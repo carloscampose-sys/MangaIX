@@ -1,0 +1,8 @@
+Action: 391b0423-d847-456f-aff0-8b0cfc03066b
+Romance: 423e2eae-a7a2-4a8b-ac03-a8351462d71d
+Comedy: 4d32cc48-9f00-4cca-9b5a-a839f0764984
+Boys' Love: 5920b825-4181-4a17-beeb-9918b0ff7a30
+Isekai: ace04997-f6bd-436e-b261-779182193d3d
+Drama: b9af3a63-f058-46de-a9a0-e0c13906197a
+Fantasy: cdc58593-87dd-415e-bbc0-2ec27bf404cc
+Slice of Life: e5301a23-ebd9-49dd-a0cb-2add944c7fe9

@@ -1,0 +1,643 @@
+import React, { useState, useEffect } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
+import { LibraryProvider, useLibrary } from './context/LibraryContext';
+import { Navbar } from './components/Navbar';
+import { ManhwaCard } from './components/ManhwaCard';
+import { Oracle } from './components/Oracle';
+import { LoadingScreen } from './components/LoadingScreen';
+import { PotaxioLuckModal } from './components/PotaxioLuckModal';
+import { ToastProvider, useToast } from './context/ToastContext';
+import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
+import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const MainApp = () => {
+  const [page, setPage] = useState('home');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [selectedFormats, setSelectedFormats] = useState([]);
+  const [selectedMood, setSelectedMood] = useState(null);
+  const { showToast } = useToast();
+
+  // Library State for filtering
+  const { library } = useLibrary();
+  const [libraryFilter, setLibraryFilter] = useState('all');
+
+  const PAGES_ORDER = ['home', 'library', 'oracle'];
+  const [direction, setDirection] = useState(0);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLuckModalOpen, setIsLuckModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Simulamos el tiempo del ritual potaxie
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const navigateToPage = (newPage) => {
+    const currentIndex = PAGES_ORDER.indexOf(page);
+    const nextIndex = PAGES_ORDER.indexOf(newPage);
+    if (currentIndex === nextIndex) return;
+    setDirection(nextIndex > currentIndex ? 1 : -1);
+    setPage(newPage);
+  };
+
+  const handleDragEnd = (event, info) => {
+    if (document.body.style.overflow === 'hidden') return;
+    const threshold = 50;
+    const velocityThreshold = 500;
+    if (Math.abs(info.offset.x) > threshold || Math.abs(info.velocity.x) > velocityThreshold) {
+      const currentIndex = PAGES_ORDER.indexOf(page);
+      if (info.offset.x > 0 && currentIndex > 0) {
+        navigateToPage(PAGES_ORDER[currentIndex - 1]);
+      } else if (info.offset.x < 0 && currentIndex < PAGES_ORDER.length - 1) {
+        navigateToPage(PAGES_ORDER[currentIndex + 1]);
+      }
+    }
+  };
+
+  const pageVariants = {
+    enter: (direction) => ({
+      x: direction > 0 ? '100%' : '-100%',
+      opacity: 0,
+      scale: 0.95
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      transition: {
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.2 }
+      }
+    },
+    exit: (direction) => ({
+      x: direction < 0 ? '100%' : '-100%',
+      opacity: 0,
+      scale: 0.95,
+      transition: {
+        x: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.2 }
+      }
+    })
+  };
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+
+    // Construir término de búsqueda
+    let searchTerm = searchQuery;
+
+    // Si hay géneros seleccionados y no hay término de búsqueda, usar género como término
+    if (!searchTerm && selectedGenres.length > 0) {
+      const firstGenre = TUMANGA_GENRES.find(g => selectedGenres.includes(g.id));
+      if (firstGenre) {
+        searchTerm = firstGenre.searchParam;
+      }
+    }
+
+    // Si hay mood seleccionado y no hay término, usar género del mood
+    if (!searchTerm && selectedMood) {
+      const moodGenre = TUMANGA_GENRES.find(g => selectedMood.genres.includes(g.id));
+      if (moodGenre) {
+        searchTerm = moodGenre.searchParam;
+      }
+    }
+
+    let results = await searchTuManga(searchTerm, {
+      genres: selectedGenres,
+      formats: selectedFormats
+    });
+
+    // Si no hay resultados y hay filtros, intentar sin filtros
+    if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
+      results = await searchTuManga(searchQuery);
+    }
+
+    // Enriquecer resultados con datos básicos para mostrar
+    results = results.map(manga => ({
+      ...manga,
+      description: "Haz clic para ver más detalles... 🥑",
+      author: '',
+      status: 'ongoing',
+      lastChapter: '?',
+      year: '?'
+    }));
+
+    setSearchResults(results);
+    setLoading(false);
+  };
+
+  const handleMoodSelect = (mood) => {
+    if (selectedMood?.id === mood.id) {
+      setSelectedMood(null);
+      setSelectedGenres([]);
+    } else {
+      setSelectedMood(mood);
+      setSelectedGenres(mood.genres);
+      showToast(mood.toast);
+    }
+  };
+
+  const toggleGenre = (id) => {
+    setSelectedMood(null); // Reset mood if user manually tweaks tags
+    setSelectedGenres(prev =>
+      prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
+    );
+  };
+
+  const toggleFormat = (name) => {
+    setSelectedFormats(prev =>
+      prev.includes(name) ? prev.filter(f => f !== name) : [...prev, name]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedGenres([]);
+    setSelectedFormats([]);
+    setSelectedMood(null);
+    setSearchQuery('');
+  };
+
+  const handleSurprise = () => {
+    if (library.length === 0) {
+      showToast("¡Añade algo a tu biblioteca primero, semillita! 🌱");
+      return;
+    }
+    setIsLuckModalOpen(true);
+  };
+
+  const filteredLibrary = library.filter(m => {
+    if (libraryFilter === 'all') return true;
+    return m.status === libraryFilter;
+  });
+
+  return (
+    <div className="min-h-screen pb-24 md:pb-32 relative">
+      <AnimatePresence>
+        {/* Global Toasts handled by ToastProvider */}
+      </AnimatePresence>
+
+      <div className="stars dark:block hidden">
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={i}
+            className="star"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              '--duration': `${2 + Math.random() * 3}s`,
+              '--opacity': Math.random()
+            }}
+          />
+        ))}
+      </div>
+
+      <Navbar setPage={navigateToPage} />
+
+      {/* Swipe Indicators (Mobile only) */}
+      <div className="fixed inset-y-0 left-0 w-12 flex items-center justify-start z-40 pointer-events-none md:hidden overflow-hidden bg-gradient-to-r from-potaxie-green/5 to-transparent">
+        <AnimatePresence>
+          {PAGES_ORDER.indexOf(page) > 0 && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="text-potaxie-green/40 font-black text-2xl flex items-center gap-1 pl-2"
+            >
+              <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>&lt;</motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="fixed inset-y-0 right-0 w-12 flex items-center justify-end z-40 pointer-events-none md:hidden overflow-hidden bg-gradient-to-l from-potaxie-green/5 to-transparent">
+        <AnimatePresence>
+          {PAGES_ORDER.indexOf(page) < PAGES_ORDER.length - 1 && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="text-potaxie-green/40 font-black text-2xl flex items-center gap-1 pr-2"
+            >
+              <motion.span animate={{ x: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>&gt;</motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <main className="container mx-auto responsive-px py-10 md:py-16 relative z-10 overflow-hidden min-h-[calc(100vh-80px)]">
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={page}
+            custom={direction}
+            variants={pageVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.1}
+            onDragEnd={handleDragEnd}
+            className="w-full h-full"
+          >
+
+            {page === 'home' && (
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-12">
+                  <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tight drop-shadow-sm">
+                    <span className="text-potaxie-green">
+                      Encuentra tu próximo vicio
+                    </span> 🥑
+                  </h2>
+                  <p className="text-purple-600 dark:text-purple-400 text-lg font-bold">Busca mangas, manhwas, manhuas y webtoons</p>
+                </div>
+
+                <div className="max-w-3xl mx-auto mb-12">
+                  <form onSubmit={handleSearch} className="relative group mb-4">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Busca por título..."
+                      className="w-full pl-12 pr-40 py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white"
+                    />
+                    <div className="absolute right-2 top-2 bottom-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                        className={`px-4 rounded-full font-bold flex items-center gap-2 transition-all relative ${isFiltersOpen ? 'bg-potaxie-cream text-potaxie-700 border border-potaxie-green' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200'}`}
+                      >
+                        <Filter size={18} />
+                        <span className="hidden sm:inline">Filtros</span>
+                        {(selectedGenres.length + selectedFormats.length > 0) && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
+                            {selectedGenres.length + selectedFormats.length}
+                          </span>
+                        )}
+                        {isFiltersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-6 bg-potaxie-green hover:bg-green-600 text-white rounded-full font-bold shadow-md transition-transform active:scale-95"
+                      >
+                        Buscar
+                      </button>
+                    </div>
+                  </form>
+
+                  <AnimatePresence>
+                    {isFiltersOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0, y: -20 }}
+                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                        exit={{ height: 0, opacity: 0, y: -20 }}
+                        className={`overflow-hidden backdrop-blur-xl rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-2xl mt-2 transition-colors duration-500 ${selectedMood ? `bg-gradient-to-br ${selectedMood.color}/10 dark:${selectedMood.color}/20` : 'bg-white/60 dark:bg-gray-800/60'}`}
+                      >
+                        <div className="space-y-8">
+                          {/* Mood Section */}
+                          <div>
+                            <div className="flex justify-between items-center mb-4 ml-2">
+                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                <Coffee size={14} className="text-potaxie-green" /> ¿Cómo está tu mood hoy, Potaxina? ✨
+                              </h4>
+                              {selectedMood && (
+                                <button
+                                  onClick={() => setSelectedMood(null)}
+                                  className="text-[10px] bg-potaxie-cream dark:bg-gray-700 px-2 py-1 rounded-full text-potaxie-700 dark:text-potaxie-300 font-bold hover:scale-105 transition-all"
+                                >
+                                  🥑 Resetear Mood
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                              {TUMANGA_MOODS.map(mood => (
+                                <motion.button
+                                  key={mood.id}
+                                  whileHover={{ scale: 1.1, y: -2 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => handleMoodSelect(mood)}
+                                  className={`
+                                        flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border-2
+                                        ${selectedMood?.id === mood.id
+                                      ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-xl scale-110`
+                                      : 'bg-white/40 dark:bg-gray-900/40 text-gray-400 border-transparent hover:bg-white dark:hover:bg-gray-800'}
+                                    `}
+                                >
+                                  <span className="text-2xl">{mood.name.split(' ').pop()}</span>
+                                  <span className="text-[10px] font-black uppercase tracking-tighter w-16 text-center leading-tight">
+                                    {mood.name.split(' ').slice(0, -1).join(' ')}
+                                  </span>
+                                </motion.button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Formatos */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-4 ml-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green" />
+                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Formato Potaxio</h4>
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-start">
+                              {TUMANGA_FORMATS.map(format => {
+                                const isActive = selectedFormats.includes(format.name);
+                                const isManga = format.name.includes("Manga");
+                                return (
+                                  <motion.button
+                                    key={format.name}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => toggleFormat(format.name)}
+                                    className={`px-5 py-2.5 rounded-full text-sm font-bold chip-transition flex items-center gap-2 border-2 box-border
+                                  ${isActive
+                                        ? isManga
+                                          ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30'
+                                          : 'bg-potaxie-green text-white border-potaxie-green shadow-lg shadow-potaxie-green/30'
+                                        : 'bg-white/50 dark:bg-gray-900/50 text-gray-500 border-transparent hover:border-potaxie-200'}
+                                `}
+                                  >
+                                    <div className={`w-4 h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                      <Sparkles size={14} className="animate-pulse" />
+                                    </div>
+                                    {format.name}
+                                  </motion.button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Géneros */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-4 ml-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Géneros Populares</h4>
+                            </div>
+                            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-2 justify-start">
+                              {TUMANGA_GENRES.map(genre => {
+                                const isActive = selectedGenres.includes(genre.id);
+                                const isSpecial = genre.id === 'boys-love' || genre.id === 'girls-love';
+                                return (
+                                  <motion.button
+                                    key={genre.id}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => toggleGenre(genre.id)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold chip-transition flex items-center gap-2 border-2 box-border
+                                  ${isActive
+                                        ? isSpecial
+                                          ? 'bg-gradient-to-r from-pink-400 to-purple-600 text-white border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.6)]'
+                                          : 'bg-potaxie-cream text-potaxie-700 border-potaxie-green shadow-md'
+                                        : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 border-transparent hover:border-potaxie-100'}
+                                `}
+                                  >
+                                    <div className={`w-3 h-3 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                      {isSpecial ? <Sparkles size={10} /> : <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green shadow-[0_0_5px_#A7D08C]" />}
+                                    </div>
+                                    {genre.name}
+                                  </motion.button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <button
+                              onClick={clearFilters}
+                              className="flex items-center gap-2 text-xs font-black text-gray-400 hover:text-red-400 transition-colors uppercase tracking-widest"
+                            >
+                              <RotateCcw size={14} /> Resetear Todo
+                            </button>
+
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={handleSearch}
+                              className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-potaxie-green to-teal-500 text-white rounded-2xl font-black shadow-xl shadow-potaxie-green/20 flex items-center justify-center gap-2 hover:from-green-400 hover:to-teal-400 dark:shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+                            >
+                              Aplicar Filtros y Buscar 🔍
+                            </motion.button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {loading && (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-20 h-20 relative">
+                      <div className="absolute inset-0 border-4 border-potaxie-green/20 rounded-full" />
+                      <div className="absolute inset-0 border-4 border-potaxie-green border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(167,208,140,0.5)]" />
+                      <div className="absolute inset-0 flex items-center justify-center text-3xl animate-bounce">🥑</div>
+                    </div>
+                    <p className="text-potaxie-700 dark:text-potaxie-400 font-black text-lg tracking-widest animate-pulse">RASTREANDO GUSTOS... 🔍</p>
+                  </div>
+                )}
+
+                <motion.div
+                  layout
+                  className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                >
+                  <AnimatePresence>
+                    {searchResults.map(manga => (
+                      <motion.div
+                        layout
+                        key={manga.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <ManhwaCard manga={manga} />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+
+                {!loading && searchResults.length === 0 && (searchQuery || selectedGenres.length > 0 || selectedFormats.length > 0) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-20 mt-10 bg-white/30 dark:bg-gray-800/30 backdrop-blur rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700"
+                  >
+                    <span className="text-7xl mb-6 block animate-bounce">💅</span>
+                    <h3 className="text-2xl font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">¡Tiesa! Nada por aquí</h3>
+                    <p className="text-gray-400 mt-2 font-medium">Prueba combinando otros géneros o menos filtros, semillita.</p>
+                    <div className="flex flex-wrap justify-center gap-4 mt-8">
+                      <button
+                        onClick={clearFilters}
+                        className="px-8 py-4 bg-white dark:bg-gray-900 text-potaxie-green border-2 border-potaxie-green rounded-full font-black hover:bg-potaxie-green hover:text-white transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                      >
+                        <RotateCcw size={18} /> Resetear Todo 🥑
+                      </button>
+                      <button
+                        onClick={() => navigateToPage('oracle')}
+                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full font-black hover:shadow-purple-500/50 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                      >
+                        <Sparkles size={18} /> Probar suerte con el Oráculo 🔮
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {page === 'library' && (
+              <div className="max-w-6xl mx-auto">
+                {/* Estadísticas de Diva */}
+                <div className="bg-gradient-to-br from-potaxie-cream via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 rounded-3xl p-6 md:p-8 mb-10 border-2 border-white dark:border-gray-800 shadow-xl overflow-hidden relative">
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-potaxie-green/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="text-center md:text-left">
+                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Mi Progreso Potaxio</h3>
+                      <div className="flex items-baseline gap-3 justify-center md:justify-start">
+                        <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+                          {library.filter(m => m.status === 'devoraste').length}
+                        </span>
+                        <span className="text-xl font-bold text-gray-800 dark:text-gray-200 uppercase">Obras Devoradas ✨</span>
+                      </div>
+                      <p className="mt-3 text-potaxie-600 dark:text-potaxie-400 font-bold bg-potaxie-cream/50 dark:bg-purple-900/20 px-4 py-1.5 rounded-full inline-block border border-potaxie-100 dark:border-purple-500/10">
+                        {(() => {
+                          const count = library.filter(m => m.status === 'devoraste').length;
+                          if (count <= 5) return "¡Empezando a devorar! 🥑";
+                          if (count <= 20) return "¡Toda una experta en chisme! 💅";
+                          return "¡Diva Suprema del Manhwa! 👑✨";
+                        })()}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-4 md:gap-8">
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl mb-1">🥑</span>
+                        <span className="text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'devorando').length}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">En Proceso</span>
+                      </div>
+                      <div className="w-px h-12 bg-gray-200 dark:bg-gray-700 hidden md:block" />
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl mb-1">☁️</span>
+                        <span className="text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'tiesa').length}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">En el Limbo</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 dark:border-gray-800 pb-6">
+                  <div className="flex flex-col items-center md:items-start">
+                    <h2 className="text-3xl font-black dark:text-white flex items-center gap-3 tracking-tighter">
+                      Mi Santuario <div className="w-2 h-2 rounded-full bg-potaxie-green animate-ping" />
+                    </h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{library.length} Manhwas Guardados</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleSurprise}
+                      className="px-6 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-2 rounded-2xl transition-all flex items-center gap-2 font-black text-xs uppercase btn-premium-potaxie group relative overflow-hidden"
+                    >
+                      <motion.div
+                        className="absolute inset-0 bg-potaxie-green/20 pointer-events-none"
+                        initial={{ scale: 0, opacity: 0 }}
+                        whileTap={{
+                          scale: [0, 4],
+                          opacity: [0.5, 0],
+                          transition: { duration: 0.5 }
+                        }}
+                      />
+                      <Shuffle size={14} className="text-potaxie-green group-hover:rotate-180 transition-transform duration-700" />
+                      <span className="relative z-10">Suerte Potaxio</span>
+                    </motion.button>
+
+                    <div className="relative">
+                      <select
+                        value={libraryFilter}
+                        onChange={(e) => setLibraryFilter(e.target.value)}
+                        className="appearance-none pl-10 pr-10 py-2.5 rounded-2xl border-2 border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white font-black text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
+                      >
+                        <option value="all">Todas las Divas</option>
+                        <option value="devorando">Devorando 🥑</option>
+                        <option value="devoraste">¡Devoraste! ✨</option>
+                        <option value="tiesa">En el Limbo ☁️</option>
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <ChevronDown size={14} className="text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {library.length === 0 ? (
+                  <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <span className="text-6xl mb-4 block">🥑</span>
+                    <h3 className="text-xl font-bold text-gray-400">Tu biblioteca está vacía</h3>
+                    <p className="text-gray-400">¡Ve a buscar algo para devorar!</p>
+                    <button onClick={() => navigateToPage('home')} className="mt-4 text-potaxie-green font-bold hover:underline">Ir al Buscador</button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    {filteredLibrary.map(manga => (
+                      <ManhwaCard key={manga.id} manga={manga} inLibrary={true} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {page === 'oracle' && <Oracle />}
+          </motion.div>
+        </AnimatePresence>
+
+        <PotaxioLuckModal
+          isOpen={isLuckModalOpen}
+          onClose={() => setIsLuckModalOpen(false)}
+          library={library}
+        />
+      </main>
+    </div>
+  );
+}
+
+const App = () => {
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulamos el tiempo del ritual potaxie
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <LibraryProvider>
+          <AnimatePresence mode="wait">
+            {isInitialLoading ? (
+              <LoadingScreen key="loading" />
+            ) : (
+              <MainApp key="app" />
+            )}
+          </AnimatePresence>
+        </LibraryProvider>
+      </ToastProvider>
+    </ThemeProvider>
+  );
+};
+
+export default App;
