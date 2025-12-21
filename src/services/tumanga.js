@@ -256,13 +256,11 @@ export const searchTuManga = async (query = '', filters = {}) => {
                 if (title && slug) {
                     // Generar un ID único usando slug + timestamp + index
                     const uniqueId = `tumanga-${slug}-${Date.now()}-${index}`;
-                    const finalCover = coverUrl?.startsWith('http') ? coverUrl : `${BASE_URL}${coverUrl}`;
-                    console.log(`Cover for ${title}:`, finalCover);
                     results.push({
                         id: uniqueId,
                         slug,
                         title,
-                        cover: finalCover,
+                        cover: coverUrl?.startsWith('http') ? coverUrl : `${BASE_URL}${coverUrl}`,
                         source: 'tumanga'
                     });
                 }
@@ -595,29 +593,13 @@ export const getRandomManga = async (genreIds = []) => {
             if (allResults.length === 0) return null;
             const randomIndex = Math.floor(Math.random() * allResults.length);
             const randomManga = allResults[randomIndex];
-            // Obtener detalles pero mantener la portada del resultado de búsqueda
-            const details = await getTuMangaDetails(randomManga.slug);
-            if (details) {
-                // Usar la portada de la búsqueda si los detalles no tienen una válida
-                if (!details.cover || details.cover.includes('loader')) {
-                    details.cover = randomManga.cover;
-                }
-            }
-            return details;
+            return await getTuMangaDetails(randomManga.slug);
         }
 
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManga = results[randomIndex];
 
-        // Obtener detalles pero mantener la portada del resultado de búsqueda
-        const details = await getTuMangaDetails(randomManga.slug);
-        if (details) {
-            // Usar la portada de la búsqueda si los detalles no tienen una válida
-            if (!details.cover || details.cover.includes('loader')) {
-                details.cover = randomManga.cover;
-            }
-        }
-        return details;
+        return await getTuMangaDetails(randomManga.slug);
     } catch (error) {
         console.error('Error getting random manga:', error);
         return null;

@@ -9,20 +9,30 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 
-// Obtener URL de imagen (con proxy si es de tumanga)
-const getImageUrl = (url) => {
-    if (!url || url.includes('loader') || url.includes('assets/img')) return '/placeholder-cover.svg';
-    if (url.includes('tumanga.org')) {
-        return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
-    }
-    return url;
+// Proxy para imágenes que tienen problemas de CORS
+const getProxiedImageUrl = (url) => {
+    if (!url) return '/placeholder-cover.svg';
+    // Usar un proxy de imágenes para evitar CORS
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=400&h=600&fit=cover`;
 };
 
 const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibrary }) => {
     const { showToast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [imageError, setImageError] = useState(false);
+    const [imgSrc, setImgSrc] = useState(recommendation?.cover);
+    const [tryCount, setTryCount] = useState(0);
+
+    // Manejar error de imagen con fallbacks
+    const handleImageError = () => {
+        if (tryCount === 0) {
+            // Primer intento fallido: probar con proxy
+            setImgSrc(`https://images.weserv.nl/?url=${encodeURIComponent(recommendation?.cover)}`);
+            setTryCount(1);
+        } else {
+            // Si el proxy también falla, mostrar placeholder
+            setImgSrc('/placeholder-cover.svg');
+        }
+    };
 
     const handleAdd = (e) => {
         e.stopPropagation();
@@ -61,18 +71,12 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                 onClick={() => setIsModalOpen(true)}
             >
                 <div className="flex flex-col md:flex-row h-full relative z-10">
-                    <div className="md:w-2/5 h-64 md:h-80 overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
-                        {!imageLoaded && !imageError && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-6xl animate-pulse">🥑</span>
-                            </div>
-                        )}
+                    <div className="md:w-2/5 h-64 md:h-80 overflow-hidden bg-gray-200 dark:bg-gray-700">
                         <img
-                            src={getImageUrl(recommendation?.cover)}
+                            src={imgSrc}
                             alt={recommendation?.title}
-                            className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                            onLoad={() => setImageLoaded(true)}
-                            onError={(e) => { setImageError(true); e.target.src = '/placeholder-cover.svg'; }}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            onError={handleImageError}
                         />
                     </div>
                     <div className="p-6 md:w-3/5 text-left flex flex-col">

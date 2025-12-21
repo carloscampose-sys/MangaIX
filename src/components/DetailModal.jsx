@@ -6,15 +6,6 @@ import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
 import { Reader } from './Reader';
 
-// Obtener URL de imagen (con proxy si es de tumanga)
-const getImageUrl = (url) => {
-    if (!url || url.includes('loader') || url.includes('assets/img')) return '/placeholder-cover.svg';
-    if (url.includes('tumanga.org')) {
-        return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
-    }
-    return url;
-};
-
 export const DetailModal = ({
     manga,
     isOpen,
@@ -164,10 +155,9 @@ export const DetailModal = ({
                         {/* Izquierda: Portada */}
                         <div className="md:w-[45%] relative h-72 md:h-auto overflow-hidden bg-gray-200 dark:bg-gray-800">
                             <img
-                                src={getImageUrl(displayData?.cover || manga?.cover)}
+                                src={displayData?.cover || manga?.cover}
                                 alt={displayData?.title || manga?.title}
                                 className="w-full h-full object-cover"
-                                onError={(e) => { e.target.src = '/placeholder-cover.svg'; }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-80" />
                             <div className="absolute bottom-6 left-6 right-6">
