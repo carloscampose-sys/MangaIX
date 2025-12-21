@@ -3,6 +3,10 @@
     "api/tumanga/pages.js": {
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/tumanga/cover.js": {
+      "memory": 1024,
+      "maxDuration": 10
     }
   }
 }
