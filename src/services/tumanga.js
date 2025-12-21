@@ -256,11 +256,13 @@ export const searchTuManga = async (query = '', filters = {}) => {
                 if (title && slug) {
                     // Generar un ID único usando slug + timestamp + index
                     const uniqueId = `tumanga-${slug}-${Date.now()}-${index}`;
+                    const finalCover = coverUrl?.startsWith('http') ? coverUrl : `${BASE_URL}${coverUrl}`;
+                    console.log(`Cover for ${title}:`, finalCover);
                     results.push({
                         id: uniqueId,
                         slug,
                         title,
-                        cover: coverUrl?.startsWith('http') ? coverUrl : `${BASE_URL}${coverUrl}`,
+                        cover: finalCover,
                         source: 'tumanga'
                     });
                 }
