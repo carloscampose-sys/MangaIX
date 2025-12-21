@@ -121,7 +121,55 @@ body {
 }
 
 .responsive-px {
-  @apply px-4 md:px-8 lg:px-12;
+  @apply px-3 sm:px-4 md:px-8 lg:px-12;
+}
+
+/* ========== TOUCH DEVICE UTILITIES ========== */
+
+/* Eliminar delay de 300ms en dispositivos táctiles */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch target mínimo 44x44px (recomendación Apple/Google) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Active states para feedback táctil */
+@media (hover: none) and (pointer: coarse) {
+  button:active,
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+}
+
+/* Safe area padding para iPhone con notch */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Responsive gaps utility */
+.responsive-gap {
+  @apply gap-2 sm:gap-3 md:gap-4 lg:gap-6;
 }
 
 /* Loading Ritual Animations */

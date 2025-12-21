@@ -30,15 +30,15 @@ export const LoadingScreen = () => {
         <motion.div
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-[#BDD191] flex flex-col items-center justify-center p-4 overflow-hidden"
+            className="fixed inset-0 z-[1000] bg-[#BDD191] flex flex-col items-center justify-center p-4 overflow-hidden safe-area-top safe-area-bottom"
         >
             {/* Central Ritual Area */}
-            <div className="relative w-64 h-64 flex items-center justify-center mb-12">
+            <div className="relative w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64 flex items-center justify-center mb-8 sm:mb-10 md:mb-12">
                 {/* Orbiting Emojis */}
                 {ORBIT_EMOJIS.map((item, idx) => (
                     <div
                         key={idx}
-                        className="absolute text-2xl animate-orbit"
+                        className="absolute text-lg sm:text-xl md:text-2xl animate-orbit"
                         style={{
                             '--duration': '8s',
                             animationDelay: `${-(idx * (8 / ORBIT_EMOJIS.length))}s`
@@ -55,10 +55,10 @@ export const LoadingScreen = () => {
                     transition={{ duration: 0.5 }}
                     className="relative flex items-center justify-center"
                 >
-                    <span className="text-[120px] filter drop-shadow-xl select-none">🥑</span>
+                    <span className="text-[80px] sm:text-[100px] md:text-[120px] filter drop-shadow-xl select-none">🥑</span>
                     {/* Golden Heart */}
                     <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <span className="text-3xl animate-pulse-heart">💛</span>
+                        <span className="text-2xl sm:text-3xl animate-pulse-heart">💛</span>
                     </div>
                 </motion.div>
 
@@ -87,18 +87,18 @@ export const LoadingScreen = () => {
             </div>
 
             {/* Texts */}
-            <div className="text-center space-y-2 mb-10">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-md">
+            <div className="text-center space-y-1.5 sm:space-y-2 mb-8 sm:mb-10">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md">
                     Santuario Potaxie
                 </h1>
-                <p className="text-white/80 font-bold text-lg animate-pulse">
+                <p className="text-white/80 font-bold text-sm sm:text-base md:text-lg animate-pulse">
                     Cargando Magia Potaxie...
                 </p>
             </div>
 
             {/* Progress Bar Container */}
-            <div className="w-full max-w-xs relative p-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 shadow-inner">
-                <div className="w-full h-4 bg-transparent rounded-full overflow-hidden">
+            <div className="w-full max-w-[200px] sm:max-w-xs relative p-0.5 sm:p-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 shadow-inner">
+                <div className="w-full h-3 sm:h-4 bg-transparent rounded-full overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
@@ -110,13 +110,13 @@ export const LoadingScreen = () => {
                 <motion.div
                     animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
                     transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -right-2 -bottom-2 text-white text-xl"
+                    className="absolute -right-1 sm:-right-2 -bottom-1 sm:-bottom-2 text-white text-lg sm:text-xl"
                 >
                     ✦
                 </motion.div>
             </div>
 
-            <div className="absolute bottom-10 right-10 text-white/40 text-4xl">
+            <div className="absolute bottom-6 sm:bottom-10 right-6 sm:right-10 text-white/40 text-2xl sm:text-4xl">
                 ✦
             </div>
         </motion.div>

@@ -249,47 +249,48 @@ const MainApp = () => {
 
             {page === 'home' && (
               <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-12">
-                  <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tight drop-shadow-sm">
+                <div className="text-center mb-8 sm:mb-10 md:mb-12">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black mb-3 sm:mb-4 tracking-tight drop-shadow-sm">
                     <span className="text-potaxie-green">
                       Encuentra tu próximo vicio
                     </span> 🥑
                   </h2>
-                  <p className="text-purple-600 dark:text-purple-400 text-lg font-bold">Busca mangas, manhwas, manhuas y webtoons</p>
+                  <p className="text-purple-600 dark:text-purple-400 text-sm sm:text-base md:text-lg font-bold px-2">Busca mangas, manhwas, manhuas y webtoons</p>
                 </div>
 
-                <div className="max-w-3xl mx-auto mb-12">
+                <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12 px-1">
                   <form onSubmit={handleSearch} className="relative group mb-4">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" />
+                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                      <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" size={18} />
                     </div>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Busca por título..."
-                      className="w-full pl-12 pr-40 py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white"
+                      className="w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base"
                     />
-                    <div className="absolute right-2 top-2 bottom-2 flex gap-2">
+                    <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">
                       <button
                         type="button"
                         onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                        className={`px-4 rounded-full font-bold flex items-center gap-2 transition-all relative ${isFiltersOpen ? 'bg-potaxie-cream text-potaxie-700 border border-potaxie-green' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200'}`}
+                        className={`px-2 sm:px-4 rounded-full font-bold flex items-center gap-1 sm:gap-2 transition-all relative text-xs sm:text-sm ${isFiltersOpen ? 'bg-potaxie-cream text-potaxie-700 border border-potaxie-green' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200'}`}
                       >
-                        <Filter size={18} />
+                        <Filter size={16} />
                         <span className="hidden sm:inline">Filtros</span>
                         {(selectedGenres.length + selectedFormats.length > 0) && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
+                          <span className="absolute -top-1 -right-1 w-4 sm:w-5 h-4 sm:h-5 bg-red-500 text-white text-[8px] sm:text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
                             {selectedGenres.length + selectedFormats.length}
                           </span>
                         )}
-                        {isFiltersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                       <button
                         type="submit"
-                        className="px-6 bg-potaxie-green hover:bg-green-600 text-white rounded-full font-bold shadow-md transition-transform active:scale-95"
+                        className="px-3 sm:px-6 bg-potaxie-green hover:bg-green-600 text-white rounded-full font-bold shadow-md transition-transform active:scale-95 text-xs sm:text-sm"
                       >
-                        Buscar
+                        <span className="hidden sm:inline">Buscar</span>
+                        <Search size={16} className="sm:hidden" />
                       </button>
                     </div>
                   </form>
@@ -300,9 +301,9 @@ const MainApp = () => {
                         initial={{ height: 0, opacity: 0, y: -20 }}
                         animate={{ height: 'auto', opacity: 1, y: 0 }}
                         exit={{ height: 0, opacity: 0, y: -20 }}
-                        className={`overflow-hidden backdrop-blur-xl rounded-[2rem] border border-gray-100 dark:border-gray-700 p-6 shadow-2xl mt-2 transition-colors duration-500 ${selectedMood ? `bg-gradient-to-br ${selectedMood.color}/10 dark:${selectedMood.color}/20` : 'bg-white/60 dark:bg-gray-800/60'}`}
+                        className={`overflow-hidden backdrop-blur-xl rounded-2xl sm:rounded-[2rem] border border-gray-100 dark:border-gray-700 p-4 sm:p-6 shadow-2xl mt-2 transition-colors duration-500 ${selectedMood ? `bg-gradient-to-br ${selectedMood.color}/10 dark:${selectedMood.color}/20` : 'bg-white/60 dark:bg-gray-800/60'}`}
                       >
-                        <div className="space-y-8">
+                        <div className="space-y-6 sm:space-y-8">
                           {/* Mood Section */}
                           <div>
                             <div className="flex justify-between items-center mb-4 ml-2">
@@ -318,22 +319,22 @@ const MainApp = () => {
                                 </button>
                               )}
                             </div>
-                            <div className="flex flex-wrap gap-3">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
                               {TUMANGA_MOODS.map(mood => (
                                 <motion.button
                                   key={mood.id}
-                                  whileHover={{ scale: 1.1, y: -2 }}
-                                  whileTap={{ scale: 0.9 }}
+                                  whileHover={{ scale: 1.05, y: -2 }}
+                                  whileTap={{ scale: 0.95 }}
                                   onClick={() => handleMoodSelect(mood)}
                                   className={`
-                                        flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border-2
+                                        flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-all border-2
                                         ${selectedMood?.id === mood.id
-                                      ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-xl scale-110`
+                                      ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-xl scale-105`
                                       : 'bg-white/40 dark:bg-gray-900/40 text-gray-400 border-transparent hover:bg-white dark:hover:bg-gray-800'}
                                     `}
                                 >
-                                  <span className="text-2xl">{mood.name.split(' ').pop()}</span>
-                                  <span className="text-[10px] font-black uppercase tracking-tighter w-16 text-center leading-tight">
+                                  <span className="text-xl sm:text-2xl">{mood.name.split(' ').pop()}</span>
+                                  <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 text-center leading-tight">
                                     {mood.name.split(' ').slice(0, -1).join(' ')}
                                   </span>
                                 </motion.button>
@@ -347,7 +348,7 @@ const MainApp = () => {
                               <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green" />
                               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Formato Potaxio</h4>
                             </div>
-                            <div className="flex flex-wrap gap-2 justify-start">
+                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-start">
                               {TUMANGA_FORMATS.map(format => {
                                 const isActive = selectedFormats.includes(format.name);
                                 const isManga = format.name.includes("Manga");
@@ -357,7 +358,7 @@ const MainApp = () => {
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => toggleFormat(format.name)}
-                                    className={`px-5 py-2.5 rounded-full text-sm font-bold chip-transition flex items-center gap-2 border-2 box-border
+                                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold chip-transition flex items-center justify-center gap-1 sm:gap-2 border-2 box-border
                                   ${isActive
                                         ? isManga
                                           ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30'
@@ -365,8 +366,8 @@ const MainApp = () => {
                                         : 'bg-white/50 dark:bg-gray-900/50 text-gray-500 border-transparent hover:border-potaxie-200'}
                                 `}
                                   >
-                                    <div className={`w-4 h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
-                                      <Sparkles size={14} className="animate-pulse" />
+                                    <div className={`w-3 sm:w-4 h-3 sm:h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                      <Sparkles size={12} className="animate-pulse" />
                                     </div>
                                     {format.name}
                                   </motion.button>
@@ -381,7 +382,7 @@ const MainApp = () => {
                               <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Géneros Populares</h4>
                             </div>
-                            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-2 justify-start">
+                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-h-40 sm:max-h-48 overflow-y-auto custom-scrollbar pr-2 justify-start">
                               {TUMANGA_GENRES.map(genre => {
                                 const isActive = selectedGenres.includes(genre.id);
                                 const isSpecial = genre.id === 'boys-love' || genre.id === 'girls-love';
@@ -391,7 +392,7 @@ const MainApp = () => {
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => toggleGenre(genre.id)}
-                                    className={`px-4 py-2 rounded-full text-xs font-bold chip-transition flex items-center gap-2 border-2 box-border
+                                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold chip-transition flex items-center justify-center gap-1 sm:gap-2 border-2 box-border
                                   ${isActive
                                         ? isSpecial
                                           ? 'bg-gradient-to-r from-pink-400 to-purple-600 text-white border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.6)]'
@@ -399,8 +400,8 @@ const MainApp = () => {
                                         : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 border-transparent hover:border-potaxie-100'}
                                 `}
                                   >
-                                    <div className={`w-3 h-3 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
-                                      {isSpecial ? <Sparkles size={10} /> : <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green shadow-[0_0_5px_#A7D08C]" />}
+                                    <div className={`w-2.5 sm:w-3 h-2.5 sm:h-3 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                      {isSpecial ? <Sparkles size={10} /> : <div className="w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full bg-potaxie-green shadow-[0_0_5px_#A7D08C]" />}
                                     </div>
                                     {genre.name}
                                   </motion.button>
@@ -445,7 +446,7 @@ const MainApp = () => {
 
                 <motion.div
                   layout
-                  className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
                 >
                   <AnimatePresence>
                     {searchResults.map(manga => (
@@ -467,23 +468,23 @@ const MainApp = () => {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-20 mt-10 bg-white/30 dark:bg-gray-800/30 backdrop-blur rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700"
+                    className="text-center py-10 sm:py-16 md:py-20 mt-6 sm:mt-8 md:mt-10 bg-white/30 dark:bg-gray-800/30 backdrop-blur rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700 px-4"
                   >
-                    <span className="text-7xl mb-6 block animate-bounce">💅</span>
-                    <h3 className="text-2xl font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">¡Tiesa! Nada por aquí</h3>
-                    <p className="text-gray-400 mt-2 font-medium">Prueba combinando otros géneros o menos filtros, semillita.</p>
-                    <div className="flex flex-wrap justify-center gap-4 mt-8">
+                    <span className="text-5xl sm:text-6xl md:text-7xl mb-4 sm:mb-6 block animate-bounce">💅</span>
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter">¡Tiesa! Nada por aquí</h3>
+                    <p className="text-gray-400 mt-2 font-medium text-sm sm:text-base">Prueba combinando otros géneros o menos filtros, semillita.</p>
+                    <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
                       <button
                         onClick={clearFilters}
-                        className="px-8 py-4 bg-white dark:bg-gray-900 text-potaxie-green border-2 border-potaxie-green rounded-full font-black hover:bg-potaxie-green hover:text-white transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                        className="px-5 sm:px-8 py-3 sm:py-4 bg-white dark:bg-gray-900 text-potaxie-green border-2 border-potaxie-green rounded-full font-black hover:bg-potaxie-green hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
-                        <RotateCcw size={18} /> Resetear Todo 🥑
+                        <RotateCcw size={16} /> Resetear Todo 🥑
                       </button>
                       <button
                         onClick={() => navigateToPage('oracle')}
-                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full font-black hover:shadow-purple-500/50 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                        className="px-5 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full font-black hover:shadow-purple-500/50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
-                        <Sparkles size={18} /> Probar suerte con el Oráculo 🔮
+                        <Sparkles size={16} /> Probar suerte con el Oráculo 🔮
                       </button>
                     </div>
                   </motion.div>
@@ -494,20 +495,20 @@ const MainApp = () => {
             {page === 'library' && (
               <div className="max-w-6xl mx-auto">
                 {/* Estadísticas de Diva */}
-                <div className="bg-gradient-to-br from-potaxie-cream via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 rounded-3xl p-6 md:p-8 mb-10 border-2 border-white dark:border-gray-800 shadow-xl overflow-hidden relative">
-                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-potaxie-green/10 rounded-full blur-3xl animate-pulse" />
-                  <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+                <div className="bg-gradient-to-br from-potaxie-cream via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 md:mb-10 border-2 border-white dark:border-gray-800 shadow-xl overflow-hidden relative">
+                  <div className="absolute -top-10 -right-10 w-32 sm:w-40 h-32 sm:h-40 bg-potaxie-green/10 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-10 -left-10 w-32 sm:w-40 h-32 sm:h-40 bg-purple-500/10 rounded-full blur-3xl" />
 
-                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
                     <div className="text-center md:text-left">
-                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Mi Progreso Potaxio</h3>
-                      <div className="flex items-baseline gap-3 justify-center md:justify-start">
-                        <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-gray-400 dark:text-gray-500 mb-2">Mi Progreso Potaxio</h3>
+                      <div className="flex items-baseline gap-2 sm:gap-3 justify-center md:justify-start">
+                        <span className="text-3xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
                           {library.filter(m => m.status === 'devoraste').length}
                         </span>
-                        <span className="text-xl font-bold text-gray-800 dark:text-gray-200 uppercase">Obras Devoradas ✨</span>
+                        <span className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200 uppercase">Obras Devoradas ✨</span>
                       </div>
-                      <p className="mt-3 text-potaxie-600 dark:text-potaxie-400 font-bold bg-potaxie-cream/50 dark:bg-purple-900/20 px-4 py-1.5 rounded-full inline-block border border-potaxie-100 dark:border-purple-500/10">
+                      <p className="mt-2 sm:mt-3 text-potaxie-600 dark:text-potaxie-400 font-bold bg-potaxie-cream/50 dark:bg-purple-900/20 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full inline-block border border-potaxie-100 dark:border-purple-500/10 text-xs sm:text-sm">
                         {(() => {
                           const count = library.filter(m => m.status === 'devoraste').length;
                           if (count <= 5) return "¡Empezando a devorar! 🥑";
@@ -517,38 +518,38 @@ const MainApp = () => {
                       </p>
                     </div>
 
-                    <div className="flex gap-4 md:gap-8">
+                    <div className="flex gap-6 sm:gap-4 md:gap-8">
                       <div className="flex flex-col items-center">
-                        <span className="text-2xl mb-1">🥑</span>
-                        <span className="text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'devorando').length}</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">En Proceso</span>
+                        <span className="text-xl sm:text-2xl mb-1">🥑</span>
+                        <span className="text-lg sm:text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'devorando').length}</span>
+                        <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">En Proceso</span>
                       </div>
-                      <div className="w-px h-12 bg-gray-200 dark:bg-gray-700 hidden md:block" />
+                      <div className="w-px h-10 sm:h-12 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
                       <div className="flex flex-col items-center">
-                        <span className="text-2xl mb-1">☁️</span>
-                        <span className="text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'tiesa').length}</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">En el Limbo</span>
+                        <span className="text-xl sm:text-2xl mb-1">☁️</span>
+                        <span className="text-lg sm:text-xl font-black text-gray-700 dark:text-gray-300">{library.filter(m => m.status === 'tiesa').length}</span>
+                        <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">En el Limbo</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 dark:border-gray-800 pb-6">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 sm:mb-8 gap-4 sm:gap-6 border-b border-gray-100 dark:border-gray-800 pb-4 sm:pb-6">
                   <div className="flex flex-col items-center md:items-start">
-                    <h2 className="text-3xl font-black dark:text-white flex items-center gap-3 tracking-tighter">
-                      Mi Santuario <div className="w-2 h-2 rounded-full bg-potaxie-green animate-ping" />
+                    <h2 className="text-2xl sm:text-3xl font-black dark:text-white flex items-center gap-2 sm:gap-3 tracking-tighter">
+                      Mi Santuario <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-potaxie-green animate-ping" />
                     </h2>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{library.length} Manhwas Guardados</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">{library.length} Manhwas Guardados</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap justify-center gap-3">
+                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={handleSurprise}
-                      className="px-6 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-2 rounded-2xl transition-all flex items-center gap-2 font-black text-xs uppercase btn-premium-potaxie group relative overflow-hidden"
+                      className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-2 rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 sm:gap-2 font-black text-[10px] sm:text-xs uppercase btn-premium-potaxie group relative overflow-hidden"
                     >
                       <motion.div
                         className="absolute inset-0 bg-potaxie-green/20 pointer-events-none"
@@ -559,7 +560,7 @@ const MainApp = () => {
                           transition: { duration: 0.5 }
                         }}
                       />
-                      <Shuffle size={14} className="text-potaxie-green group-hover:rotate-180 transition-transform duration-700" />
+                      <Shuffle size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green group-hover:rotate-180 transition-transform duration-700" />
                       <span className="relative z-10">Suerte Potaxio</span>
                     </motion.button>
 
@@ -567,29 +568,29 @@ const MainApp = () => {
                       <select
                         value={libraryFilter}
                         onChange={(e) => setLibraryFilter(e.target.value)}
-                        className="appearance-none pl-10 pr-10 py-2.5 rounded-2xl border-2 border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white font-black text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
+                        className="appearance-none pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border-2 border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white font-black text-[10px] sm:text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
                       >
                         <option value="all">Todas las Divas</option>
                         <option value="devorando">Devorando 🥑</option>
                         <option value="devoraste">¡Devoraste! ✨</option>
                         <option value="tiesa">En el Limbo ☁️</option>
                       </select>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <ChevronDown size={14} className="text-gray-400" />
+                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <ChevronDown size={12} className="sm:w-[14px] sm:h-[14px] text-gray-400" />
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {library.length === 0 ? (
-                  <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                    <span className="text-6xl mb-4 block">🥑</span>
-                    <h3 className="text-xl font-bold text-gray-400">Tu biblioteca está vacía</h3>
-                    <p className="text-gray-400">¡Ve a buscar algo para devorar!</p>
-                    <button onClick={() => navigateToPage('home')} className="mt-4 text-potaxie-green font-bold hover:underline">Ir al Buscador</button>
+                  <div className="text-center py-12 sm:py-16 md:py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4">
+                    <span className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4 block">🥑</span>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-400">Tu biblioteca está vacía</h3>
+                    <p className="text-gray-400 text-sm sm:text-base">¡Ve a buscar algo para devorar!</p>
+                    <button onClick={() => navigateToPage('home')} className="mt-4 text-potaxie-green font-bold hover:underline text-sm sm:text-base">Ir al Buscador</button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
                     {filteredLibrary.map(manga => (
                       <ManhwaCard key={manga.id} manga={manga} inLibrary={true} />
                     ))}

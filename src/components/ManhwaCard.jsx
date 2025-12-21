@@ -144,13 +144,13 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
             {/* Cover */}
             <div
-                className="relative h-64 overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer"
+                className="relative h-40 sm:h-52 md:h-64 overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer"
                 onClick={() => setIsModalOpen(true)}
             >
                 {incognito ? (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 flex-col gap-2">
-                        <span className="text-4xl">👜</span>
-                        <span className="text-sm">Cartera de Jiafei</span>
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 flex-col gap-1 sm:gap-2">
+                        <span className="text-2xl sm:text-3xl md:text-4xl">👜</span>
+                        <span className="text-[10px] sm:text-xs md:text-sm">Cartera de Jiafei</span>
                     </div>
                 ) : (
                     <img
@@ -162,43 +162,43 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                 )}
 
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <span className="bg-white/90 text-gray-800 px-4 py-2 rounded-full font-bold text-xs shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                    <span className="bg-white/90 text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold text-[10px] sm:text-xs shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                         Ver Detalles ✨
                     </span>
                 </div>
 
                 {inLibrary ? (
-                    <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-1 ${currentStatus.color} ${currentStatus.text}`}>
-                        {currentStatus.emoji} {currentStatus.label}
+                    <div className={`absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-0.5 sm:gap-1 ${currentStatus.color} ${currentStatus.text}`}>
+                        {currentStatus.emoji} <span className="hidden sm:inline">{currentStatus.label}</span>
                     </div>
                 ) : (
-                    <div className="absolute top-2 right-2 px-3 py-1 rounded-full text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-1 bg-white/20 text-white">
-                        {manga?.lastChapter || "?"} Caps ✨
+                    <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-0.5 sm:gap-1 bg-white/20 text-white">
+                        {manga?.lastChapter || "?"} <span className="hidden sm:inline">Caps</span> ✨
                     </div>
                 )}
             </div>
 
-            <div className="p-4 flex flex-col flex-grow gap-2">
+            <div className="p-2.5 sm:p-3 md:p-4 flex flex-col flex-grow gap-1 sm:gap-2">
                 <h3
-                    className="font-bold text-base line-clamp-1 leading-tight text-gray-900 dark:text-gray-100 cursor-pointer hover:text-potaxie-600 transition-colors"
+                    className="font-bold text-xs sm:text-sm md:text-base line-clamp-1 leading-tight text-gray-900 dark:text-gray-100 cursor-pointer hover:text-potaxie-600 transition-colors"
                     onClick={() => setIsModalOpen(true)}
                     title={manga?.title}
                 >
                     {manga?.title || 'Título Desconocido'}
                 </h3>
 
-                <p className="text-[12px] text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[10px] sm:text-[11px] md:text-[12px] text-gray-400 dark:text-gray-500 mb-0.5 sm:mb-1">
                     {manga?.author || "Desconocido"}
                 </p>
 
                 {!inLibrary && (
-                    <div className="flex-grow flex flex-col mb-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
+                    <div className="flex-grow flex flex-col mb-2 sm:mb-3">
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
                             {manga?.description || "Sin sinopsis disponible."}
                         </p>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="mt-2 text-[10px] font-bold text-potaxie-600 dark:text-potaxie-400 hover:underline text-left self-start"
+                            className="mt-1 sm:mt-2 text-[9px] sm:text-[10px] font-bold text-potaxie-600 dark:text-potaxie-400 hover:underline text-left self-start"
                         >
                             Leer sinopsis completa... ✨
                         </button>
@@ -206,18 +206,18 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                 )}
 
                 {inLibrary ? (
-                    <div className="flex flex-col gap-3 mt-auto">
-                        <div className="flex items-center gap-2">
-                            <form onSubmit={handleProgressUpdate} className="flex items-center gap-1.5 w-full">
+                    <div className="flex flex-col gap-2 sm:gap-3 mt-auto">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <form onSubmit={handleProgressUpdate} className="flex items-center gap-1 sm:gap-1.5 w-full flex-wrap">
                                 <input
                                     type="number"
                                     min="0"
                                     value={chaptersInput}
                                     onChange={(e) => setChaptersInput(Math.max(0, parseInt(e.target.value) || 0))}
-                                    className="w-12 p-1 text-xs border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-600 text-center"
+                                    className="w-10 sm:w-12 p-0.5 sm:p-1 text-[10px] sm:text-xs border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-600 text-center"
                                 />
-                                <span className="text-[10px] text-gray-500">/{manga?.lastChapter || "?"}</span>
-                                <button type="submit" className="text-[10px] bg-potaxie-green text-white px-2 py-1 rounded font-bold">Ok</button>
+                                <span className="text-[8px] sm:text-[10px] text-gray-500">/{manga?.lastChapter || "?"}</span>
+                                <button type="submit" className="text-[8px] sm:text-[10px] bg-potaxie-green text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold">Ok</button>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -225,31 +225,31 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                         setChaptersInput(newVal);
                                         updateProgress(manga.id, 1);
                                     }}
-                                    className="text-[10px] bg-cyan-500 text-white px-2 py-1 rounded hover:bg-cyan-600 font-bold"
+                                    className="text-[8px] sm:text-[10px] bg-cyan-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded hover:bg-cyan-600 font-bold"
                                 >
                                     +1
                                 </button>
                             </form>
                         </div>
 
-                        <div className="flex gap-1 justify-center border-t dark:border-gray-700 pt-2">
+                        <div className="flex gap-0.5 sm:gap-1 justify-center border-t dark:border-gray-700 pt-1.5 sm:pt-2">
                             {AVOCADO_RATING.map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setMangaRating(manga.id, r)}
-                                    className={`text-base transition-transform hover:scale-125 ${(manga?.rating || 0) >= r ? 'opacity-100' : 'opacity-20 grayscale'}`}
+                                    className={`text-sm sm:text-base transition-transform hover:scale-125 ${(manga?.rating || 0) >= r ? 'opacity-100' : 'opacity-20 grayscale'}`}
                                 >
                                     🥑
                                 </button>
                             ))}
                         </div>
 
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-0.5 sm:mt-1">
                             <button
                                 onClick={() => setIsModalOpen(true)}
-                                className="text-[10px] font-bold text-potaxie-600 flex items-center gap-1 hover:underline"
+                                className="text-[8px] sm:text-[10px] font-bold text-potaxie-600 flex items-center gap-0.5 sm:gap-1 hover:underline"
                             >
-                                <BookOpen size={10} /> Notas & Extra
+                                <BookOpen size={10} /> <span className="hidden sm:inline">Notas & Extra</span><span className="sm:hidden">Más</span>
                             </button>
                             <button
                                 onClick={() => {
@@ -261,18 +261,18 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                     const randomCopy = copies[Math.floor(Math.random() * copies.length)];
                                     showToast(randomCopy);
                                 }}
-                                className="text-[10px] text-red-500 hover:text-red-600 flex items-center gap-1 font-bold group"
+                                className="text-[8px] sm:text-[10px] text-red-500 hover:text-red-600 flex items-center gap-0.5 sm:gap-1 font-bold group"
                             >
-                                <Trash2 size={10} className="group-hover:animate-bounce" /> Quitar
+                                <Trash2 size={10} className="group-hover:animate-bounce" /> <span className="hidden sm:inline">Quitar</span>
                             </button>
                         </div>
                     </div>
                 ) : (
                     <button
                         onClick={handleAdd}
-                        className="mt-auto w-full py-2.5 bg-potaxie-green hover:bg-green-600 text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-md active:scale-95"
+                        className="mt-auto w-full py-2 sm:py-2.5 bg-potaxie-green hover:bg-green-600 text-white rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold transition-all shadow-md active:scale-95"
                     >
-                        <Plus size={16} /> Añadir a Biblioteca
+                        <Plus size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Añadir a Biblioteca</span><span className="sm:hidden">Añadir</span>
                     </button>
                 )}
             </div>
