@@ -157,8 +157,9 @@ export const Oracle = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-12"
             >
-                <h2 className="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-500 mb-4 inline-flex items-center gap-3">
-                    El Oráculo Potaxio 🔮✨
+                <h2 className="text-4xl md:text-6xl font-black mb-4 inline-flex items-center gap-3">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-500">El Oráculo Potaxio</span>
+                    <span>🔮✨</span>
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 text-lg md:text-xl font-medium">
                     "Donde el cosmos decide qué manhwa devorarás hoy"
