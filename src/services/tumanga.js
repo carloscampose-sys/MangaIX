@@ -574,13 +574,29 @@ export const getRandomManga = async (genreIds = []) => {
             if (allResults.length === 0) return null;
             const randomIndex = Math.floor(Math.random() * allResults.length);
             const randomManga = allResults[randomIndex];
-            return await getTuMangaDetails(randomManga.slug);
+            // Obtener detalles pero mantener la portada del resultado de búsqueda
+            const details = await getTuMangaDetails(randomManga.slug);
+            if (details) {
+                // Usar la portada de la búsqueda si los detalles no tienen una válida
+                if (!details.cover || details.cover.includes('loader')) {
+                    details.cover = randomManga.cover;
+                }
+            }
+            return details;
         }
 
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManga = results[randomIndex];
 
-        return await getTuMangaDetails(randomManga.slug);
+        // Obtener detalles pero mantener la portada del resultado de búsqueda
+        const details = await getTuMangaDetails(randomManga.slug);
+        if (details) {
+            // Usar la portada de la búsqueda si los detalles no tienen una válida
+            if (!details.cover || details.cover.includes('loader')) {
+                details.cover = randomManga.cover;
+            }
+        }
+        return details;
     } catch (error) {
         console.error('Error getting random manga:', error);
         return null;
