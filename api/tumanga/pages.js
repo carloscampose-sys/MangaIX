@@ -35,14 +35,12 @@ export default async function handler(req, res) {
 
         const page = await browser.newPage();
 
-        // Bloquear recursos innecesarios para acelerar
+        // Bloquear solo publicidad, permitir scripts necesarios
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-            const resourceType = req.resourceType();
-            // Bloquear CSS, fuentes y scripts de publicidad
-            if (['stylesheet', 'font'].includes(resourceType)) {
-                req.abort();
-            } else if (req.url().includes('google') || req.url().includes('analytics') || req.url().includes('yandex')) {
+            const url = req.url();
+            // Bloquear publicidad y analytics
+            if (url.includes('google') || url.includes('analytics') || url.includes('yandex') || url.includes('ads')) {
                 req.abort();
             } else {
                 req.continue();
@@ -51,27 +49,42 @@ export default async function handler(req, res) {
 
         // Navegar a la página del capítulo
         await page.goto(`https://tumanga.org/leer/${slug}-${chapter}`, {
-            waitUntil: 'domcontentloaded',
+            waitUntil: 'networkidle2',
             timeout: 8000
         });
 
-        // Esperar un poco para que el JavaScript decodifique las imágenes
+        // Esperar a que las imágenes reales se carguen (no los loaders)
         await page.waitForFunction(() => {
             const imgs = document.querySelectorAll('#lector img');
-            return imgs.length > 0;
-        }, { timeout: 5000 }).catch(() => {
-            console.log('Timeout waiting for images, trying to extract anyway...');
+            if (imgs.length === 0) return false;
+
+            // Verificar que al menos una imagen NO sea el loader
+            for (const img of imgs) {
+                const src = img.src || img.dataset?.src || '';
+                if (src && !src.includes('loader') && (src.includes('pic_source') || src.includes('social-google'))) {
+                    return true;
+                }
+            }
+            return false;
+        }, { timeout: 6000 }).catch(() => {
+            console.log('Timeout waiting for real images...');
         });
 
-        // Extraer URLs de imágenes
+        // Pequeña pausa adicional para asegurar que todas las imágenes se decodifiquen
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Extraer URLs de imágenes (excluyendo loaders)
         const pages = await page.evaluate(() => {
             const images = document.querySelectorAll('#lector img');
             const urls = [];
 
             images.forEach(img => {
                 const src = img.src || img.dataset?.src || img.getAttribute('data-src');
-                if (src && (src.includes('tumanga') || src.includes('pic_source') || src.includes('social-google'))) {
-                    urls.push(src);
+                // Excluir loaders y solo incluir imágenes reales
+                if (src && !src.includes('loader') && !src.includes('assets/img')) {
+                    if (src.includes('pic_source') || src.includes('social-google') || src.includes('tumanga.org/pic')) {
+                        urls.push(src);
+                    }
                 }
             });
 
