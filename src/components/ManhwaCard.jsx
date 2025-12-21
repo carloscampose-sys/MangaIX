@@ -9,10 +9,14 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 
-// Proxy para imágenes con CORS
-const getProxiedImageUrl = (url) => {
+// Obtener URL de imagen (con proxy si es de tumanga)
+const getImageUrl = (url) => {
     if (!url || url.includes('loader') || url.includes('assets/img')) return null;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    // Si es de tumanga, usar proxy para evitar CORS
+    if (url.includes('tumanga.org')) {
+        return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
 };
 
 const AVOCADO_RATING = [1, 2, 3, 4, 5];
@@ -159,7 +163,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                     </div>
                 ) : (
                     <img
-                        src={getProxiedImageUrl(manga?.cover) || 'https://via.placeholder.com/300x450/1f2937/9ca3af?text=🥑'}
+                        src={getImageUrl(manga?.cover) || 'https://via.placeholder.com/300x450/1f2937/9ca3af?text=🥑'}
                         alt={manga?.title || 'Unknown'}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         onError={(e) => { e.target.src = 'https://via.placeholder.com/300x450/1f2937/9ca3af?text=🥑'; }}

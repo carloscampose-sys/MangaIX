@@ -6,10 +6,13 @@ import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
 import { Reader } from './Reader';
 
-// Proxy para imágenes con CORS
-const getProxiedImageUrl = (url) => {
-    if (!url || url.includes('loader')) return '/placeholder-cover.svg';
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+// Obtener URL de imagen (con proxy si es de tumanga)
+const getImageUrl = (url) => {
+    if (!url || url.includes('loader') || url.includes('assets/img')) return '/placeholder-cover.svg';
+    if (url.includes('tumanga.org')) {
+        return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
 };
 
 export const DetailModal = ({
@@ -161,7 +164,7 @@ export const DetailModal = ({
                         {/* Izquierda: Portada */}
                         <div className="md:w-[45%] relative h-72 md:h-auto overflow-hidden bg-gray-200 dark:bg-gray-800">
                             <img
-                                src={getProxiedImageUrl(displayData?.cover || manga?.cover)}
+                                src={getImageUrl(displayData?.cover || manga?.cover)}
                                 alt={displayData?.title || manga?.title}
                                 className="w-full h-full object-cover"
                                 onError={(e) => { e.target.src = '/placeholder-cover.svg'; }}

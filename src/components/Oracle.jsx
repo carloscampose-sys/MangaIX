@@ -9,21 +9,20 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 
+// Obtener URL de imagen (con proxy si es de tumanga)
+const getImageUrl = (url) => {
+    if (!url || url.includes('loader') || url.includes('assets/img')) return '/placeholder-cover.svg';
+    if (url.includes('tumanga.org')) {
+        return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+};
+
 const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibrary }) => {
     const { showToast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
-
-    // Construir URL de imagen con proxy
-    const getImageUrl = () => {
-        const cover = recommendation?.cover;
-        if (!cover || cover.includes('loader')) {
-            return '/placeholder-cover.svg';
-        }
-        // Usar proxy para evitar CORS
-        return `https://images.weserv.nl/?url=${encodeURIComponent(cover)}&default=${encodeURIComponent('https://via.placeholder.com/400x600/1f2937/9ca3af?text=🥑')}`;
-    };
 
     const handleAdd = (e) => {
         e.stopPropagation();
@@ -69,11 +68,11 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                             </div>
                         )}
                         <img
-                            src={imageError ? '/placeholder-cover.svg' : getImageUrl()}
+                            src={getImageUrl(recommendation?.cover)}
                             alt={recommendation?.title}
                             className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                             onLoad={() => setImageLoaded(true)}
-                            onError={() => setImageError(true)}
+                            onError={(e) => { setImageError(true); e.target.src = '/placeholder-cover.svg'; }}
                         />
                     </div>
                     <div className="p-6 md:w-3/5 text-left flex flex-col">

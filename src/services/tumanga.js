@@ -275,28 +275,6 @@ export const searchTuManga = async (query = '', filters = {}) => {
 };
 
 /**
- * Obtiene la portada usando la API con Puppeteer
- */
-const fetchCoverFromAPI = async (slug) => {
-    try {
-        const isLocalhost = typeof window !== 'undefined' &&
-            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        const apiBase = isLocalhost ? 'http://localhost:3000' : '';
-
-        const response = await fetch(`${apiBase}/api/tumanga/cover?slug=${encodeURIComponent(slug)}`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.cover) {
-                return data.cover;
-            }
-        }
-    } catch (error) {
-        console.warn('Error fetching cover from API:', error);
-    }
-    return null;
-};
-
-/**
  * Obtiene los detalles completos de un manga
  */
 export const getTuMangaDetails = async (slug) => {
@@ -310,19 +288,11 @@ export const getTuMangaDetails = async (slug) => {
         // Extraer título
         const title = doc.querySelector('h1')?.textContent?.trim() || slug;
 
-        // Extraer imagen de portada del HTML (puede ser loader)
+        // Extraer imagen de portada
         const coverImg = doc.querySelector('.cover img, .portada img, img[alt*="cover"], .manga-cover img');
         let cover = coverImg?.getAttribute('data-src') || coverImg?.getAttribute('src') || '';
         if (cover && !cover.startsWith('http')) {
             cover = `${BASE_URL}${cover}`;
-        }
-
-        // Si la portada es un loader, intentar obtenerla de la API
-        if (!cover || cover.includes('loader') || cover.includes('assets/img')) {
-            const apiCover = await fetchCoverFromAPI(slug);
-            if (apiCover) {
-                cover = apiCover;
-            }
         }
 
         // Extraer sinopsis
