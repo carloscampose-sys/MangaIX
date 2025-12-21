@@ -4,8 +4,9 @@ const BASE_URL = 'https://tumanga.org';
 
 // Lista de proxies CORS para hacer fallback
 const PROXY_URLS = [
-    'https://api.allorigins.win/raw?url=',
     'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+    'https://proxy.cors.sh/',
     'https://api.codetabs.com/v1/proxy?quest='
 ];
 
@@ -14,19 +15,37 @@ let currentProxyIndex = 0;
 /**
  * Hace una petición con fallback de proxies
  */
-const fetchWithProxy = async (url, retries = 3) => {
+const fetchWithProxy = async (url, retries = 4) => {
+    const errors = [];
+
     for (let i = 0; i < retries; i++) {
-        const proxyUrl = PROXY_URLS[(currentProxyIndex + i) % PROXY_URLS.length];
+        const proxyIndex = (currentProxyIndex + i) % PROXY_URLS.length;
+        const proxyUrl = PROXY_URLS[proxyIndex];
+
         try {
-            const response = await axios.get(`${proxyUrl}${encodeURIComponent(url)}`, {
-                timeout: 15000
+            const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
+            console.log(`Intentando proxy ${proxyIndex + 1}/${PROXY_URLS.length}...`);
+
+            const response = await axios.get(fullUrl, {
+                timeout: 12000,
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                }
             });
+
             // Si funcionó, usar este proxy para las siguientes peticiones
-            currentProxyIndex = (currentProxyIndex + i) % PROXY_URLS.length;
+            currentProxyIndex = proxyIndex;
+            console.log(`Proxy ${proxyUrl} funcionó correctamente`);
             return response;
         } catch (error) {
-            console.warn(`Proxy ${proxyUrl} falló, intentando siguiente...`);
-            if (i === retries - 1) throw error;
+            const errorMsg = error.response?.status || error.message;
+            console.warn(`Proxy ${proxyUrl} falló (${errorMsg}), intentando siguiente...`);
+            errors.push({ proxy: proxyUrl, error: errorMsg });
+
+            if (i === retries - 1) {
+                console.error('Todos los proxies fallaron:', errors);
+                throw new Error('Todos los proxies CORS fallaron');
+            }
         }
     }
 };
