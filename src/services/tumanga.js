@@ -288,9 +288,45 @@ export const getTuMangaDetails = async (slug) => {
         // Extraer título
         const title = doc.querySelector('h1')?.textContent?.trim() || slug;
 
-        // Extraer imagen de portada
-        const coverImg = doc.querySelector('.cover img, .portada img, img[alt*="cover"], .manga-cover img');
-        let cover = coverImg?.getAttribute('data-src') || coverImg?.getAttribute('src') || '';
+        // Extraer imagen de portada - probar múltiples selectores
+        const coverSelectors = [
+            '.cover img',
+            '.portada img',
+            '.manga-cover img',
+            '.thumb img',
+            '.info img',
+            'img[alt*="cover"]',
+            'img[data-src*="uploads"]',
+            'img[src*="uploads"]',
+            '.container img'
+        ];
+
+        let cover = '';
+        for (const selector of coverSelectors) {
+            const img = doc.querySelector(selector);
+            if (img) {
+                const src = img.getAttribute('data-src') || img.getAttribute('src') || '';
+                // Solo aceptar si no es un loader
+                if (src && !src.includes('loader') && !src.includes('assets/img')) {
+                    cover = src;
+                    break;
+                }
+            }
+        }
+
+        // Si no encontramos con selectores, buscar cualquier imagen que parezca portada
+        if (!cover) {
+            const allImages = doc.querySelectorAll('img');
+            for (const img of allImages) {
+                const src = img.getAttribute('data-src') || img.getAttribute('src') || '';
+                if (src && !src.includes('loader') && !src.includes('assets/img') &&
+                    (src.includes('uploads') || src.includes('cover') || src.includes('poster'))) {
+                    cover = src;
+                    break;
+                }
+            }
+        }
+
         if (cover && !cover.startsWith('http')) {
             cover = `${BASE_URL}${cover}`;
         }

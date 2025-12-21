@@ -5,6 +5,7 @@ import { X, Share2, Sparkles, BookOpen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
 import { Reader } from './Reader';
+import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
 
 export const DetailModal = ({
     manga,
@@ -155,9 +156,10 @@ export const DetailModal = ({
                         {/* Izquierda: Portada */}
                         <div className="md:w-[45%] relative h-72 md:h-auto overflow-hidden bg-gray-200 dark:bg-gray-800">
                             <img
-                                src={displayData?.cover || manga?.cover}
+                                src={getImageUrl(displayData?.cover || manga?.cover) || PLACEHOLDER_IMAGE}
                                 alt={displayData?.title || manga?.title}
                                 className="w-full h-full object-cover"
+                                onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-80" />
                             <div className="absolute bottom-6 left-6 right-6">

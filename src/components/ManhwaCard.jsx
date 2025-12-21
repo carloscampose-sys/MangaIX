@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
+import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
 
 const AVOCADO_RATING = [1, 2, 3, 4, 5];
 
@@ -153,9 +154,10 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                     </div>
                 ) : (
                     <img
-                        src={manga?.cover || 'https://via.placeholder.com/300x450'}
+                        src={getImageUrl(manga?.cover) || PLACEHOLDER_IMAGE}
                         alt={manga?.title || 'Unknown'}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                     />
                 )}
 
