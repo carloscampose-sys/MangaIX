@@ -9,9 +9,17 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 
+// Proxy para imágenes que tienen problemas de CORS
+const getProxiedImageUrl = (url) => {
+    if (!url) return '/placeholder-cover.svg';
+    // Usar un proxy de imágenes para evitar CORS
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=400&h=600&fit=cover`;
+};
+
 const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibrary }) => {
     const { showToast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     const handleAdd = (e) => {
         e.stopPropagation();
@@ -50,11 +58,12 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                 onClick={() => setIsModalOpen(true)}
             >
                 <div className="flex flex-col md:flex-row h-full relative z-10">
-                    <div className="md:w-2/5 h-64 md:h-80 overflow-hidden">
+                    <div className="md:w-2/5 h-64 md:h-80 overflow-hidden bg-gray-200 dark:bg-gray-700">
                         <img
-                            src={recommendation?.cover}
+                            src={imageError ? '/placeholder-cover.svg' : getProxiedImageUrl(recommendation?.cover)}
                             alt={recommendation?.title}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            onError={() => setImageError(true)}
                         />
                     </div>
                     <div className="p-6 md:w-3/5 text-left flex flex-col">

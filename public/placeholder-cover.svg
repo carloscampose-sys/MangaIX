@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600">
+  <rect width="400" height="600" fill="#1f2937"/>
+  <text x="200" y="280" text-anchor="middle" font-size="80">🥑</text>
+  <text x="200" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af">Cargando portada...</text>
+</svg>
