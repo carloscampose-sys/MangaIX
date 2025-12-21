@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const BASE_URL = 'https://tumanga.org';
 
-// Lista de proxies CORS para hacer fallback
+// Lista de proxies CORS para hacer fallback (ordenados por confiabilidad)
 const PROXY_URLS = [
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
