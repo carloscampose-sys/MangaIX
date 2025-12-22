@@ -67,8 +67,9 @@ export default async function handler(req, res) {
             }
         });
 
-        // Navegar a la página de búsqueda
-        const searchUrl = `https://manhwaweb.com/mis-manhwas?buscar=${encodeURIComponent(query)}`;
+        // Intentar página principal primero (sin login)
+        // Si no funciona, probaremos otras rutas
+        const searchUrl = `https://manhwaweb.com/?buscar=${encodeURIComponent(query)}`;
         console.log(`[ManhwaWeb Search] Navigating to: ${searchUrl}`);
 
         await page.goto(searchUrl, {
