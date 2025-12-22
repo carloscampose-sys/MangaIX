@@ -28,14 +28,14 @@ function getService(source) {
 /**
  * Busca obras en una fuente específica
  */
-export async function unifiedSearch(query, filters, source) {
+export async function unifiedSearch(query, filters, source, page = 1) {
     try {
         const service = getService(source);
         
         if (source === 'tumanga') {
             return await service.searchTuManga(query, filters);
         } else if (source === 'manhwaweb') {
-            return await service.searchManhwaWeb(query, filters);
+            return await service.searchManhwaWeb(query, filters, page);
         }
         
         return [];

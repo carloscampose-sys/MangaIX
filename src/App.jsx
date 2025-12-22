@@ -35,6 +35,10 @@ const MainApp = ({ userName }) => {
   const [selectedSortBy, setSelectedSortBy] = useState('');
   const [selectedSortOrder, setSelectedSortOrder] = useState('');
   
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  
   const { showToast } = useToast();
   
   // Obtener filtros dinámicos según fuente seleccionada
@@ -58,6 +62,14 @@ const MainApp = ({ userName }) => {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Ejecutar búsqueda automáticamente cuando cambie la página
+  useEffect(() => {
+    if (currentPage > 1 && searchResults.length > 0) {
+      // Solo ejecutar si ya hay resultados (para no ejecutar en la carga inicial)
+      handleSearch();
+    }
+  }, [currentPage]);
 
   const navigateToPage = (newPage) => {
     const currentIndex = PAGES_ORDER.indexOf(page);
@@ -172,8 +184,8 @@ const MainApp = ({ userName }) => {
       };
     }
     
-    // Usar servicio unificado según la fuente seleccionada
-    let results = await unifiedSearch(searchTerm, filters, selectedSource);
+    // Usar servicio unificado según la fuente seleccionada con página actual
+    let results = await unifiedSearch(searchTerm, filters, selectedSource, currentPage);
 
     // Si no hay resultados y hay filtros, intentar sin filtros
     if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
@@ -191,7 +203,27 @@ const MainApp = ({ userName }) => {
     }));
 
     setSearchResults(results);
+    
+    // Determinar si hay más páginas (si obtuvo 60 resultados, probablemente hay más)
+    setHasMorePages(results.length >= 60);
+    
     setLoading(false);
+  };
+  
+  // Función para ir a la página siguiente
+  const goToNextPage = () => {
+    setCurrentPage(prev => prev + 1);
+    // Hacer scroll al inicio
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Función para ir a la página anterior
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      // Hacer scroll al inicio
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleMoodSelect = (mood) => {
@@ -230,6 +262,7 @@ const MainApp = ({ userName }) => {
     setSelectedDemographic('');
     setSelectedSortBy('');
     setSelectedSortOrder('');
+    setCurrentPage(1); // Reset página también
   };
 
   const handleSurprise = () => {
@@ -360,6 +393,7 @@ const MainApp = ({ userName }) => {
                             setSelectedDemographic('');
                             setSelectedSortBy('');
                             setSelectedSortOrder('');
+                            setCurrentPage(1); // Reset página también
                             
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
                           }}
@@ -723,6 +757,70 @@ const MainApp = ({ userName }) => {
                     ))}
                   </AnimatePresence>
                 </motion.div>
+
+                {/* Botones de Paginación */}
+                {!loading && searchResults.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center gap-4 mt-8 mb-4"
+                  >
+                    {/* Información de resultados */}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold">
+                      Mostrando {searchResults.length} resultados en esta página
+                      {hasMorePages && (
+                        <span className="text-potaxie-green ml-1">
+                          • Hay más páginas disponibles 📚
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Botones de navegación */}
+                    <div className="flex justify-center items-center gap-4"
+                  >
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      className={`px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 transition-all ${
+                        currentPage === 1
+                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                          : 'bg-potaxie-green hover:bg-green-600 text-white shadow-lg'
+                      }`}
+                    >
+                      <ChevronDown className="rotate-90" size={18} />
+                      Anterior
+                    </motion.button>
+
+                    <div className="px-4 py-2 bg-white dark:bg-gray-800 rounded-full border-2 border-potaxie-green shadow-md">
+                      <span className="font-black text-potaxie-green">
+                        Página {currentPage}{hasMorePages ? '+' : ''}
+                      </span>
+                      {hasMorePages && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                          (hay más)
+                        </span>
+                      )}
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={goToNextPage}
+                      disabled={!hasMorePages}
+                      className={`px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 transition-all ${
+                        !hasMorePages
+                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                          : 'bg-potaxie-green hover:bg-green-600 text-white shadow-lg'
+                      }`}
+                    >
+                      Siguiente
+                      <ChevronUp className="rotate-90" size={18} />
+                    </motion.button>
+                    </div>
+                  </motion.div>
+                )}
 
                 {!loading && searchResults.length === 0 && (searchQuery || selectedGenres.length > 0 || selectedFormats.length > 0) && (
                   <motion.div

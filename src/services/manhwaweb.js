@@ -66,7 +66,7 @@ export const normalizeTitle = (title) => {
  * En LOCAL: Muestra mensaje informativo (ManhwaWeb requiere API serverless)
  * En PRODUCCIÓN: Usa API serverless con Puppeteer
  */
-export const searchManhwaWeb = async (query = '', filters = {}) => {
+export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
     try {
         console.log(`[ManhwaWeb] Buscando: "${query}"`, filters);
 
@@ -103,7 +103,8 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
                 erotic: filters.erotic || '',
                 demographic: filters.demographic || '',
                 sortBy: filters.sortBy || '',
-                sortOrder: filters.sortOrder || ''
+                sortOrder: filters.sortOrder || '',
+                page: page || 1  // Agregar parámetro de página
             },
             timeout: 60000 // 60 segundos para Puppeteer
         });

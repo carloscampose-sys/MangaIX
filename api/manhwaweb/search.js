@@ -14,8 +14,8 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar)
-    const { query, genres, type, status, erotic, demographic, sortBy, sortOrder } = req.query;
+    // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar, página)
+    const { query, genres, type, status, erotic, demographic, sortBy, sortOrder, page } = req.query;
 
     // Permitir búsquedas solo con filtros (sin query de texto)
     // if (!query && !genres) {
@@ -177,6 +177,11 @@ export default async function handler(req, res) {
             urlParams.append('order_item', 'alfabetico');
             urlParams.append('order_dir', 'desc');
         }
+        
+        // Agregar paginación (page=1, page=2, etc.)
+        const pageNumber = page ? parseInt(page) : 1;
+        urlParams.append('page', pageNumber);
+        console.log('[ManhwaWeb Search] Página:', pageNumber);
         
         // Construir URL final
         const finalUrl = urlParams.toString() ? `${libraryUrl}?${urlParams.toString()}` : libraryUrl;
