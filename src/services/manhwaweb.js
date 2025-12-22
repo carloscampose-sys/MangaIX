@@ -147,46 +147,44 @@ export const getManhwaWebDetails = async (slug) => {
 };
 
 /**
- * Obtiene la lista de capítulos de una obra
+ * Obtiene la lista de capítulos de una obra usando API serverless con Puppeteer
  */
 export const getManhwaWebChapters = async (slug) => {
     try {
-        const url = `${BASE_URL}/manhwa/${slug}`;
-        const response = await fetchWithProxy(url);
+        console.log(`[ManhwaWeb] Obteniendo capítulos de: ${slug}`);
+        
+        // Detectar si estamos en local
+        const isLocal = typeof window !== 'undefined' && 
+                       (window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1');
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(response.data, 'text/html');
-        
-        const chapters = [];
-        
-        // Buscar enlaces de capítulos (esto puede variar, necesita verificación)
-        const chapterLinks = doc.querySelectorAll('a[href*="/capitulo/"], a[href*="/chapter/"], a[href*="/cap/"]');
-        
-        chapterLinks.forEach((link, index) => {
-            const href = link.getAttribute('href');
-            if (!href) return;
-            
-            // Intentar extraer número de capítulo del href o del texto
-            const chapterText = link.textContent.trim();
-            const chapterMatch = chapterText.match(/cap[íi]tulo\s*(\d+\.?\d*)/i) || 
-                                chapterText.match(/chapter\s*(\d+\.?\d*)/i) ||
-                                chapterText.match(/(\d+\.?\d*)/);
-            
-            const chapterNum = chapterMatch ? chapterMatch[1] : String(index + 1);
-            
-            const uniqueId = `manhwaweb-${slug}-ch-${chapterNum}-${Date.now()}-${index}`;
-            
-            chapters.push({
-                id: uniqueId,
-                slug,
-                chapter: chapterNum,
-                title: chapterText || `Capítulo ${chapterNum}`,
-                url: href.startsWith('http') ? href : `${BASE_URL}${href}`
-            });
+        if (isLocal) {
+            console.warn('[ManhwaWeb] ⚠️ Capítulos no disponibles en local con Vite.');
+            console.warn('[ManhwaWeb] 💡 Para ver capítulos, despliega a Vercel.');
+            return [];
+        }
+
+        // En producción, usar la API serverless
+        const response = await axios.get('/api/manhwaweb/chapters', {
+            params: { slug },
+            timeout: 40000 // 40 segundos
         });
-        
-        console.log(`[ManhwaWeb] Encontrados ${chapters.length} capítulos`);
-        return chapters;
+
+        if (response.data.success && response.data.chapters) {
+            const chapters = response.data.chapters.map((item, index) => ({
+                id: `manhwaweb-${slug}-ch-${item.chapter}-${Date.now()}-${index}`,
+                slug,
+                chapter: item.chapter,
+                title: item.title,
+                url: item.url
+            }));
+
+            console.log(`[ManhwaWeb] Encontrados ${chapters.length} capítulos`);
+            return chapters;
+        } else {
+            console.error('[ManhwaWeb] Respuesta inválida de la API');
+            return [];
+        }
     } catch (error) {
         console.error('[ManhwaWeb] Error obteniendo capítulos:', error);
         return [];
