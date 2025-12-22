@@ -90,10 +90,10 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
             return [];
         }
 
-        // En producción, usar la API serverless
+        // En producción, usar la API serverless (timeout aumentado)
         const response = await axios.get('/api/manhwaweb/search', {
             params: { query },
-            timeout: 30000
+            timeout: 60000 // 60 segundos para Puppeteer
         });
 
         if (response.data.success && response.data.results) {
