@@ -73,129 +73,65 @@ export default async function handler(req, res) {
             }
         });
 
-        // ManhwaWeb requiere que la búsqueda se ejecute con interacción
-        // Primero vamos a la biblioteca, luego escribimos en el input de búsqueda
-        const libraryUrl = `https://manhwaweb.com/library`;
-        console.log(`[ManhwaWeb Search] Navigating to library first: ${libraryUrl}`);
-
-        await page.goto(libraryUrl, {
+        // NUEVA ESTRATEGIA: Construir URL con todos los parámetros
+        // ManhwaWeb usa parámetros URL para filtros, no necesitamos clicks
+        let libraryUrl = 'https://manhwaweb.com/library';
+        const urlParams = new URLSearchParams();
+        
+        // Agregar búsqueda si existe
+        if (query && query.trim()) {
+            urlParams.append('buscar', query.trim());
+        }
+        
+        // Agregar géneros (ManhwaWeb usa 'genders[]' en la URL)
+        if (genreIds.length > 0) {
+            genreIds.forEach(genreId => {
+                urlParams.append('genders[]', genreId);
+            });
+            console.log('[ManhwaWeb Search] Géneros en URL:', genreIds);
+        }
+        
+        // Agregar tipo
+        if (type) {
+            urlParams.append('type', type);
+            console.log('[ManhwaWeb Search] Tipo en URL:', type);
+        }
+        
+        // Agregar estado
+        if (status) {
+            urlParams.append('status', status);
+            console.log('[ManhwaWeb Search] Estado en URL:', status);
+        }
+        
+        // Agregar erótico
+        if (erotic) {
+            urlParams.append('erotic', erotic);
+            console.log('[ManhwaWeb Search] Erótico en URL:', erotic);
+        }
+        
+        // Agregar demografía
+        if (demographic) {
+            urlParams.append('demographic', demographic);
+            console.log('[ManhwaWeb Search] Demografía en URL:', demographic);
+        }
+        
+        // Agregar ordenamiento
+        if (sortBy) {
+            urlParams.append('sortby', sortBy);
+            if (sortOrder) {
+                urlParams.append('order', sortOrder);
+            }
+            console.log('[ManhwaWeb Search] Orden en URL:', sortBy, sortOrder);
+        }
+        
+        // Construir URL final
+        const finalUrl = urlParams.toString() ? `${libraryUrl}?${urlParams.toString()}` : libraryUrl;
+        console.log(`[ManhwaWeb Search] Navegando con filtros: ${finalUrl}`);
+        
+        await page.goto(finalUrl, {
             waitUntil: 'domcontentloaded',
             timeout: 30000
         });
-
-        // Esperar a que el input de búsqueda esté disponible
-        console.log('[ManhwaWeb Search] Esperando input de búsqueda...');
-        
-        try {
-            // Buscar el input de búsqueda con diferentes selectores
-            const searchInput = await page.waitForSelector('input[type="search"], input[name*="buscar"], input[placeholder*="Buscar"], input[class*="search"]', { timeout: 5000 });
-            
-            if (searchInput) {
-                console.log('[ManhwaWeb Search] Input encontrado, escribiendo query...');
-                await searchInput.type(query, { delay: 50 });
-                
-                // Presionar Enter
-                await page.keyboard.press('Enter');
-                console.log('[ManhwaWeb Search] Enter presionado, esperando resultados...');
-                
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        } catch (error) {
-            console.log('[ManhwaWeb Search] No se encontró input de búsqueda, intentando URL directa...');
-            const searchUrl = `https://manhwaweb.com/library?buscar=${encodeURIComponent(query)}`;
-            await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        }
-        
-        // Aplicar filtros si existen
-        if (genreIds.length > 0 || type || status || erotic || demographic || sortBy) {
-            console.log('[ManhwaWeb Search] Aplicando filtros...');
-            
-            try {
-                // Buscar y hacer clic en botón de filtros si existe
-                const filterButton = await page.$('button[class*="filter"], button[class*="filtro"]');
-                if (filterButton) {
-                    await filterButton.click();
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-                
-                // Aplicar filtros de géneros (checkboxes)
-                if (genreIds.length > 0) {
-                    console.log('[ManhwaWeb Search] Aplicando géneros:', genreIds);
-                    for (const genreId of genreIds) {
-                        // Buscar checkbox por value o por texto
-                        const checkbox = await page.$(`input[type="checkbox"][value="${genreId}"], input[name="genders"][value="${genreId}"]`);
-                        if (checkbox) {
-                            const isChecked = await page.evaluate(el => el.checked, checkbox);
-                            if (!isChecked) {
-                                await checkbox.click();
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            }
-                        }
-                    }
-                }
-                
-                // Aplicar filtro de tipo
-                if (type) {
-                    console.log('[ManhwaWeb Search] Aplicando tipo:', type);
-                    const typeSelect = await page.$('select[name*="type"], select[name*="tipo"]');
-                    if (typeSelect) {
-                        await typeSelect.select(type);
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                }
-                
-                // Aplicar filtro de estado
-                if (status) {
-                    console.log('[ManhwaWeb Search] Aplicando estado:', status);
-                    const statusSelect = await page.$('select[name*="status"], select[name*="estado"]');
-                    if (statusSelect) {
-                        await statusSelect.select(status);
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                }
-                
-                // Aplicar filtro demográfico
-                if (demographic) {
-                    console.log('[ManhwaWeb Search] Aplicando demografía:', demographic);
-                    const demoSelect = await page.$('select[name*="demographic"], select[name*="demografia"]');
-                    if (demoSelect) {
-                        await demoSelect.select(demographic);
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                }
-                
-                // Aplicar ordenamiento
-                if (sortBy) {
-                    console.log('[ManhwaWeb Search] Aplicando orden:', sortBy, sortOrder);
-                    const sortSelect = await page.$('select[name*="sort"], select[name*="orden"]');
-                    if (sortSelect) {
-                        await sortSelect.select(sortBy);
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                    
-                    if (sortOrder) {
-                        const orderSelect = await page.$('select[name*="order"], select[name*="direction"]');
-                        if (orderSelect) {
-                            await orderSelect.select(sortOrder);
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        }
-                    }
-                }
-                
-                // Buscar botón de aplicar filtros
-                const applyButton = await page.$('button[type="submit"], button[class*="aplicar"], button[class*="apply"]');
-                if (applyButton) {
-                    console.log('[ManhwaWeb Search] Haciendo clic en aplicar filtros...');
-                    await applyButton.click();
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-                
-                console.log('[ManhwaWeb Search] Filtros aplicados');
-            } catch (filterError) {
-                console.log('[ManhwaWeb Search] Error aplicando filtros:', filterError.message);
-                console.log('[ManhwaWeb Search] Continuando sin filtros...');
-            }
-        }
 
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');
