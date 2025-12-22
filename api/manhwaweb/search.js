@@ -67,14 +67,40 @@ export default async function handler(req, res) {
             }
         });
 
-        // ManhwaWeb usa /library para biblioteca pública (sin login)
-        const searchUrl = `https://manhwaweb.com/library?buscar=${encodeURIComponent(query)}`;
-        console.log(`[ManhwaWeb Search] Navigating to: ${searchUrl}`);
+        // ManhwaWeb requiere que la búsqueda se ejecute con interacción
+        // Primero vamos a la biblioteca, luego escribimos en el input de búsqueda
+        const libraryUrl = `https://manhwaweb.com/library`;
+        console.log(`[ManhwaWeb Search] Navigating to library first: ${libraryUrl}`);
 
-        await page.goto(searchUrl, {
+        await page.goto(libraryUrl, {
             waitUntil: 'domcontentloaded',
             timeout: 30000
         });
+
+        // Esperar a que el input de búsqueda esté disponible
+        console.log('[ManhwaWeb Search] Esperando input de búsqueda...');
+        
+        try {
+            // Buscar el input de búsqueda con diferentes selectores
+            const searchInput = await page.waitForSelector('input[type="search"], input[name*="buscar"], input[placeholder*="Buscar"], input[class*="search"]', { timeout: 5000 });
+            
+            if (searchInput) {
+                console.log('[ManhwaWeb Search] Input encontrado, escribiendo query...');
+                await searchInput.type(query, { delay: 100 });
+                
+                // Presionar Enter o hacer clic en botón de búsqueda
+                await page.keyboard.press('Enter');
+                console.log('[ManhwaWeb Search] Enter presionado, esperando resultados...');
+                
+                // Esperar a que la página actualice con los resultados
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        } catch (error) {
+            console.log('[ManhwaWeb Search] No se encontró input de búsqueda, intentando URL directa...');
+            // Fallback: intentar con URL directa
+            const searchUrl = `https://manhwaweb.com/library?buscar=${encodeURIComponent(query)}`;
+            await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        }
 
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');
