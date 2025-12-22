@@ -108,13 +108,18 @@ export default async function handler(req, res) {
             };
             
             // Convertir cada ID de género a su valor numérico y agregarlo a la URL
+            // PROBANDO MÚLTIPLES NOMBRES DE PARÁMETROS (ManhwaWeb puede usar diferentes nombres)
             genreIds.forEach(genreId => {
                 const genreValue = genreMap[genreId] || genreId;
-                urlParams.append('genders[]', genreValue); // Ej: genders[]=5 en lugar de genders[]=comedia
+                // Intentar con varios nombres de parámetro posibles
+                urlParams.append('genders[]', genreValue);   // Opción 1
+                urlParams.append('genres[]', genreValue);    // Opción 2
+                urlParams.append('genero[]', genreValue);    // Opción 3
+                urlParams.append('genre', genreValue);       // Opción 4 (sin [])
             });
             console.log('[ManhwaWeb Search] Géneros IDs:', genreIds);
             console.log('[ManhwaWeb Search] Géneros valores numéricos:', genreIds.map(id => genreMap[id] || id));
-            // Resultado: /library?genders[]=5 (comedia) en lugar de /library?genders[]=comedia
+            console.log('[ManhwaWeb Search] PROBANDO múltiples nombres de parámetros: genders[], genres[], genero[], genre');
         }
         
         // Agregar tipo
