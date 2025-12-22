@@ -86,14 +86,14 @@ export default async function handler(req, res) {
             
             if (searchInput) {
                 console.log('[ManhwaWeb Search] Input encontrado, escribiendo query...');
-                await searchInput.type(query, { delay: 100 });
+                await searchInput.type(query, { delay: 50 }); // Más rápido
                 
                 // Presionar Enter o hacer clic en botón de búsqueda
                 await page.keyboard.press('Enter');
                 console.log('[ManhwaWeb Search] Enter presionado, esperando resultados...');
                 
-                // Esperar a que la página actualice con los resultados
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                // Esperar a que la página actualice con los resultados (reducido)
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Reducido de 3s a 2s
             }
         } catch (error) {
             console.log('[ManhwaWeb Search] No se encontró input de búsqueda, intentando URL directa...');
@@ -105,18 +105,17 @@ export default async function handler(req, res) {
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');
         
-        // Esperar a que se carguen las tarjetas
+        // Esperar a que se carguen las tarjetas (timeout reducido)
         await page.waitForFunction(() => {
             const links = document.querySelectorAll('a[href*="/manhwa/"]');
-            console.log(`Esperando... Enlaces encontrados: ${links.length}`);
-            return links.length > 5; // Esperar al menos 5 resultados
-        }, { timeout: 30000 }).catch(() => {
+            return links.length > 3; // Reducido a 3 para ser más rápido
+        }, { timeout: 15000 }).catch(() => {
             console.log('[ManhwaWeb Search] Timeout esperando resultados, intentando extraer de todos modos...');
         });
 
-        // Pausa para asegurar que lazy loading termine
+        // Pausa reducida para lazy loading
         console.log('[ManhwaWeb Search] Esperando carga de imágenes lazy...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Reducido de 3s a 1.5s
         
         // Log de debugging
         const debugInfo = await page.evaluate(() => {

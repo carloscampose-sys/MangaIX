@@ -120,6 +120,11 @@ const MainApp = ({ userName }) => {
 
     setLoading(true);
 
+    // Toast especial para ManhwaWeb (tarda más)
+    if (selectedSource === 'manhwaweb') {
+      showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
+    }
+
     // Usar servicio unificado según la fuente seleccionada
     let results = await unifiedSearch(searchTerm, {
       genres: selectedGenres,
