@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     
     // Parsear géneros si vienen como string separado por comas
     // Ejemplo: "accion,aventura,comedia" → ["accion", "aventura", "comedia"]
+    // NOTA: Estos son los IDs (nombres), luego se convierten a valores numéricos
     const genreIds = genres ? (typeof genres === 'string' ? genres.split(',') : genres) : [];
 
     let browser = null;
@@ -87,12 +88,26 @@ export default async function handler(req, res) {
             console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
         
-        // Agregar géneros (ManhwaWeb usa 'genders[]' en la URL)
+        // Agregar géneros (ManhwaWeb usa 'genders[]' con valores numéricos)
+        // Necesitamos convertir los IDs a sus valores numéricos
         if (genreIds.length > 0) {
+            // Mapeo de IDs a valores numéricos (basado en manhwawebFilters.js)
+            const genreMap = {
+                'accion': '3', 'aventura': '4', 'comedia': '5', 'drama': '6',
+                'recuentos': '7', 'romance': '8', 'venganza': '9', 'harem': '10',
+                'fantasia': '11', 'sobrenatural': '12', 'tragedia': '13', 'psicologico': '14',
+                'horror': '15', 'thriller': '16', 'historias-cortas': '17', 'ecchi': '18',
+                'gore': '19', 'girls-love': '20', 'boys-love': '21', 'reencarnacion': '22',
+                'sistema-niveles': '23', 'ciencia-ficcion': '24', 'apocaliptico': '25',
+                'artes-marciales': '26', 'superpoderes': '27', 'cultivacion': '28', 'milf': '29'
+            };
+            
             genreIds.forEach(genreId => {
-                urlParams.append('genders[]', genreId);
+                const genreValue = genreMap[genreId] || genreId;
+                urlParams.append('genders[]', genreValue);
             });
-            console.log('[ManhwaWeb Search] Géneros en URL:', genreIds);
+            console.log('[ManhwaWeb Search] Géneros IDs:', genreIds);
+            console.log('[ManhwaWeb Search] Géneros valores numéricos:', genreIds.map(id => genreMap[id] || id));
         }
         
         // Agregar tipo
