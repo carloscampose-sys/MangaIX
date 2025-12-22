@@ -76,44 +76,82 @@ export default async function handler(req, res) {
             timeout: 30000
         });
 
-        // Esperar a que se carguen las tarjetas (con timeout más largo)
+        // Esperar a que la página cargue completamente
+        console.log('[ManhwaWeb Search] Esperando carga de contenido...');
+        
+        // Esperar a que se carguen las tarjetas
         await page.waitForFunction(() => {
             const links = document.querySelectorAll('a[href*="/manhwa/"]');
-            return links.length > 0;
-        }, { timeout: 20000 }).catch(() => {
-            console.log('[ManhwaWeb Search] Timeout waiting for results, trying to extract anyway...');
+            console.log(`Esperando... Enlaces encontrados: ${links.length}`);
+            return links.length > 5; // Esperar al menos 5 resultados
+        }, { timeout: 30000 }).catch(() => {
+            console.log('[ManhwaWeb Search] Timeout esperando resultados, intentando extraer de todos modos...');
         });
 
-        // Pequeña pausa adicional
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Pausa para asegurar que lazy loading termine
+        console.log('[ManhwaWeb Search] Esperando carga de imágenes lazy...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Log de debugging
+        const debugInfo = await page.evaluate(() => {
+            return {
+                totalLinks: document.querySelectorAll('a').length,
+                manhwaLinks: document.querySelectorAll('a[href*="/manhwa/"]').length,
+                images: document.querySelectorAll('img').length,
+                bodyText: document.body.innerText.substring(0, 200)
+            };
+        });
+        
+        console.log('[ManhwaWeb Search] Debug info:', debugInfo);
 
-        // Extraer resultados
+        // Extraer resultados con debugging mejorado
         const results = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('a[href*="/manhwa/"]')).filter(a => a.querySelector('img'));
+            // Intentar múltiples selectores
+            let cards = Array.from(document.querySelectorAll('a[href*="/manhwa/"]')).filter(a => a.querySelector('img'));
+            
+            console.log(`[Puppeteer] Total de enlaces con /manhwa/: ${document.querySelectorAll('a[href*="/manhwa/"]').length}`);
+            console.log(`[Puppeteer] Enlaces con imagen: ${cards.length}`);
+            
             const data = [];
 
             cards.forEach((card, index) => {
-                const href = card.getAttribute('href');
-                if (!href) return;
+                try {
+                    const href = card.getAttribute('href');
+                    if (!href) return;
 
-                const slug = href.split('/manhwa/')[1];
-                if (!slug) return;
+                    const slug = href.split('/manhwa/')[1];
+                    if (!slug) return;
 
-                // Extraer título
-                const titleEl = card.querySelector('p.text-xs_');
-                const title = titleEl?.textContent?.trim();
-                if (!title) return;
+                    // Extraer título - intentar múltiples selectores
+                    let title = null;
+                    const titleSelectors = ['p.text-xs_', 'p[class*="text-"]', 'h3', 'h4', 'p', 'span'];
+                    
+                    for (const selector of titleSelectors) {
+                        const el = card.querySelector(selector);
+                        if (el && el.textContent.trim()) {
+                            title = el.textContent.trim();
+                            break;
+                        }
+                    }
+                    
+                    // Si no hay título, usar el slug limpio
+                    if (!title) {
+                        title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    }
 
-                // Extraer imagen
-                const img = card.querySelector('img');
-                const cover = img?.getAttribute('src') || '';
+                    // Extraer imagen
+                    const img = card.querySelector('img');
+                    const cover = img?.getAttribute('src') || img?.getAttribute('data-src') || '';
 
-                data.push({
-                    slug,
-                    title,
-                    cover,
-                    index
-                });
+                    data.push({
+                        slug,
+                        title,
+                        cover,
+                        index
+                    });
+                } catch (error) {
+                    console.error(`[Puppeteer] Error procesando tarjeta ${index}:`, error.message);
+                }
             });
 
             return data;
