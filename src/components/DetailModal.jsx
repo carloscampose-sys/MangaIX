@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Share2, Sparkles, BookOpen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
+import { unifiedGetDetails, unifiedGetChapters, unifiedGetPages } from '../services/unified';
+import { getSourceById } from '../services/sources';
 import { Reader } from './Reader';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
 
@@ -24,8 +26,12 @@ export const DetailModal = ({
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [mangaDetails, setMangaDetails] = useState(null);
 
-    // TuManga chapters
-    const [tumangaChapters, setTumangaChapters] = useState([]);
+    // Capítulos por fuente
+    const [chaptersBySource, setChaptersBySource] = useState({
+        tumanga: [],
+        manhwaweb: []
+    });
+    const [selectedChapterSource, setSelectedChapterSource] = useState(manga?.source || 'tumanga');
     const [isLoadingChapters, setIsLoadingChapters] = useState(false);
     const [selectedChapter, setSelectedChapter] = useState(null);
     const [readerPages, setReaderPages] = useState(null);
@@ -43,7 +49,7 @@ export const DetailModal = ({
             document.body.style.overflow = 'unset';
             if (!isOpen) {
                 setMangaDetails(null);
-                setTumangaChapters([]);
+                setChaptersBySource({ tumanga: [], manhwaweb: [] });
                 setSelectedChapter(null);
                 setReaderPages(null);
             }
@@ -57,11 +63,13 @@ export const DetailModal = ({
         setIsLoadingDetails(true);
         setIsLoadingChapters(true);
 
+        const source = manga?.source || 'tumanga';
+
         try {
-            // Cargar detalles y capítulos en paralelo
+            // Cargar detalles y capítulos de la fuente correspondiente
             const [details, chapters] = await Promise.all([
-                getTuMangaDetails(slug),
-                getTuMangaChapters(slug)
+                unifiedGetDetails(slug, source),
+                unifiedGetChapters(slug, source)
             ]);
 
             if (details) {
@@ -76,7 +84,14 @@ export const DetailModal = ({
                 }
             }
 
-            setTumangaChapters(chapters || []);
+            // Guardar capítulos en el objeto por fuente
+            setChaptersBySource(prev => ({
+                ...prev,
+                [source]: chapters || []
+            }));
+            
+            // Establecer la fuente seleccionada
+            setSelectedChapterSource(source);
         } catch (error) {
             console.error('Error loading manga data:', error);
         } finally {
@@ -98,22 +113,24 @@ export const DetailModal = ({
         });
     };
 
-    const openReader = async (chapter) => {
+    const openReader = async (chapter, source) => {
         if (!manga?.slug) return;
 
         setSelectedChapter(chapter.chapter);
         setIsOpeningReader(true);
 
         try {
-            const pages = await getTuMangaPages(manga.slug, chapter.chapter);
+            const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource);
             if (pages && pages.length > 0) {
                 setReaderPages(pages);
             } else {
-                // Mensaje más descriptivo sobre el error
-                showToast("El sitio cambió su protección. Intenta leer en tumanga.org directamente 😭💅");
+                const sourceInfo = getSourceById(source || selectedChapterSource);
+                showToast(`No se pudieron cargar las páginas. Intenta en ${sourceInfo.name} directamente 😭💅`);
+                
                 // Abrir el capítulo en una nueva pestaña como fallback
-                const chapterUrl = chapter.url || `https://tumanga.org/leer/${manga.slug}-${chapter.chapter}`;
-                window.open(chapterUrl, '_blank');
+                if (chapter.url) {
+                    window.open(chapter.url, '_blank');
+                }
             }
         } catch (error) {
             console.error('Error opening reader:', error);
@@ -249,14 +266,28 @@ export const DetailModal = ({
                                     <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
                                         <Sparkles size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green" /> Lectura Directa ✨
                                     </h3>
+                                    
+                                    {/* Tabs de fuentes (si hay capítulos en la fuente actual) */}
+                                    {chaptersBySource[selectedChapterSource]?.length > 0 && (
+                                        <div className="mb-3">
+                                            <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400">
+                                                <span className="font-bold">Fuente:</span>
+                                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg font-bold flex items-center gap-1">
+                                                    {getSourceById(selectedChapterSource).icon}
+                                                    <span className="hidden sm:inline">{getSourceById(selectedChapterSource).name}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     <div className="flex flex-wrap gap-1.5 sm:gap-2 max-h-36 sm:max-h-48 overflow-y-auto custom-scrollbar p-1.5 sm:p-2">
                                         {isLoadingChapters ? (
                                             <span className="text-[10px] sm:text-xs text-gray-400 italic animate-pulse">Cargando capítulos...</span>
-                                        ) : tumangaChapters.length > 0 ? (
-                                            tumangaChapters.map((ch) => (
+                                        ) : chaptersBySource[selectedChapterSource]?.length > 0 ? (
+                                            chaptersBySource[selectedChapterSource].map((ch) => (
                                                 <button
                                                     key={ch.id}
-                                                    onClick={() => openReader(ch)}
+                                                    onClick={() => openReader(ch, selectedChapterSource)}
                                                     disabled={isOpeningReader}
                                                     className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-800 hover:bg-potaxie-green hover:text-white dark:hover:bg-potaxie-green dark:text-gray-300 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all disabled:opacity-50"
                                                 >

@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
+    "puppeteer": "^24.34.0",
     "puppeteer-core": "^24.34.0",
     "react": "^19.2.0",
     "react-confetti": "^6.4.0",

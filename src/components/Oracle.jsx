@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
+import { unifiedGetRandom } from '../services/unified';
+import { SOURCES, DEFAULT_SOURCE, getActiveSources } from '../services/sources';
 import { useLibrary } from '../context/LibraryContext';
 import { Sparkles, Plus, Loader2, Coffee } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -109,6 +111,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
 export const Oracle = () => {
     const [selectedGenre, setSelectedGenre] = useState(null);
     const [selectedMood, setSelectedMood] = useState(null);
+    const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
     const [loading, setLoading] = useState(false);
     const [recommendation, setRecommendation] = useState(null);
     const [error, setError] = useState(null);
@@ -126,7 +129,7 @@ export const Oracle = () => {
         const genreIds = selectedMood ? selectedMood.genres : [selectedGenre];
 
         try {
-            const result = await getRandomManga(genreIds);
+            const result = await unifiedGetRandom(genreIds, selectedSource);
 
             if (result) {
                 setRecommendation(result);
@@ -167,6 +170,33 @@ export const Oracle = () => {
                     "Donde el cosmos decide qué manhwa devorarás hoy"
                 </p>
             </motion.div>
+
+            {/* Selector de Fuente */}
+            <div className="flex justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+                {getActiveSources().map(source => (
+                    <button
+                        key={source.id}
+                        type="button"
+                        onClick={() => {
+                            setSelectedSource(source.id);
+                            setRecommendation(null);
+                            setError(null);
+                            showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
+                        }}
+                        className={`
+                            flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm
+                            transition-all duration-300 transform hover:scale-105 active:scale-95
+                            ${selectedSource === source.id
+                                ? `${source.color} text-white shadow-lg ring-2 ring-offset-2 dark:ring-offset-gray-900`
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }
+                        `}
+                    >
+                        <span className="text-base sm:text-lg">{source.icon}</span>
+                        <span className="hidden sm:inline">{source.name}</span>
+                    </button>
+                ))}
+            </div>
 
             {/* Mood Section */}
             <div className="mb-6 sm:mb-8 md:mb-12 bg-white/30 dark:bg-gray-800/30 backdrop-blur-xl p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2rem] border border-gray-100 dark:border-gray-700">

@@ -1,6 +1,9 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
+// Detectar si estamos en Vercel o en local
+const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 export default async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,18 +23,30 @@ export default async function handler(req, res) {
     let browser = null;
 
     try {
-        console.log(`Fetching chapter ${chapter} of ${slug}...`);
+        console.log(`[TuManga] Fetching chapter ${chapter} of ${slug}...`);
+        console.log(`[TuManga] Environment: ${isVercel ? 'Vercel' : 'Local'}`);
 
-        // Configurar chromium para Vercel
-        chromium.setHeadlessMode = true;
-        chromium.setGraphicsMode = false;
+        // Configuración diferente para Vercel vs Local
+        if (isVercel) {
+            // Configurar chromium para Vercel
+            chromium.setHeadlessMode = true;
+            chromium.setGraphicsMode = false;
 
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: { width: 1280, height: 720 },
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
-        });
+            browser = await puppeteer.launch({
+                args: chromium.args,
+                defaultViewport: { width: 1280, height: 720 },
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+            });
+        } else {
+            // Usar puppeteer local
+            const puppeteerLocal = await import('puppeteer');
+            browser = await puppeteerLocal.default.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                defaultViewport: { width: 1280, height: 720 }
+            });
+        }
 
         const page = await browser.newPage();
 
@@ -49,8 +64,8 @@ export default async function handler(req, res) {
 
         // Navegar a la página del capítulo
         await page.goto(`https://tumanga.org/leer/${slug}-${chapter}`, {
-            waitUntil: 'networkidle2',
-            timeout: 8000
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
         });
 
         // Esperar a que las imágenes reales se carguen (no los loaders)

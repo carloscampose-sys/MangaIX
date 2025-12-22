@@ -8,6 +8,8 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
+import { unifiedSearch } from './services/unified';
+import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,6 +22,7 @@ const MainApp = ({ userName }) => {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedFormats, setSelectedFormats] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
+  const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
   const { showToast } = useToast();
 
   // Library State for filtering
@@ -110,14 +113,15 @@ const MainApp = ({ userName }) => {
       }
     }
 
-    let results = await searchTuManga(searchTerm, {
+    // Usar servicio unificado según la fuente seleccionada
+    let results = await unifiedSearch(searchTerm, {
       genres: selectedGenres,
       formats: selectedFormats
-    });
+    }, selectedSource);
 
     // Si no hay resultados y hay filtros, intentar sin filtros
     if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
-      results = await searchTuManga(searchQuery);
+      results = await unifiedSearch(searchQuery, {}, selectedSource);
     }
 
     // Enriquecer resultados con datos básicos para mostrar
@@ -265,6 +269,45 @@ const MainApp = ({ userName }) => {
                 </div>
 
                 <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12 px-1">
+                  {/* Selector de Fuente */}
+                  <div className="flex justify-center gap-2 sm:gap-3 mb-4">
+                    {getActiveSources().map(source => {
+                      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                      const isDisabled = isLocal && source.id === 'manhwaweb';
+                      
+                      return (
+                        <button
+                          key={source.id}
+                          type="button"
+                          onClick={() => {
+                            if (isDisabled) {
+                              showToast(`⚠️ ManhwaWeb requiere Vercel. Usa TuManga en local 📚`);
+                              return;
+                            }
+                            setSelectedSource(source.id);
+                            setSearchResults([]);
+                            showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
+                          }}
+                          disabled={isDisabled}
+                          className={`
+                            flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm
+                            transition-all duration-300 transform hover:scale-105 active:scale-95
+                            ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                            ${selectedSource === source.id
+                              ? `${source.color} text-white shadow-lg ring-2 ring-offset-2 ring-${source.color.replace('bg-', '')}`
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }
+                          `}
+                          title={isDisabled ? 'Solo disponible en Vercel' : ''}
+                        >
+                          <span className="text-base sm:text-lg">{source.icon}</span>
+                          <span className="hidden sm:inline">{source.name}</span>
+                          {isDisabled && <span className="text-xs">🚀</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <form onSubmit={handleSearch} className="relative group mb-4">
                     <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
                       <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" size={18} />

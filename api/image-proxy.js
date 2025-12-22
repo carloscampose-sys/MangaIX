@@ -18,11 +18,17 @@ export default async function handler(req, res) {
         // Decodificar la URL
         const imageUrl = decodeURIComponent(url);
 
+        // Determinar el referer según la URL de la imagen
+        let referer = 'https://tumanga.org/';
+        if (imageUrl.includes('imageshack.com')) {
+            referer = 'https://manhwaweb.com/';
+        }
+
         // Hacer la petición a la imagen con headers que simulan un navegador
         const response = await fetch(imageUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://tumanga.org/',
+                'Referer': referer,
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
             },
         });

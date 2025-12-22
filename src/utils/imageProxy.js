@@ -19,6 +19,11 @@ export const getImageUrl = (url) => {
         return `/api/image-proxy?url=${encodeURIComponent(url)}`;
     }
 
+    // Si es de manhwaweb (imageshack) y estamos en producción, usar el proxy
+    if (url.includes('imageshack.com') && !isLocalhost) {
+        return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+
     // En otros casos, usar la URL directa
     return url;
 };

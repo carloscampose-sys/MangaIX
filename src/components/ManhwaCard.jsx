@@ -9,6 +9,7 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
+import { getSourceById } from '../services/sources';
 
 const AVOCADO_RATING = [1, 2, 3, 4, 5];
 
@@ -94,12 +95,23 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
     const note = getNote(manga?.id || "unknown");
     const currentStatus = STATUS_OPTIONS.find(s => s.id === (manga?.status || 'devorando')) || STATUS_OPTIONS[0];
 
+    // Obtener información de la fuente
+    const source = manga?.source ? getSourceById(manga.source) : null;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className={`group manhwa-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col h-full relative transition-all hover:shadow-2xl ${manga?.status === 'tiesa' ? 'opacity-70 grayscale-[40%]' : ''}`}
         >
+            {/* Badge de Fuente */}
+            {source && (
+                <div className="absolute top-2 right-2 z-20 px-2 py-1 rounded-full text-[8px] sm:text-[9px] font-bold bg-black/70 dark:bg-white/80 text-white dark:text-gray-900 backdrop-blur-sm shadow-lg flex items-center gap-1">
+                    <span>{source.icon}</span>
+                    <span className="hidden sm:inline">{source.name}</span>
+                </div>
+            )}
+
             {/* Status Dropdown Menu (Only in Library) */}
             {inLibrary && (
                 <div className="absolute top-2 left-2 z-20" ref={menuRef}>
