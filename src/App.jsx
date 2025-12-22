@@ -187,6 +187,9 @@ const MainApp = ({ userName }) => {
     // Usar servicio unificado según la fuente seleccionada con página actual
     let results = await unifiedSearch(searchTerm, filters, selectedSource, currentPage);
 
+    // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
+    const resultCount = results.length;
+
     // Si no hay resultados y hay filtros, intentar sin filtros
     if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
       results = await unifiedSearch(searchQuery, {}, selectedSource);
@@ -204,8 +207,10 @@ const MainApp = ({ userName }) => {
 
     setSearchResults(results);
     
-    // Determinar si hay más páginas (si obtuvo 60 resultados, probablemente hay más)
-    setHasMorePages(results.length >= 60);
+    // Determinar si hay más páginas basado en el conteo ORIGINAL
+    // ManhwaWeb devuelve exactamente 30 resultados por página
+    // Si obtuvimos 30, probablemente hay más páginas
+    setHasMorePages(resultCount >= 30);
     
     setLoading(false);
   };
@@ -766,11 +771,16 @@ const MainApp = ({ userName }) => {
                     className="flex flex-col items-center gap-4 mt-8 mb-4"
                   >
                     {/* Información de resultados */}
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold">
-                      Mostrando {searchResults.length} resultados en esta página
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold text-center">
+                      Mostrando {searchResults.length} manhwas en esta página
                       {hasMorePages && (
-                        <span className="text-potaxie-green ml-1">
-                          • Hay más páginas disponibles 📚
+                        <span className="text-potaxie-green ml-1 block sm:inline">
+                          • Continúa navegando para ver más 📚
+                        </span>
+                      )}
+                      {!hasMorePages && currentPage > 1 && (
+                        <span className="text-gray-400 ml-1 block sm:inline">
+                          • Has llegado al final 🎉
                         </span>
                       )}
                     </div>
