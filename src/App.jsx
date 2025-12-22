@@ -10,6 +10,7 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
 import { unifiedSearch } from './services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
+import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,7 +24,19 @@ const MainApp = ({ userName }) => {
   const [selectedFormats, setSelectedFormats] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
+  
+  // Filtros específicos de ManhwaWeb
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedErotic, setSelectedErotic] = useState('');
+  const [selectedDemographic, setSelectedDemographic] = useState('');
+  const [selectedSortBy, setSelectedSortBy] = useState('');
+  const [selectedSortOrder, setSelectedSortOrder] = useState('');
+  
   const { showToast } = useToast();
+  
+  // Obtener filtros dinámicos según fuente
+  const currentFilters = getFiltersForSource(selectedSource);
 
   // Library State for filtering
   const { library } = useLibrary();
@@ -125,11 +138,28 @@ const MainApp = ({ userName }) => {
       showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
     }
 
+    // Construir filtros según la fuente seleccionada
+    let filters = {};
+    
+    if (selectedSource === 'tumanga') {
+      filters = {
+        genres: selectedGenres,
+        formats: selectedFormats
+      };
+    } else if (selectedSource === 'manhwaweb') {
+      filters = {
+        genres: selectedGenres,
+        type: selectedType,
+        status: selectedStatus,
+        erotic: selectedErotic,
+        demographic: selectedDemographic,
+        sortBy: selectedSortBy,
+        sortOrder: selectedSortOrder
+      };
+    }
+    
     // Usar servicio unificado según la fuente seleccionada
-    let results = await unifiedSearch(searchTerm, {
-      genres: selectedGenres,
-      formats: selectedFormats
-    }, selectedSource);
+    let results = await unifiedSearch(searchTerm, filters, selectedSource);
 
     // Si no hay resultados y hay filtros, intentar sin filtros
     if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
@@ -179,6 +209,13 @@ const MainApp = ({ userName }) => {
     setSelectedFormats([]);
     setSelectedMood(null);
     setSearchQuery('');
+    // Limpiar filtros de ManhwaWeb también
+    setSelectedType('');
+    setSelectedStatus('');
+    setSelectedErotic('');
+    setSelectedDemographic('');
+    setSelectedSortBy('');
+    setSelectedSortOrder('');
   };
 
   const handleSurprise = () => {
@@ -296,8 +333,20 @@ const MainApp = ({ userName }) => {
                               showToast(`⚠️ ManhwaWeb requiere Vercel. Usa TuManga en local 📚`);
                               return;
                             }
+                            
+                            // Cambiar fuente y resetear TODOS los filtros
                             setSelectedSource(source.id);
                             setSearchResults([]);
+                            setSelectedGenres([]);
+                            setSelectedFormats([]);
+                            setSelectedMood(null);
+                            setSelectedType('');
+                            setSelectedStatus('');
+                            setSelectedErotic('');
+                            setSelectedDemographic('');
+                            setSelectedSortBy('');
+                            setSelectedSortOrder('');
+                            
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
                           }}
                           disabled={isDisabled}
@@ -365,7 +414,7 @@ const MainApp = ({ userName }) => {
                         className={`overflow-hidden backdrop-blur-xl rounded-2xl sm:rounded-[2rem] border border-gray-100 dark:border-gray-700 p-4 sm:p-6 shadow-2xl mt-2 transition-colors duration-500 ${selectedMood ? `bg-gradient-to-br ${selectedMood.color}/10 dark:${selectedMood.color}/20` : 'bg-white/60 dark:bg-gray-800/60'}`}
                       >
                         <div className="space-y-6 sm:space-y-8">
-                          {/* Mood Section */}
+                          {/* Mood Section - Dinámico según fuente */}
                           <div>
                             <div className="flex justify-between items-center mb-4 ml-2">
                               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
@@ -381,7 +430,7 @@ const MainApp = ({ userName }) => {
                               )}
                             </div>
                             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                              {TUMANGA_MOODS.map(mood => (
+                              {currentFilters.moods.map(mood => (
                                 <motion.button
                                   key={mood.id}
                                   whileHover={{ scale: 1.05, y: -2 }}
@@ -403,48 +452,50 @@ const MainApp = ({ userName }) => {
                             </div>
                           </div>
 
-                          {/* Formatos */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-4 ml-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green" />
-                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Formato Potaxio</h4>
+                          {/* Formatos (solo TuManga) */}
+                          {selectedSource === 'tumanga' && currentFilters.formats.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-4 ml-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green" />
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Formato Potaxio</h4>
+                              </div>
+                              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-start">
+                                {currentFilters.formats.map(format => {
+                                  const isActive = selectedFormats.includes(format.name);
+                                  const isManga = format.name.includes("Manga");
+                                  return (
+                                    <motion.button
+                                      key={format.name}
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      onClick={() => toggleFormat(format.name)}
+                                      className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold chip-transition flex items-center justify-center gap-1 sm:gap-2 border-2 box-border
+                                    ${isActive
+                                          ? isManga
+                                            ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30'
+                                            : 'bg-potaxie-green text-white border-potaxie-green shadow-lg shadow-potaxie-green/30'
+                                          : 'bg-white/50 dark:bg-gray-900/50 text-gray-500 border-transparent hover:border-potaxie-200'}
+                                  `}
+                                    >
+                                      <div className={`w-3 sm:w-4 h-3 sm:h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                        <Sparkles size={12} className="animate-pulse" />
+                                      </div>
+                                      {format.name}
+                                    </motion.button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-start">
-                              {TUMANGA_FORMATS.map(format => {
-                                const isActive = selectedFormats.includes(format.name);
-                                const isManga = format.name.includes("Manga");
-                                return (
-                                  <motion.button
-                                    key={format.name}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => toggleFormat(format.name)}
-                                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold chip-transition flex items-center justify-center gap-1 sm:gap-2 border-2 box-border
-                                  ${isActive
-                                        ? isManga
-                                          ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30'
-                                          : 'bg-potaxie-green text-white border-potaxie-green shadow-lg shadow-potaxie-green/30'
-                                        : 'bg-white/50 dark:bg-gray-900/50 text-gray-500 border-transparent hover:border-potaxie-200'}
-                                `}
-                                  >
-                                    <div className={`w-3 sm:w-4 h-3 sm:h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
-                                      <Sparkles size={12} className="animate-pulse" />
-                                    </div>
-                                    {format.name}
-                                  </motion.button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                          )}
 
-                          {/* Géneros */}
+                          {/* Géneros - Dinámico según fuente */}
                           <div>
                             <div className="flex items-center gap-2 mb-4 ml-2">
                               <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Géneros Populares</h4>
                             </div>
                             <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-h-40 sm:max-h-48 overflow-y-auto custom-scrollbar pr-2 justify-start">
-                              {TUMANGA_GENRES.map(genre => {
+                              {currentFilters.genres.map(genre => {
                                 const isActive = selectedGenres.includes(genre.id);
                                 const isSpecial = genre.id === 'boys-love' || genre.id === 'girls-love';
                                 return (
@@ -470,6 +521,140 @@ const MainApp = ({ userName }) => {
                               })}
                             </div>
                           </div>
+
+                          {/* Filtros Avanzados (solo ManhwaWeb) */}
+                          {selectedSource === 'manhwaweb' && currentFilters.hasAdvancedFilters && (
+                            <>
+                              {/* Tipo */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo de Obra</h4>
+                                </div>
+                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                                  {currentFilters.types.map(type => (
+                                    <button
+                                      key={type.id}
+                                      onClick={() => setSelectedType(selectedType === type.value ? '' : type.value)}
+                                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                        selectedType === type.value
+                                          ? 'bg-blue-500 text-white shadow-lg'
+                                          : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-blue-100 dark:hover:bg-gray-800'
+                                      }`}
+                                    >
+                                      {type.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Estado */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Estado</h4>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {currentFilters.status.map(status => (
+                                    <button
+                                      key={status.id}
+                                      onClick={() => setSelectedStatus(selectedStatus === status.value ? '' : status.value)}
+                                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                        selectedStatus === status.value
+                                          ? 'bg-green-500 text-white shadow-lg'
+                                          : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-green-100 dark:hover:bg-gray-800'
+                                      }`}
+                                    >
+                                      {status.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Erótico y Demografía */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Erótico */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Erótico</h4>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {currentFilters.erotic.map(option => (
+                                      <button
+                                        key={option.id}
+                                        onClick={() => setSelectedErotic(selectedErotic === option.value ? '' : option.value)}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                          selectedErotic === option.value
+                                            ? 'bg-red-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-red-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {option.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Demografía */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Demografía</h4>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {currentFilters.demographics.map(demo => (
+                                      <button
+                                        key={demo.id}
+                                        onClick={() => setSelectedDemographic(selectedDemographic === demo.value ? '' : demo.value)}
+                                        className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                                          selectedDemographic === demo.value
+                                            ? 'bg-yellow-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-yellow-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {demo.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Ordenar */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Ordenar</h4>
+                                </div>
+                                <div className="flex gap-2">
+                                  <select
+                                    value={selectedSortBy}
+                                    onChange={(e) => setSelectedSortBy(e.target.value)}
+                                    className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 outline-none"
+                                  >
+                                    <option value="">Criterio...</option>
+                                    {currentFilters.sortBy.map(sort => (
+                                      <option key={sort.id} value={sort.value}>
+                                        {sort.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    value={selectedSortOrder}
+                                    onChange={(e) => setSelectedSortOrder(e.target.value)}
+                                    className="px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 outline-none"
+                                  >
+                                    <option value="">Orden...</option>
+                                    {currentFilters.sortOrder.map(order => (
+                                      <option key={order.id} value={order.value}>
+                                        {order.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </>
+                          )}
 
                           <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                             <button

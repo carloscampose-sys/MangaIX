@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
 import { unifiedGetRandom } from '../services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from '../services/sources';
+import { getMoodsForSource, getGenresForSource } from '../services/filterService';
 import { useLibrary } from '../context/LibraryContext';
 import { Sparkles, Plus, Loader2, Coffee } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -118,6 +119,10 @@ export const Oracle = () => {
     const { theme } = useTheme();
     const { showToast } = useToast();
     const { library, addToLibrary } = useLibrary();
+    
+    // Obtener moods y géneros dinámicos según fuente
+    const currentMoods = getMoodsForSource(selectedSource);
+    const currentGenres = getGenresForSource(selectedSource);
 
     const handleSummon = async () => {
         if (!selectedGenre && !selectedMood) return;
@@ -214,7 +219,7 @@ export const Oracle = () => {
                     )}
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-                    {TUMANGA_MOODS.map(mood => (
+                    {currentMoods.map(mood => (
                         <motion.button
                             key={mood.id}
                             whileHover={{ scale: 1.05, y: -3 }}
@@ -247,7 +252,7 @@ export const Oracle = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-8 sm:mb-10 md:mb-12">
-                {TUMANGA_GENRES.slice(0, 16).map((genre) => {
+                {currentGenres.slice(0, 16).map((genre) => {
                     const isSelected = selectedGenre === genre.id;
                     const isSpecial = genre.id === 'boys-love' || genre.id === 'girls-love';
                     return (
