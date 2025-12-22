@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
 import { unifiedGetRandom } from '../services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from '../services/sources';
+// Sistema de filtros dinámicos - Oracle adapta moods y géneros según la fuente
 import { getMoodsForSource, getGenresForSource } from '../services/filterService';
 import { useLibrary } from '../context/LibraryContext';
 import { Sparkles, Plus, Loader2, Coffee } from 'lucide-react';
@@ -120,7 +121,8 @@ export const Oracle = () => {
     const { showToast } = useToast();
     const { library, addToLibrary } = useLibrary();
     
-    // Obtener moods y géneros dinámicos según fuente
+    // Obtener moods y géneros dinámicos según fuente seleccionada
+    // Esto permite que Oracle muestre diferentes opciones para TuManga y ManhwaWeb
     const currentMoods = getMoodsForSource(selectedSource);
     const currentGenres = getGenresForSource(selectedSource);
 
@@ -219,6 +221,7 @@ export const Oracle = () => {
                     )}
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                    {/* Moods dinámicos - cambian según la fuente seleccionada */}
                     {currentMoods.map(mood => (
                         <motion.button
                             key={mood.id}
@@ -252,6 +255,7 @@ export const Oracle = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-8 sm:mb-10 md:mb-12">
+                {/* Géneros dinámicos - TuManga muestra 21, ManhwaWeb muestra 27 */}
                 {currentGenres.slice(0, 16).map((genre) => {
                     const isSelected = selectedGenre === genre.id;
                     const isSpecial = genre.id === 'boys-love' || genre.id === 'girls-love';

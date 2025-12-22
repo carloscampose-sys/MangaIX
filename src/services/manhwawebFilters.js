@@ -1,6 +1,9 @@
 /**
  * Filtros y constantes para ManhwaWeb
  * Basados en la estructura real de manhwaweb.com
+ * @version 1.0.0 - Implementación completa de filtros ManhwaWeb
+ * @date 2025-12-22
+ * @author Potaxie Dev Team
  */
 
 // Géneros disponibles en ManhwaWeb

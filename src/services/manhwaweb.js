@@ -94,6 +94,8 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
         const response = await axios.get('/api/manhwaweb/search', {
             params: { 
                 query,
+                // Enviar todos los filtros avanzados de ManhwaWeb a la API
+                // Estos parámetros serán procesados por Puppeteer para aplicar filtros reales
                 genres: filters.genres ? filters.genres.join(',') : '',
                 type: filters.type || '',
                 status: filters.status || '',

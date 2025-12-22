@@ -14,13 +14,15 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
+    // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar)
     const { query, genres, type, status, erotic, demographic, sortBy, sortOrder } = req.query;
 
     if (!query) {
         return res.status(400).json({ error: 'Missing query parameter' });
     }
     
-    // Parsear géneros si vienen como string
+    // Parsear géneros si vienen como string separado por comas
+    // Ejemplo: "accion,aventura,comedia" → ["accion", "aventura", "comedia"]
     const genreIds = genres ? (typeof genres === 'string' ? genres.split(',') : genres) : [];
 
     let browser = null;

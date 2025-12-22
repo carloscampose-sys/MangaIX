@@ -10,6 +10,7 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
 import { unifiedSearch } from './services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
+// Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
 import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,7 +26,8 @@ const MainApp = ({ userName }) => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
   
-  // Filtros específicos de ManhwaWeb
+  // Filtros específicos de ManhwaWeb (Tipo, Estado, Erótico, Demografía, Ordenar)
+  // Estos estados solo se usan cuando selectedSource === 'manhwaweb'
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedErotic, setSelectedErotic] = useState('');
@@ -35,7 +37,9 @@ const MainApp = ({ userName }) => {
   
   const { showToast } = useToast();
   
-  // Obtener filtros dinámicos según fuente
+  // Obtener filtros dinámicos según fuente seleccionada
+  // TuManga: 5 moods, 21 géneros, 4 formatos
+  // ManhwaWeb: 6 moods, 27 géneros + filtros avanzados
   const currentFilters = getFiltersForSource(selectedSource);
 
   // Library State for filtering

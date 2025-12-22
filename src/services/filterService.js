@@ -1,6 +1,8 @@
 /**
  * Servicio unificador de filtros
  * Provee los filtros correctos según la fuente seleccionada
+ * @version 1.0.0 - Sistema de filtros dinámicos multi-fuente
+ * @date 2025-12-22
  */
 
 import { 
