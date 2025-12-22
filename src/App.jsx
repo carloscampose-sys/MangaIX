@@ -113,25 +113,35 @@ const MainApp = ({ userName }) => {
     // Construir término de búsqueda
     let searchTerm = searchQuery;
 
-    // Si hay géneros seleccionados y no hay término de búsqueda, usar género como término
-    if (!searchTerm && selectedGenres.length > 0) {
-      const firstGenre = TUMANGA_GENRES.find(g => selectedGenres.includes(g.id));
-      if (firstGenre) {
-        searchTerm = firstGenre.searchParam;
+    // SOLO PARA TUMANGA: Si hay géneros seleccionados y no hay término de búsqueda, usar género como término
+    // ManhwaWeb usa filtros en URL directamente, no necesita texto de búsqueda
+    if (selectedSource === 'tumanga') {
+      if (!searchTerm && selectedGenres.length > 0) {
+        const firstGenre = TUMANGA_GENRES.find(g => selectedGenres.includes(g.id));
+        if (firstGenre) {
+          searchTerm = firstGenre.searchParam;
+        }
+      }
+
+      // Si hay mood seleccionado y no hay término, usar género del mood
+      if (!searchTerm && selectedMood) {
+        const moodGenre = TUMANGA_GENRES.find(g => selectedMood.genres.includes(g.id));
+        if (moodGenre) {
+          searchTerm = moodGenre.searchParam;
+        }
       }
     }
 
-    // Si hay mood seleccionado y no hay término, usar género del mood
-    if (!searchTerm && selectedMood) {
-      const moodGenre = TUMANGA_GENRES.find(g => selectedMood.genres.includes(g.id));
-      if (moodGenre) {
-        searchTerm = moodGenre.searchParam;
-      }
-    }
-
-    // Si no hay término de búsqueda ni filtros, no buscar
-    if (!searchTerm && selectedGenres.length === 0 && selectedFormats.length === 0 && !selectedMood) {
+    // Validación: Si no hay término de búsqueda ni filtros, no buscar
+    if (!searchTerm && selectedGenres.length === 0 && selectedFormats.length === 0 && !selectedMood &&
+        selectedSource === 'tumanga') {
       console.log('[App] No hay query ni filtros, no se ejecuta búsqueda');
+      return;
+    }
+
+    // Para ManhwaWeb, permitir búsqueda solo con filtros (sin searchTerm)
+    if (selectedSource === 'manhwaweb' && !searchTerm && selectedGenres.length === 0) {
+      console.log('[App] ManhwaWeb: No hay query ni géneros, no se ejecuta búsqueda');
       return;
     }
 
