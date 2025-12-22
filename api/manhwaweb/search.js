@@ -17,9 +17,10 @@ export default async function handler(req, res) {
     // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar)
     const { query, genres, type, status, erotic, demographic, sortBy, sortOrder } = req.query;
 
-    if (!query) {
-        return res.status(400).json({ error: 'Missing query parameter' });
-    }
+    // Permitir búsquedas solo con filtros (sin query de texto)
+    // if (!query && !genres) {
+    //     return res.status(400).json({ error: 'Missing query or genres parameter' });
+    // }
     
     // Parsear géneros si vienen como string separado por comas
     // Ejemplo: "accion,aventura,comedia" → ["accion", "aventura", "comedia"]
@@ -78,9 +79,12 @@ export default async function handler(req, res) {
         let libraryUrl = 'https://manhwaweb.com/library';
         const urlParams = new URLSearchParams();
         
-        // Agregar búsqueda si existe
-        if (query && query.trim()) {
+        // Agregar búsqueda si existe (ahora es opcional)
+        if (query && query.trim() !== '' && query.trim() !== 'undefined') {
             urlParams.append('buscar', query.trim());
+            console.log('[ManhwaWeb Search] Búsqueda en URL:', query.trim());
+        } else {
+            console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
         
         // Agregar géneros (ManhwaWeb usa 'genders[]' en la URL)

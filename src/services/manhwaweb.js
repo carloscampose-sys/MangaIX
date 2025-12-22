@@ -70,8 +70,9 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
     try {
         console.log(`[ManhwaWeb] Buscando: "${query}"`, filters);
 
-        if (!query || query.trim() === '') {
-            console.log('[ManhwaWeb] Búsqueda vacía, retornando array vacío');
+        // Permitir búsquedas solo con filtros (sin query de texto)
+        if ((!query || query.trim() === '') && (!filters.genres || filters.genres.length === 0)) {
+            console.log('[ManhwaWeb] Búsqueda vacía sin filtros, retornando array vacío');
             return [];
         }
 
@@ -93,7 +94,7 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
         // En producción, usar la API serverless (timeout aumentado)
         const response = await axios.get('/api/manhwaweb/search', {
             params: { 
-                query,
+                query: query || '',  // Enviar string vacío si no hay query
                 // Enviar todos los filtros avanzados de ManhwaWeb a la API
                 // Estos parámetros serán procesados por Puppeteer para aplicar filtros reales
                 genres: filters.genres ? filters.genres.join(',') : '',
