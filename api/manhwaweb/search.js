@@ -88,10 +88,15 @@ export default async function handler(req, res) {
             console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
         
+        // ============================================================
+        // CONVERSIÓN DE GÉNEROS: ID → VALOR NUMÉRICO
+        // ============================================================
         // Agregar géneros (ManhwaWeb usa 'genders[]' con valores numéricos)
         // Necesitamos convertir los IDs a sus valores numéricos
+        // Ejemplo: 'comedia' → '5', 'superpoderes' → '27'
         if (genreIds.length > 0) {
             // Mapeo de IDs a valores numéricos (basado en manhwawebFilters.js)
+            // Este mapeo es crítico: sin él, todos los géneros devuelven el mismo listado
             const genreMap = {
                 'accion': '3', 'aventura': '4', 'comedia': '5', 'drama': '6',
                 'recuentos': '7', 'romance': '8', 'venganza': '9', 'harem': '10',
@@ -102,12 +107,14 @@ export default async function handler(req, res) {
                 'artes-marciales': '26', 'superpoderes': '27', 'cultivacion': '28', 'milf': '29'
             };
             
+            // Convertir cada ID de género a su valor numérico y agregarlo a la URL
             genreIds.forEach(genreId => {
                 const genreValue = genreMap[genreId] || genreId;
-                urlParams.append('genders[]', genreValue);
+                urlParams.append('genders[]', genreValue); // Ej: genders[]=5 en lugar de genders[]=comedia
             });
             console.log('[ManhwaWeb Search] Géneros IDs:', genreIds);
             console.log('[ManhwaWeb Search] Géneros valores numéricos:', genreIds.map(id => genreMap[id] || id));
+            // Resultado: /library?genders[]=5 (comedia) en lugar de /library?genders[]=comedia
         }
         
         // Agregar tipo
