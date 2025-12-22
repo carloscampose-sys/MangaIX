@@ -200,17 +200,47 @@ export default async function handler(req, res) {
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');
         
-        // Esperar a que se carguen las tarjetas (timeout reducido)
+        // Esperar a que se carguen las tarjetas iniciales
         await page.waitForFunction(() => {
             const links = document.querySelectorAll('a[href*="/manhwa/"]');
-            return links.length > 3; // Reducido a 3 para ser más rápido
+            return links.length > 0;
         }, { timeout: 15000 }).catch(() => {
             console.log('[ManhwaWeb Search] Timeout esperando resultados, intentando extraer de todos modos...');
         });
 
-        // Pausa reducida para lazy loading
-        console.log('[ManhwaWeb Search] Esperando carga de imágenes lazy...');
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Reducido de 3s a 1.5s
+        // HACER SCROLL PARA CARGAR MÁS RESULTADOS (lazy loading)
+        console.log('[ManhwaWeb Search] Haciendo scroll para cargar más resultados...');
+        let previousCount = 0;
+        let currentCount = 0;
+        let scrollAttempts = 0;
+        const maxScrollAttempts = 8; // Limitar a 8 intentos de scroll
+        
+        do {
+            previousCount = currentCount;
+            
+            // Scroll hacia abajo
+            await page.evaluate(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+            
+            // Esperar a que se carguen nuevos elementos
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Contar elementos actuales
+            currentCount = await page.evaluate(() => {
+                return document.querySelectorAll('a[href*="/manhwa/"]').length;
+            });
+            
+            scrollAttempts++;
+            console.log(`[ManhwaWeb Search] Scroll ${scrollAttempts}/${maxScrollAttempts}: ${currentCount} resultados`);
+            
+            // Salir si no hay más elementos nuevos o alcanzamos el límite
+        } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
+        
+        console.log(`[ManhwaWeb Search] Scroll completado. Total: ${currentCount} resultados`);
+        
+        // Pausa final para que se carguen las imágenes
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Log de debugging
         const debugInfo = await page.evaluate(() => {
