@@ -92,7 +92,6 @@ const MainApp = ({ userName }) => {
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
-    setLoading(true);
 
     // Construir término de búsqueda
     let searchTerm = searchQuery;
@@ -112,6 +111,14 @@ const MainApp = ({ userName }) => {
         searchTerm = moodGenre.searchParam;
       }
     }
+
+    // Si no hay término de búsqueda ni filtros, no buscar
+    if (!searchTerm && selectedGenres.length === 0 && selectedFormats.length === 0 && !selectedMood) {
+      console.log('[App] No hay query ni filtros, no se ejecuta búsqueda');
+      return;
+    }
+
+    setLoading(true);
 
     // Usar servicio unificado según la fuente seleccionada
     let results = await unifiedSearch(searchTerm, {
