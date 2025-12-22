@@ -67,52 +67,14 @@ export default async function handler(req, res) {
             }
         });
 
-        // ManhwaWeb usa diferentes rutas para búsqueda
-        // Intentamos múltiples URLs
-        const searchUrls = [
-            `https://manhwaweb.com/biblioteca?buscar=${encodeURIComponent(query)}`,
-            `https://manhwaweb.com/search?q=${encodeURIComponent(query)}`,
-            `https://manhwaweb.com/?s=${encodeURIComponent(query)}`,
-            `https://manhwaweb.com/?buscar=${encodeURIComponent(query)}`
-        ];
-        
-        let searchUrl = searchUrls[0]; // Probar biblioteca primero
-        console.log(`[ManhwaWeb Search] Trying search URL: ${searchUrl}`);
+        // ManhwaWeb usa /library para biblioteca pública (sin login)
+        const searchUrl = `https://manhwaweb.com/library?buscar=${encodeURIComponent(query)}`;
+        console.log(`[ManhwaWeb Search] Navigating to: ${searchUrl}`);
 
-        let resultsFound = false;
-        
-        // Intentar múltiples URLs hasta encontrar resultados
-        for (const url of searchUrls) {
-            try {
-                console.log(`[ManhwaWeb Search] Trying: ${url}`);
-                
-                await page.goto(url, {
-                    waitUntil: 'domcontentloaded',
-                    timeout: 20000
-                });
-                
-                // Verificar si hay resultados
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                const hasResults = await page.evaluate(() => {
-                    const links = document.querySelectorAll('a[href*="/manhwa/"]');
-                    return links.length > 5;
-                });
-                
-                if (hasResults) {
-                    console.log(`[ManhwaWeb Search] Found results with URL: ${url}`);
-                    searchUrl = url;
-                    resultsFound = true;
-                    break;
-                }
-            } catch (error) {
-                console.log(`[ManhwaWeb Search] URL failed: ${url}, trying next...`);
-            }
-        }
-        
-        if (!resultsFound) {
-            console.log(`[ManhwaWeb Search] No results found with any URL`);
-        }
+        await page.goto(searchUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+        });
 
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');

@@ -119,39 +119,30 @@ export const searchManhwaWeb = async (query = '', filters = {}) => {
 
 /**
  * Obtiene los detalles completos de una obra
- * NOTA: Los detalles también requieren Puppeteer porque es una SPA,
- * pero por ahora dejamos esta implementación simple para no bloquear el flujo.
- * TODO: Crear api/manhwaweb/details.js si es necesario
  */
 export const getManhwaWebDetails = async (slug) => {
     try {
         console.log(`[ManhwaWeb] Obteniendo detalles de: ${slug}`);
         
-        // Por ahora, retornamos detalles básicos construidos desde el slug
-        // En una SPA, necesitaríamos Puppeteer para esto también
+        // URL correcta de detalles
         const url = `${BASE_URL}/manhwa/${slug}`;
         
-        // Intentar con proxy (probablemente falle por ser SPA)
-        const response = await fetchWithProxy(url).catch(() => null);
+        // Construir detalles básicos desde el slug
+        const title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         
-        if (!response) {
-            // Fallback: construir detalles básicos desde el slug
-            const title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            
-            return {
-                id: `manhwaweb-${slug}`,
-                slug,
-                title,
-                cover: '', // No tenemos la imagen sin Puppeteer
-                description: "Descubre esta increíble historia en ManhwaWeb. ¡A devorar! 🥑",
-                genres: [],
-                status: 'ongoing',
-                author: 'Autor desconocido',
-                lastChapter: '?',
-                chaptersCount: 0,
-                source: 'manhwaweb'
-            };
-        }
+        return {
+            id: `manhwaweb-${slug}`,
+            slug,
+            title,
+            cover: '', // Se cargará de la búsqueda
+            description: "Descubre esta increíble historia en ManhwaWeb. ¡A devorar! 🥑",
+            genres: [],
+            status: 'ongoing',
+            author: 'Autor desconocido',
+            lastChapter: '?',
+            chaptersCount: 0,
+            source: 'manhwaweb'
+        };
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(response.data, 'text/html');

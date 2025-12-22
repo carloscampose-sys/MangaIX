@@ -68,8 +68,8 @@ export default async function handler(req, res) {
         });
 
         // Construir URL del capítulo
-        // Formato: https://manhwaweb.com/ver/{slug}/{chapter}
-        const chapterUrl = `https://manhwaweb.com/ver/${slug}/${chapter}`;
+        // Formato correcto: https://manhwaweb.com/leer/{slug-chapter}
+        const chapterUrl = `https://manhwaweb.com/leer/${slug}-${chapter}`;
         console.log(`[ManhwaWeb] Navigating to: ${chapterUrl}`);
 
         // Navegar a la página del capítulo
