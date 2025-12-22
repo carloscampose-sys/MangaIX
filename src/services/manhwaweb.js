@@ -124,9 +124,6 @@ export const getManhwaWebDetails = async (slug) => {
     try {
         console.log(`[ManhwaWeb] Obteniendo detalles de: ${slug}`);
         
-        // URL correcta de detalles
-        const url = `${BASE_URL}/manhwa/${slug}`;
-        
         // Construir detalles básicos desde el slug
         const title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         
@@ -138,66 +135,6 @@ export const getManhwaWebDetails = async (slug) => {
             description: "Descubre esta increíble historia en ManhwaWeb. ¡A devorar! 🥑",
             genres: [],
             status: 'ongoing',
-            author: 'Autor desconocido',
-            lastChapter: '?',
-            chaptersCount: 0,
-            source: 'manhwaweb'
-        };
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(response.data, 'text/html');
-
-        // Extraer título (buscar en múltiples ubicaciones)
-        let title = doc.querySelector('h1')?.textContent?.trim() || '';
-        if (!title) {
-            // Fallback: extraer del slug
-            title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-
-        // Extraer imagen de portada
-        let cover = '';
-        const coverImg = doc.querySelector('img[src*="imageshack"], img[src*="manhwa"]');
-        if (coverImg) {
-            cover = coverImg.getAttribute('src') || '';
-        }
-
-        // Extraer descripción/sinopsis
-        let description = '';
-        const descriptionEl = doc.querySelector('p[class*="description"], div[class*="sinopsis"], div[class*="description"]');
-        if (descriptionEl) {
-            description = descriptionEl.textContent?.trim() || '';
-        }
-        
-        if (!description) {
-            description = "Descubre esta increíble historia. ¡A devorar! 🥑";
-        }
-
-        // Extraer géneros
-        const genres = [];
-        doc.querySelectorAll('a[href*="genero"], span[class*="genre"], a[class*="genre"]').forEach(el => {
-            const genreName = el.textContent?.trim();
-            if (genreName && genreName.length < 20) {
-                genres.push(genreName);
-            }
-        });
-
-        // Estado (por defecto ongoing)
-        let status = 'ongoing';
-        const statusText = doc.body?.textContent || '';
-        if (statusText.toLowerCase().includes('finalizado') || 
-            statusText.toLowerCase().includes('completado') ||
-            statusText.toLowerCase().includes('completed')) {
-            status = 'completed';
-        }
-
-        return {
-            id: `manhwaweb-${slug}`,
-            slug,
-            title,
-            cover,
-            description,
-            genres,
-            status,
             author: 'Autor desconocido',
             lastChapter: '?',
             chaptersCount: 0,
