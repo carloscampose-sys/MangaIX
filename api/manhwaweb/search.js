@@ -85,74 +85,97 @@ export default async function handler(req, res) {
             urlParams.append('buscar', query.trim());
             console.log('[ManhwaWeb Search] Búsqueda en URL:', query.trim());
         } else {
+            urlParams.append('buscar', ''); // ManhwaWeb requiere el parámetro aunque esté vacío
             console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
         
         // ============================================================
-        // CONVERSIÓN DE GÉNEROS: ID → VALOR NUMÉRICO
+        // CONVERSIÓN DE GÉNEROS: ID → VALOR NUMÉRICO (IDs REALES DE MANHWAWEB)
         // ============================================================
-        // Agregar géneros (ManhwaWeb usa 'genders[]' con valores numéricos)
-        // Necesitamos convertir los IDs a sus valores numéricos
-        // Ejemplo: 'comedia' → '5', 'superpoderes' → '27'
+        // ManhwaWeb usa 'genders' repetido para múltiples géneros
+        // URL real con 2 géneros: ?genders=18&genders=2
         if (genreIds.length > 0) {
-            // Mapeo de IDs a valores numéricos (basado en manhwawebFilters.js)
-            // Este mapeo es crítico: sin él, todos los géneros devuelven el mismo listado
+            // MAPEO REAL Y COMPLETO DE MANHWAWEB (verificado del sitio real)
             const genreMap = {
-                'accion': '3', 'aventura': '4', 'comedia': '5', 'drama': '6',
-                'recuentos': '7', 'romance': '8', 'venganza': '9', 'harem': '10',
-                'fantasia': '11', 'sobrenatural': '12', 'tragedia': '13', 'psicologico': '14',
-                'horror': '15', 'thriller': '16', 'historias-cortas': '17', 'ecchi': '18',
-                'gore': '19', 'girls-love': '20', 'boys-love': '21', 'reencarnacion': '22',
-                'sistema-niveles': '23', 'ciencia-ficcion': '24', 'apocaliptico': '25',
-                'artes-marciales': '26', 'superpoderes': '27', 'cultivacion': '28', 'milf': '29'
+                'drama': '1',
+                'romance': '2',
+                'accion': '3',
+                'venganza': '5',
+                'harem': '6',
+                'milf': '8',
+                'comedia': '18',
+                'tragedia': '25',
+                'girls-love': '27',
+                'historias-cortas': '28',
+                'aventura': '29',
+                'ecchi': '30',
+                'sobrenatural': '31',
+                'horror': '32',
+                'ciencia-ficcion': '33',
+                'gore': '34',
+                'cultivacion': '35',
+                'sistema-niveles': '37',
+                'apocaliptico': '38',
+                'artes-marciales': '39',
+                'superpoderes': '40',
+                'reencarnacion': '41',
+                'recuentos': '42',
+                'psicologico': '43',
+                'thriller': '44',
+                'boys-love': '45',
+                'fantasia': '23'
             };
             
-            // Convertir cada ID de género a su valor numérico y agregarlo a la URL
-            // PROBANDO MÚLTIPLES NOMBRES DE PARÁMETROS (ManhwaWeb puede usar diferentes nombres)
+            // Agregar cada género como parámetro 'genders' separado
             genreIds.forEach(genreId => {
                 const genreValue = genreMap[genreId] || genreId;
-                // Intentar con varios nombres de parámetro posibles
-                urlParams.append('genders[]', genreValue);   // Opción 1
-                urlParams.append('genres[]', genreValue);    // Opción 2
-                urlParams.append('genero[]', genreValue);    // Opción 3
-                urlParams.append('genre', genreValue);       // Opción 4 (sin [])
+                urlParams.append('genders', genreValue);
             });
-            console.log('[ManhwaWeb Search] Géneros IDs:', genreIds);
-            console.log('[ManhwaWeb Search] Géneros valores numéricos:', genreIds.map(id => genreMap[id] || id));
-            console.log('[ManhwaWeb Search] PROBANDO múltiples nombres de parámetros: genders[], genres[], genero[], genre');
+            
+            console.log('[ManhwaWeb Search] Géneros seleccionados:', genreIds);
+            console.log('[ManhwaWeb Search] IDs numéricos:', genreIds.map(id => genreMap[id] || id));
         }
         
-        // Agregar tipo
+        // Agregar tipo (ManhwaWeb usa 'tipo' en español)
         if (type) {
-            urlParams.append('type', type);
+            urlParams.append('tipo', type);
             console.log('[ManhwaWeb Search] Tipo en URL:', type);
+        } else {
+            urlParams.append('tipo', '');
         }
         
-        // Agregar estado
+        // Agregar estado (ManhwaWeb usa 'estado' en español)
         if (status) {
-            urlParams.append('status', status);
+            urlParams.append('estado', status);
             console.log('[ManhwaWeb Search] Estado en URL:', status);
+        } else {
+            urlParams.append('estado', '');
         }
         
-        // Agregar erótico
+        // Agregar erótico (ManhwaWeb usa 'erotico' en español)
         if (erotic) {
-            urlParams.append('erotic', erotic);
+            urlParams.append('erotico', erotic);
             console.log('[ManhwaWeb Search] Erótico en URL:', erotic);
+        } else {
+            urlParams.append('erotico', '');
         }
         
-        // Agregar demografía
+        // Agregar demografía (ManhwaWeb usa 'demografia' en español)
         if (demographic) {
-            urlParams.append('demographic', demographic);
+            urlParams.append('demografia', demographic);
             console.log('[ManhwaWeb Search] Demografía en URL:', demographic);
+        } else {
+            urlParams.append('demografia', '');
         }
         
-        // Agregar ordenamiento
+        // Agregar ordenamiento (ManhwaWeb usa 'order_item' y 'order_dir')
         if (sortBy) {
-            urlParams.append('sortby', sortBy);
-            if (sortOrder) {
-                urlParams.append('order', sortOrder);
-            }
+            urlParams.append('order_item', sortBy);
+            urlParams.append('order_dir', sortOrder || 'desc');
             console.log('[ManhwaWeb Search] Orden en URL:', sortBy, sortOrder);
+        } else {
+            urlParams.append('order_item', 'alfabetico');
+            urlParams.append('order_dir', 'desc');
         }
         
         // Construir URL final
