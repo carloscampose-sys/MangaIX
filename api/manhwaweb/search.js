@@ -208,22 +208,28 @@ export default async function handler(req, res) {
             console.log('[ManhwaWeb Search] Timeout esperando resultados, intentando extraer de todos modos...');
         });
 
+        // ============================================================
         // HACER SCROLL PARA CARGAR MÁS RESULTADOS (lazy loading)
+        // Soluciona el problema de obtener solo 1 resultado en filtros como "Comedia"
+        // ManhwaWeb usa infinite scroll, debemos hacer scroll para cargar todos
+        // ============================================================
         console.log('[ManhwaWeb Search] Haciendo scroll para cargar más resultados...');
         let previousCount = 0;
         let currentCount = 0;
         let scrollAttempts = 0;
-        const maxScrollAttempts = 8; // Limitar a 8 intentos de scroll
+        const maxScrollAttempts = 8; // Limitar a 8 intentos (8 segundos total)
+        // Cada scroll carga ~10-20 resultados adicionales
         
         do {
             previousCount = currentCount;
             
-            // Scroll hacia abajo
+            // Scroll hacia abajo hasta el final de la página
+            // Esto activa el lazy loading de ManhwaWeb
             await page.evaluate(() => {
                 window.scrollTo(0, document.body.scrollHeight);
             });
             
-            // Esperar a que se carguen nuevos elementos
+            // Esperar 1 segundo a que se carguen nuevos elementos del lazy loading
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Contar elementos actuales
@@ -234,7 +240,8 @@ export default async function handler(req, res) {
             scrollAttempts++;
             console.log(`[ManhwaWeb Search] Scroll ${scrollAttempts}/${maxScrollAttempts}: ${currentCount} resultados`);
             
-            // Salir si no hay más elementos nuevos o alcanzamos el límite
+            // Salir si no hay más elementos nuevos o alcanzamos el límite de scrolls
+            // currentCount > previousCount = hay nuevos elementos cargados
         } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
         
         console.log(`[ManhwaWeb Search] Scroll completado. Total: ${currentCount} resultados`);
