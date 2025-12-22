@@ -11,7 +11,7 @@ import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from '.
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MainApp = () => {
+const MainApp = ({ userName }) => {
   const [page, setPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -252,8 +252,14 @@ const MainApp = () => {
                 <div className="text-center mb-8 sm:mb-10 md:mb-12">
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black mb-3 sm:mb-4 tracking-tight drop-shadow-sm">
                     <span className="text-potaxie-green">
-                      Encuentra tu próximo vicio
-                    </span> 🥑
+                      {userName && userName === 'Ana' ? (
+                        <>El Santuario de <span className="text-potaxie-gold text-outline-gold">Ana</span> 🥑</>
+                      ) : userName ? (
+                        <>Bienvenida, <span className="text-potaxie-gold text-outline-gold">{userName}</span> 🥑</>
+                      ) : (
+                        <>Encuentra tu próximo vicio</>
+                      )}
+                    </span>
                   </h2>
                   <p className="text-purple-600 dark:text-purple-400 text-sm sm:text-base md:text-lg font-bold px-2">Busca mangas, manhwas, manhuas y webtoons</p>
                 </div>
@@ -613,26 +619,61 @@ const MainApp = () => {
   );
 }
 
+import WelcomeScreen from './components/WelcomeScreen'; // Import the new WelcomeScreen component
+
 const App = () => {
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(true);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false); // New state to control LoadingScreen display
+  const [userName, setUserName] = useState(null);
 
   useEffect(() => {
-    // Simulamos el tiempo del ritual potaxie
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const storedUserName = localStorage.getItem('userName');
+    if (storedUserName) {
+      setUserName(storedUserName);
+      setShowWelcomeScreen(false); // Skip welcome screen
+      setShowLoadingScreen(true); // Go straight to loading animation
+    } else {
+      setShowWelcomeScreen(true); // Show welcome screen if no userName
+    }
   }, []);
+
+  // Effect for the loading screen after welcome or directly if userName exists
+  useEffect(() => {
+    if (showLoadingScreen) {
+      const timer = setTimeout(() => {
+        setShowLoadingScreen(false);
+      }, 2000); // Simulate initial loading time
+      return () => clearTimeout(timer);
+    }
+  }, [showLoadingScreen]);
+
+  const handleWelcomeEnter = () => {
+    setUserName(localStorage.getItem('userName')); // Get the newly set userName
+    setShowWelcomeScreen(false);
+    setShowLoadingScreen(true); // Trigger loading screen after welcome
+  };
 
   return (
     <ThemeProvider>
       <ToastProvider>
         <LibraryProvider>
           <AnimatePresence mode="wait">
-            {isInitialLoading ? (
+            {showWelcomeScreen && (
+              <motion.div
+                key="welcome"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <WelcomeScreen onEnter={handleWelcomeEnter} />
+              </motion.div>
+            )}
+            {!showWelcomeScreen && showLoadingScreen && (
               <LoadingScreen key="loading" />
-            ) : (
-              <MainApp key="app" />
+            )}
+            {!showWelcomeScreen && !showLoadingScreen && (
+              <MainApp key="app" userName={userName} /> // Pass userName to MainApp
             )}
           </AnimatePresence>
         </LibraryProvider>
@@ -642,3 +683,4 @@ const App = () => {
 };
 
 export default App;
+

@@ -23,7 +23,7 @@ html {
 }
 
 body {
-  @apply bg-potaxie-cream text-gray-800 transition-colors duration-300;
+  @apply bg-potaxie-cream text-potaxie-text-light transition-colors duration-300;
   cursor: var(--cursor-url), auto;
   min-height: 100vh;
   margin: 0;
@@ -89,16 +89,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #A3E635;
-  /* Verde aguacate */
+  background: #BEE3B0;
+  /* Pastel Green */
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #65a30d;
-  /* Verde más oscuro al tocar */
+  background-color: #9ac28a;
+  /* Darker pastel green on hover */
 }
 
 /* Manhwa Card Glow in Dark Mode */
@@ -114,6 +114,10 @@ body {
 /* Custom Utilities */
 .text-outline {
   text-shadow: 1px 1px 0 #000;
+}
+
+.text-outline-gold {
+  text-shadow: 0 0 3px #FFD700, 0 0 5px rgba(255, 215, 0, 0.2); /* Even softer golden glow */
 }
 
 .section-spacing {
@@ -256,7 +260,7 @@ textarea {
   position: relative;
   overflow: hidden;
   animation: pulse-glow-potaxio 3s ease-in-out infinite;
-  @apply border-[#A3E635]/30 dark:border-[#A3E635]/20;
+  @apply border-potaxie-green-pastel/30 dark:border-[#A3E635]/20;
 }
 
 .btn-premium-potaxie::after {
@@ -277,4 +281,17 @@ textarea {
 
 .dark .btn-premium-potaxie {
   animation: pulse-glow-potaxio 3s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+/* Custom gold glow for input focus */
+.focus\:ring-gold-500:focus {
+  --tw-ring-color: #FFD700; /* Gold color */
 }
