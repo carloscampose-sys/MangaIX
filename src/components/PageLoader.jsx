@@ -1,140 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Componente SVG del hurón animado
-const AnimatedFerret = () => {
-    return (
-        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Cuerpo del hurón */}
-            <motion.ellipse
-                cx="60"
-                cy="70"
-                rx="35"
-                ry="25"
-                fill="#A7D08C"
-                animate={{
-                    scale: [1, 1.05, 1],
-                }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            />
-
-            {/* Cabeza */}
-            <motion.ellipse
-                cx="60"
-                cy="40"
-                rx="25"
-                ry="20"
-                fill="#A7D08C"
-                animate={{
-                    y: [0, -3, 0],
-                }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            />
-
-            {/* Oreja izquierda */}
-            <motion.path
-                d="M 45 25 Q 40 15 45 10 Q 50 15 45 25 Z"
-                fill="#8BB874"
-                animate={{
-                    rotate: [-5, 5, -5],
-                }}
-                transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                style={{ originX: '45px', originY: '25px' }}
-            />
-
-            {/* Oreja derecha */}
-            <motion.path
-                d="M 75 25 Q 80 15 75 10 Q 70 15 75 25 Z"
-                fill="#8BB874"
-                animate={{
-                    rotate: [5, -5, 5],
-                }}
-                transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                style={{ originX: '75px', originY: '25px' }}
-            />
-
-            {/* Ojo izquierdo */}
-            <motion.circle
-                cx="50"
-                cy="38"
-                r="3"
-                fill="#2C3E50"
-                animate={{
-                    scale: [1, 0.1, 1],
-                }}
-                transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            />
-
-            {/* Ojo derecho */}
-            <motion.circle
-                cx="70"
-                cy="38"
-                r="3"
-                fill="#2C3E50"
-                animate={{
-                    scale: [1, 0.1, 1],
-                }}
-                transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            />
-
-            {/* Nariz */}
-            <ellipse
-                cx="60"
-                cy="48"
-                rx="4"
-                ry="3"
-                fill="#6B8E5E"
-            />
-
-            {/* Cola */}
-            <motion.path
-                d="M 90 75 Q 105 70 110 80 Q 105 90 95 85 Q 92 82 90 75 Z"
-                fill="#8BB874"
-                animate={{
-                    rotate: [0, 10, 0, -10, 0],
-                }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-                style={{ originX: '90px', originY: '75px' }}
-            />
-
-            {/* Patas delanteras */}
-            <ellipse cx="45" cy="90" rx="6" ry="10" fill="#8BB874" />
-            <ellipse cx="60" cy="90" rx="6" ry="10" fill="#8BB874" />
-
-            {/* Patas traseras */}
-            <ellipse cx="75" cy="90" rx="6" ry="10" fill="#8BB874" />
-        </svg>
-    );
-};
-
 export const PageLoader = ({ isLoading }) => {
     const [progress, setProgress] = useState(0);
     const [dots, setDots] = useState('');
@@ -192,19 +58,27 @@ export const PageLoader = ({ isLoading }) => {
                         transition={{ duration: 0.3 }}
                         className="flex flex-col items-center gap-6 p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border-2 border-potaxie-green/20 dark:border-potaxie-green/30"
                     >
-                        {/* Hurón animado */}
+                        {/* Nutria/Hurón animado */}
                         <motion.div
                             animate={{
-                                rotate: [0, 360],
+                                rotate: [0, 15, -15, 0],
+                                scale: [1, 1.1, 1]
                             }}
                             transition={{
-                                duration: 3,
+                                duration: 2,
                                 repeat: Infinity,
-                                ease: "linear"
+                                ease: "easeInOut"
                             }}
                             className="relative"
                         >
-                            <AnimatedFerret />
+                            <img
+                                src="/otter.png"
+                                alt="Loading"
+                                className="w-32 h-32 object-contain"
+                                style={{
+                                    filter: 'drop-shadow(0 0 20px rgba(167, 208, 140, 0.5))'
+                                }}
+                            />
                             {/* Glow effect */}
                             <div className="absolute inset-0 bg-potaxie-green/20 rounded-full blur-2xl -z-10"></div>
                         </motion.div>
