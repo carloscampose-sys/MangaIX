@@ -164,7 +164,87 @@ export default async function handler(req, res) {
             const titleEl = document.querySelector('h1, .title, [class*="title"]');
             const title = titleEl ? cleanText(titleEl.textContent) : '';
 
-            // Sinopsis/Descripción - ESTRATEGIA MEJORADA
+            // EXTRAER METADATA Y SINOPSIS POR SEPARADO
+            
+            // 1. GÉNEROS
+            let genres = [];
+            const genreSelectors = [
+                '.genres a',
+                '.genre a',
+                '[class*="genre"] a',
+                '[class*="Genre"] a',
+                '.tags a',
+                '[class*="tag"] a'
+            ];
+            
+            for (const selector of genreSelectors) {
+                const elements = document.querySelectorAll(selector);
+                if (elements.length > 0) {
+                    genres = Array.from(elements).map(el => cleanText(el.textContent));
+                    console.log(`[Géneros] Encontrados ${genres.length} géneros`);
+                    break;
+                }
+            }
+            
+            // 2. ESTADO (Publicándose, Finalizado, etc.)
+            let status = '';
+            const statusKeywords = ['estado', 'status', 'publicando', 'finalizado', 'completado', 'en emisión'];
+            const allElements = Array.from(document.querySelectorAll('div, span, p'));
+            
+            for (const el of allElements) {
+                const text = el.textContent.trim().toLowerCase();
+                if (statusKeywords.some(kw => text.includes(kw)) && text.length < 50) {
+                    const parent = el.closest('div');
+                    if (parent) {
+                        status = cleanText(parent.textContent);
+                        console.log('[Estado] Encontrado:', status);
+                        break;
+                    }
+                }
+            }
+            
+            // 3. NOMBRES ASOCIADOS (títulos alternativos)
+            let alternativeTitles = [];
+            const titleKeywords = ['nombres asociados', 'alternative', 'otros nombres', 'también conocido'];
+            
+            for (const el of allElements) {
+                const text = el.textContent.trim().toLowerCase();
+                if (titleKeywords.some(kw => text.includes(kw))) {
+                    const parent = el.closest('div');
+                    if (parent) {
+                        const titles = parent.textContent
+                            .split('\n')
+                            .map(t => t.trim())
+                            .filter(t => t && !titleKeywords.some(kw => t.toLowerCase().includes(kw)));
+                        alternativeTitles = titles.slice(0, 5); // Máximo 5
+                        console.log('[Títulos alternativos] Encontrados:', alternativeTitles.length);
+                        break;
+                    }
+                }
+            }
+            
+            // 4. AUTORES
+            let authors = [];
+            const authorSelectors = [
+                '.author',
+                '.authors',
+                '[class*="author"]',
+                '[class*="Author"]'
+            ];
+            
+            for (const selector of authorSelectors) {
+                const el = document.querySelector(selector);
+                if (el) {
+                    const authorText = cleanText(el.textContent);
+                    if (authorText && !authorText.toLowerCase().includes('autor')) {
+                        authors = [authorText];
+                        console.log('[Autor] Encontrado:', authorText);
+                        break;
+                    }
+                }
+            }
+            
+            // 5. SINOPSIS/DESCRIPCIÓN (SOLO LA HISTORIA, SIN METADATA)
             let description = '';
             
             // Estrategia 1: Selectores CSS comunes
@@ -270,42 +350,66 @@ export default async function handler(req, res) {
                     console.log('[Descripción] Encontrada usando keywords');
                 }
             }
-
-            // Autor
-            let author = '';
-            const authorSelectors = [
-                '.author',
-                '[class*="author"]',
-                '[class*="artist"]'
-            ];
             
-            for (const selector of authorSelectors) {
-                const el = document.querySelector(selector);
-                if (el) {
-                    author = cleanText(el.textContent);
-                    break;
+            // LIMPIAR DESCRIPCIÓN: Eliminar metadata que pueda haberse colado
+            if (description) {
+                // Eliminar líneas que contengan palabras clave de metadata
+                const metadataKeywords = [
+                    'género', 'genero', 'romance', 'comedia', 'acción', 'drama', 'fantasía',
+                    'estado', 'publicandose', 'finalizado', 'completado',
+                    'nombres asociados', 'alternative', 'también conocido',
+                    'autor', 'autores', 'artista'
+                ];
+                
+                const lines = description.split('\n');
+                const cleanLines = lines.filter(line => {
+                    const lower = line.toLowerCase().trim();
+                    // Mantener solo líneas que NO sean metadata (más de 30 caracteres y no contienen keywords)
+                    return line.length > 30 && !metadataKeywords.some(kw => lower.startsWith(kw));
+                });
+                
+                description = cleanLines.join(' ').trim();
+            }
+
+            // Usar el autor ya extraído o buscar de nuevo
+            let author = authors.length > 0 ? authors.join(', ') : '';
+            if (!author) {
+                const authorSelectors2 = [
+                    '.author',
+                    '[class*="author"]',
+                    '[class*="artist"]'
+                ];
+                
+                for (const selector of authorSelectors2) {
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        author = cleanText(el.textContent);
+                        break;
+                    }
                 }
             }
 
-            // Géneros
-            const genres = [];
-            const genreElements = document.querySelectorAll('.genre, .tag, [class*="genre"], [class*="tag"]');
-            genreElements.forEach(el => {
-                const text = cleanText(el.textContent);
-                if (text && text.length < 30) {
-                    genres.push(text);
-                }
-            });
+            // Si no se encontraron géneros antes, buscar de nuevo
+            if (genres.length === 0) {
+                const genreElements = document.querySelectorAll('.genre, .tag, [class*="genre"], [class*="tag"]');
+                genreElements.forEach(el => {
+                    const text = cleanText(el.textContent);
+                    if (text && text.length < 30 && !genres.includes(text)) {
+                        genres.push(text);
+                    }
+                });
+            }
 
-            // Estado
-            let status = 'ongoing';
-            const statusEl = document.querySelector('.status, [class*="status"]');
-            if (statusEl) {
-                const statusText = cleanText(statusEl.textContent).toLowerCase();
-                if (statusText.includes('finali') || statusText.includes('complet')) {
-                    status = 'completed';
-                } else if (statusText.includes('pausa') || statusText.includes('hiatus')) {
-                    status = 'paused';
+            // Normalizar estado extraído
+            let statusNormalized = 'ongoing';
+            if (status) {
+                const statusLower = status.toLowerCase();
+                if (statusLower.includes('finali') || statusLower.includes('complet')) {
+                    statusNormalized = 'completed';
+                } else if (statusLower.includes('pausa') || statusLower.includes('hiatus')) {
+                    statusNormalized = 'paused';
+                } else if (statusLower.includes('publicando') || statusLower.includes('en emisión')) {
+                    statusNormalized = 'ongoing';
                 }
             }
 
@@ -326,7 +430,9 @@ export default async function handler(req, res) {
                 description,
                 author,
                 genres,
-                status,
+                status: statusNormalized,
+                statusRaw: status, // Estado sin procesar
+                alternativeTitles, // Títulos alternativos
                 chaptersCount,
                 cover
             };

@@ -205,6 +205,64 @@ export const DetailModal = ({
                                 </div>
                             </div>
 
+                            {/* Información de la Obra */}
+                            {mangaDetails && (mangaDetails.genres?.length > 0 || mangaDetails.statusRaw || mangaDetails.alternativeTitles?.length > 0) && (
+                                <div className="mb-4 sm:mb-6 md:mb-8">
+                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4">
+                                        Info de la Obra ✨
+                                    </h3>
+                                    <div className="bg-gray-50/50 dark:bg-gray-800/30 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-gray-100/50 dark:border-gray-800 space-y-3">
+                                        
+                                        {/* Géneros */}
+                                        {mangaDetails.genres?.length > 0 && (
+                                            <div>
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                    Géneros
+                                                </p>
+                                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                                    {mangaDetails.genres.map((genre, idx) => (
+                                                        <span 
+                                                            key={idx}
+                                                            className="px-2 sm:px-3 py-1 bg-potaxie-green/10 dark:bg-potaxie-green/20 text-potaxie-700 dark:text-potaxie-300 rounded-lg text-[10px] sm:text-xs font-bold"
+                                                        >
+                                                            {genre}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Estado */}
+                                        {mangaDetails.statusRaw && (
+                                            <div>
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                    Estado
+                                                </p>
+                                                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium">
+                                                    {mangaDetails.statusRaw}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Nombres Asociados */}
+                                        {mangaDetails.alternativeTitles?.length > 0 && (
+                                            <div>
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                    Nombres Asociados
+                                                </p>
+                                                <div className="space-y-1">
+                                                    {mangaDetails.alternativeTitles.map((altTitle, idx) => (
+                                                        <p key={idx} className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                                            • {altTitle}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Sinopsis */}
                             <div className="mb-4 sm:mb-6 md:mb-8">
                                 <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
