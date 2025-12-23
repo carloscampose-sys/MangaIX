@@ -105,17 +105,17 @@ body {
 
 /* Scrollbar más grueso para lector y componentes con scroll largo */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 16px;
+  width: 18px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
+  border-radius: 9px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #BEE3B0;
-  border-radius: 8px;
+  border-radius: 9px;
   border: 3px solid transparent;
   background-clip: content-box;
   transition: background-color 0.2s ease;
