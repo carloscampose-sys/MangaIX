@@ -517,6 +517,49 @@ export default async function handler(req, res) {
             // 5. SINOPSIS/DESCRIPCIÓN (SOLO LA HISTORIA, SIN METADATA)
             let description = '';
             
+            // ===== ESTRATEGIA 0: BUSCAR TEXTO ENTRE TÍTULO Y LISTA DE CAPÍTULOS =====
+            // Esta es la estrategia más específica para ManhwaWeb
+            const h2Element = document.querySelector('h2');
+            if (h2Element && !description) {
+                console.log('[Descripción] Intentando estrategia de texto entre título y capítulos...');
+                
+                // Obtener todo el texto del body
+                const bodyText = document.body.innerText || '';
+                
+                // Buscar la posición del título
+                const titleText = h2Element.textContent.trim();
+                const titleIndex = bodyText.indexOf(titleText);
+                
+                // Buscar la posición de "Ocultar previews" (inicio de lista de capítulos)
+                const chapterListIndex = bodyText.indexOf('Ocultar previews');
+                
+                if (titleIndex !== -1 && chapterListIndex !== -1 && chapterListIndex > titleIndex) {
+                    // Extraer el texto entre el título y la lista de capítulos
+                    const textBetween = bodyText.substring(titleIndex + titleText.length, chapterListIndex).trim();
+                    
+                    console.log('[Descripción] Texto entre título y capítulos:', textBetween.substring(0, 200));
+                    
+                    // Validar que sea texto sustancial (no solo metadata)
+                    if (textBetween.length > 100 && textBetween.length < 2000) {
+                        // Limpiar metadata (géneros, estado, etc.)
+                        const lines = textBetween.split('\n').map(l => l.trim()).filter(l => l);
+                        
+                        // Filtrar líneas que sean metadata
+                        const metadataKeywords = ['género', 'genero', 'estado', 'autor', 'romance', 'comedia', 'manhwa', 'seinen'];
+                        const contentLines = lines.filter(line => {
+                            const lower = line.toLowerCase();
+                            const isMetadata = metadataKeywords.some(kw => lower.includes(kw)) && line.length < 50;
+                            return !isMetadata && line.length > 20;
+                        });
+                        
+                        if (contentLines.length > 0) {
+                            description = contentLines.join(' ').trim();
+                            console.log('[Descripción] ✅ Encontrada entre título y capítulos:', description.substring(0, 100));
+                        }
+                    }
+                }
+            }
+            
             // Estrategia 1: Selectores CSS comunes
             const descSelectors = [
                 '.description',
