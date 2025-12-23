@@ -262,18 +262,40 @@ export default async function handler(req, res) {
                 }
             }
             
-            // Buscar también en el texto si hay "Autor: Nombre"
+            // Buscar también en el texto si hay "Autor: Nombre" o "Autores: Nombre"
             if (authors.length === 0) {
                 const bodyText = document.body.innerText || '';
-                const authorMatch = bodyText.match(/Autor(?:es)?:\s*([^\n]{3,50})/i);
-                if (authorMatch && authorMatch[1]) {
-                    const authorName = cleanText(authorMatch[1]);
-                    if (authorName) {
-                        authors.push(authorName);
-                        console.log('[Autor] Encontrado en texto:', authorName);
+                
+                // Patrón más flexible para capturar autores
+                const patterns = [
+                    /Autor(?:es)?[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i,
+                    /Artist[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Genres?|Status|Alternative|$))/i,
+                    /(?:By|De)[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i
+                ];
+                
+                for (const pattern of patterns) {
+                    const match = bodyText.match(pattern);
+                    if (match && match[1]) {
+                        const authorName = cleanText(match[1]);
+                        // Verificar que no sea metadata u otro campo
+                        const lower = authorName.toLowerCase();
+                        const isValid = authorName.length > 2 && 
+                                       authorName.length < 100 &&
+                                       !lower.includes('género') &&
+                                       !lower.includes('estado') &&
+                                       !lower.includes('nombre');
+                        
+                        if (isValid && !authors.includes(authorName)) {
+                            authors.push(authorName);
+                            console.log('[Autor] Encontrado en texto:', authorName);
+                            break;
+                        }
                     }
                 }
             }
+            
+            // Log final de autores
+            console.log('[Autores] Total encontrados:', authors.length, authors);
             
             // 5. SINOPSIS/DESCRIPCIÓN (SOLO LA HISTORIA, SIN METADATA)
             let description = '';
@@ -426,62 +448,74 @@ export default async function handler(req, res) {
             
             // LIMPIAR DESCRIPCIÓN: Eliminar metadata y secciones no deseadas
             if (description) {
-                // Lista expandida de keywords a eliminar
-                const metadataKeywords = [
-                    // Metadata de la obra
-                    'género', 'genero', 'géneros', 'generos', 'romance', 'comedia', 'acción', 'drama', 'fantasía',
-                    'estado', 'publicandose', 'publicándose', 'finalizado', 'completado', 'en emisión',
-                    'nombres asociados', 'alternative', 'también conocido', 'otros nombres',
-                    'autor', 'autores', 'artista', 'artist',
-                    // Comentarios y social
-                    'comentar', 'comment', 'intensedebate', 'disqus',
-                    'suscríbete', 'suscribete', 'subscribe', 'rss', 'feed',
-                    'iniciar sesión', 'login', 'sign in', 'register',
-                    'olvidaste', 'forgot password', 'lost password',
-                    'admin options', 'disable comments', 'save settings',
-                    'publicando anónimamente', 'posting anonymously',
-                    'se muestra junto', 'comentarios de esta entrada',
-                    'twitter', 'facebook', 'compartir', 'share',
-                    'ordenar por:', 'sort by:',
-                    'cerrar mensaje', 'close message',
-                    'responder como', 'reply as',
-                    'comments by', 'powered by'
+                console.log('[Limpieza] Descripción original (primeros 500 chars):', description.substring(0, 500));
+                
+                // PASO 1: Cortar en keywords específicas (incluso si están en medio del texto)
+                const cutoffKeywords = [
+                    'Ver más',
+                    'Géneros',
+                    'Generos',
+                    'Estado',
+                    'Nombres asociados',
+                    'Autores',
+                    'Autor',
+                    'Cerrar mensaje', 
+                    'Suscríbete', 
+                    'Comentar como', 
+                    'Comments by',
+                    'Romance', // Género común que aparece después de sinopsis
+                    'Academia',
+                    'Comedia'
                 ];
                 
-                const lines = description.split('\n').map(l => l.trim()).filter(l => l);
-                const cleanLines = lines.filter(line => {
-                    const lower = line.toLowerCase();
-                    
-                    // Verificar si la línea contiene keywords no deseadas
-                    const hasUnwantedKeywords = metadataKeywords.some(kw => lower.includes(kw));
-                    
-                    // Verificar si es una línea muy corta (probablemente no es sinopsis)
-                    const isTooShort = line.length < 40;
-                    
-                    // Verificar si tiene muchos números o caracteres especiales (probablemente spam)
-                    const specialCharRatio = (line.match(/[0-9@#$%&*()_+=[\]{}|;:'",.<>?/\\-]/g) || []).length / line.length;
-                    const hasTooManySpecialChars = specialCharRatio > 0.3;
-                    
-                    return !hasUnwantedKeywords && !isTooShort && !hasTooManySpecialChars;
-                });
+                let shortestCutIndex = description.length;
+                let foundKeyword = null;
                 
-                // Si quedan líneas válidas, unirlas
-                if (cleanLines.length > 0) {
-                    description = cleanLines.join(' ').trim();
-                } else {
-                    // Si todo fue filtrado, intentar obtener solo el primer párrafo largo original
-                    const firstLongLine = lines.find(l => l.length > 100);
-                    description = firstLongLine || description;
-                }
-                
-                // Última limpieza: eliminar texto después de keywords específicas
-                const cutoffKeywords = ['Cerrar mensaje', 'Suscríbete', 'Comentar como', 'Comments by'];
                 for (const keyword of cutoffKeywords) {
                     const idx = description.indexOf(keyword);
-                    if (idx > 50) { // Solo cortar si hay al menos 50 caracteres antes
-                        description = description.substring(0, idx).trim();
+                    if (idx > 50 && idx < shortestCutIndex) { // Al menos 50 caracteres de sinopsis
+                        shortestCutIndex = idx;
+                        foundKeyword = keyword;
                     }
                 }
+                
+                if (foundKeyword) {
+                    console.log(`[Limpieza] Cortando en: "${foundKeyword}" (posición ${shortestCutIndex})`);
+                    description = description.substring(0, shortestCutIndex).trim();
+                }
+                
+                // PASO 2: Limpiar línea por línea si tiene saltos
+                const lines = description.split('\n').map(l => l.trim()).filter(l => l);
+                
+                if (lines.length > 1) {
+                    const metadataKeywords = [
+                        'género', 'genero', 'géneros', 'generos',
+                        'estado', 'publicandose', 'publicándose',
+                        'nombres asociados', 'alternative',
+                        'autor', 'autores', 'artista',
+                        'comentar', 'suscríbete', 'intensedebate',
+                        'iniciar sesión', 'twitter', 'facebook'
+                    ];
+                    
+                    const cleanLines = lines.filter(line => {
+                        const lower = line.toLowerCase();
+                        const hasUnwantedKeywords = metadataKeywords.some(kw => lower.includes(kw));
+                        const isTooShort = line.length < 40;
+                        return !hasUnwantedKeywords && !isTooShort;
+                    });
+                    
+                    if (cleanLines.length > 0) {
+                        description = cleanLines.join(' ').trim();
+                    }
+                }
+                
+                // PASO 3: Limpieza final de caracteres extraños
+                description = description
+                    .replace(/\s+/g, ' ') // Múltiples espacios → un espacio
+                    .replace(/\s+([.,!?])/g, '$1') // Espacios antes de puntuación
+                    .trim();
+                
+                console.log('[Limpieza] Descripción limpia (primeros 300 chars):', description.substring(0, 300));
             }
 
             // Usar el autor ya extraído o buscar de nuevo
