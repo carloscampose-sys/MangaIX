@@ -82,12 +82,14 @@ export default async function handler(req, res) {
         let libraryUrl = 'https://manhwaweb.com/library';
         const urlParams = new URLSearchParams();
         
-        // Agregar búsqueda si existe (ahora es opcional)
-        if (query && query.trim() !== '' && query.trim() !== 'undefined') {
-            urlParams.append('buscar', query.trim());
-            console.log('[ManhwaWeb Search] Búsqueda en URL:', query.trim());
+        // NOTA: ManhwaWeb cambió su sistema de búsqueda
+        // El parámetro 'buscar' ya NO funciona en la URL
+        // Necesitamos usar el campo de búsqueda directamente en el sitio
+        const hasTextQuery = query && query.trim() !== '' && query.trim() !== 'undefined';
+        
+        if (hasTextQuery) {
+            console.log('[ManhwaWeb Search] Búsqueda con texto:', query.trim());
         } else {
-            urlParams.append('buscar', ''); // ManhwaWeb requiere el parámetro aunque esté vacío
             console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
         
@@ -204,6 +206,36 @@ export default async function handler(req, res) {
 
         // Esperar a que la página cargue completamente
         console.log('[ManhwaWeb Search] Esperando carga de contenido...');
+        
+        // Si hay búsqueda de texto, usar el campo de búsqueda del sitio
+        if (hasTextQuery) {
+            console.log('[ManhwaWeb Search] Usando campo de búsqueda del sitio...');
+            
+            // Esperar a que el campo de búsqueda esté disponible
+            // Intentar múltiples selectores comunes para input de búsqueda
+            const searchInputFound = await page.waitForSelector('input[type="text"], input[type="search"], input[placeholder*="uscar"], input[placeholder*="ombre"]', { timeout: 10000 })
+                .catch(() => null);
+            
+            if (searchInputFound) {
+                console.log('[ManhwaWeb Search] Campo de búsqueda encontrado');
+                
+                // Escribir el término de búsqueda
+                await page.type('input[type="text"], input[type="search"]', query.trim(), { delay: 100 });
+                
+                // Esperar un momento para que se procese
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Intentar presionar Enter o hacer click en el botón de búsqueda
+                await page.keyboard.press('Enter');
+                
+                // Esperar a que se actualicen los resultados
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                console.log('[ManhwaWeb Search] Búsqueda enviada');
+            } else {
+                console.warn('[ManhwaWeb Search] No se encontró el campo de búsqueda, continuando sin búsqueda de texto...');
+            }
+        }
         
         // Esperar a que se carguen las tarjetas iniciales
         await page.waitForFunction(() => {
