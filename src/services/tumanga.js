@@ -114,40 +114,40 @@ export const TUMANGA_SORT_ORDER = [
     { name: "Descendente (Z-A, 9-0)", id: "desc", value: "desc", icon: "↓" }
 ];
 
-// Moods predefinidos que mapean a géneros de TuManga
+// Moods predefinidos que mapean a géneros de TuManga (usando IDs numéricos)
 export const TUMANGA_MOODS = [
     {
         name: "Quiero llorar 😭",
         id: "cry",
-        genres: ["drama", "tragedia"],
+        genres: [4, 25],  // Drama (4), Tragedia (25)
         toast: "Busca los pañuelos, que hoy se llora... 😭",
         color: "from-blue-400 to-blue-600"
     },
     {
         name: "Colapso de amor 😍",
         id: "love",
-        genres: ["romance", "comedia"],
+        genres: [13, 3],  // Romance (13), Comedia (3)
         toast: "Prepárate para el colapso de azúcar, divina... 😍",
         color: "from-pink-400 to-rose-600"
     },
     {
         name: "Chisme y traición 🐍",
         id: "tea",
-        genres: ["drama", "psicologico"],
+        genres: [4, 12],  // Drama (4), Psicológico (12)
         toast: "Prepárate, que el chisme viene fuerte... 🐍☕",
         color: "from-indigo-400 to-purple-600"
     },
     {
         name: "¡A devorar! 💅",
         id: "devour",
-        genres: ["accion", "fantasia"],
+        genres: [1, 7],  // Acción (1), Fantasía (7)
         toast: "¡Poder total activado! Vas a devorar... 💅",
         color: "from-potaxie-green to-teal-600"
     },
     {
         name: "Noche de terror 🕯️",
         id: "fear",
-        genres: ["horror", "misterio"],
+        genres: [10, 11],  // Horror (10), Misterio (11)
         toast: "No mires atrás... el misterio te espera... 🕯️",
         color: "from-gray-700 to-gray-900"
     }

@@ -7,7 +7,7 @@ import { Oracle } from './components/Oracle';
 import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { ToastProvider, useToast } from './context/ToastContext';
-import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
+import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
 // Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
@@ -22,7 +22,6 @@ const MainApp = ({ userName }) => {
   const [loading, setLoading] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const [selectedFormats, setSelectedFormats] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
   
@@ -133,7 +132,7 @@ const MainApp = ({ userName }) => {
       if (!searchTerm && selectedGenres.length > 0) {
         const firstGenre = TUMANGA_GENRES.find(g => selectedGenres.includes(g.id));
         if (firstGenre) {
-          searchTerm = firstGenre.searchParam;
+          searchTerm = firstGenre.displayName;
         }
       }
 
@@ -141,13 +140,13 @@ const MainApp = ({ userName }) => {
       if (!searchTerm && selectedMood) {
         const moodGenre = TUMANGA_GENRES.find(g => selectedMood.genres.includes(g.id));
         if (moodGenre) {
-          searchTerm = moodGenre.searchParam;
+          searchTerm = moodGenre.displayName;
         }
       }
     }
 
     // Validación: Si no hay término de búsqueda ni filtros, no buscar
-    if (!searchTerm && selectedGenres.length === 0 && selectedFormats.length === 0 && !selectedMood &&
+    if (!searchTerm && selectedGenres.length === 0 && !selectedMood &&
         selectedSource === 'tumanga') {
       console.log('[App] No hay query ni filtros, no se ejecuta búsqueda');
       return;
@@ -172,9 +171,9 @@ const MainApp = ({ userName }) => {
     if (selectedSource === 'tumanga') {
       filters = {
         genres: selectedGenres,
-        formats: selectedFormats,
         sortBy: selectedTuMangaSortBy,
-        sortOrder: selectedTuMangaSortOrder
+        sortOrder: selectedTuMangaSortOrder,
+        page: pageToUse - 1  // TuManga usa paginación 0-based (0, 1, 2...)
       };
     } else if (selectedSource === 'manhwaweb') {
       filters = {
@@ -196,7 +195,7 @@ const MainApp = ({ userName }) => {
     const resultCount = results.length;
 
     // Si no hay resultados y hay filtros, intentar sin filtros
-    if (results.length === 0 && (selectedGenres.length > 0 || selectedFormats.length > 0)) {
+    if (results.length === 0 && selectedGenres.length > 0) {
       results = await unifiedSearch(searchQuery, {}, selectedSource);
     }
 
@@ -333,15 +332,8 @@ const MainApp = ({ userName }) => {
     );
   };
 
-  const toggleFormat = (name) => {
-    setSelectedFormats(prev =>
-      prev.includes(name) ? prev.filter(f => f !== name) : [...prev, name]
-    );
-  };
-
   const clearFilters = () => {
     setSelectedGenres([]);
-    setSelectedFormats([]);
     setSelectedMood(null);
     setSearchQuery('');
     // Limpiar filtros de ManhwaWeb también
@@ -477,7 +469,6 @@ const MainApp = ({ userName }) => {
                             setSelectedSource(source.id);
                             setSearchResults([]);
                             setSelectedGenres([]);
-                            setSelectedFormats([]);
                             setSelectedMood(null);
                             setSelectedType('');
                             setSelectedStatus('');
@@ -531,9 +522,9 @@ const MainApp = ({ userName }) => {
                       >
                         <Filter size={16} />
                         <span className="hidden sm:inline">Filtros</span>
-                        {(selectedGenres.length + selectedFormats.length > 0) && (
+                        {selectedGenres.length > 0 && (
                           <span className="absolute -top-1 -right-1 w-4 sm:w-5 h-4 sm:h-5 bg-red-500 text-white text-[8px] sm:text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 animate-bounce">
-                            {selectedGenres.length + selectedFormats.length}
+                            {selectedGenres.length}
                           </span>
                         )}
                         {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -595,41 +586,6 @@ const MainApp = ({ userName }) => {
                             </div>
                           </div>
 
-                          {/* Formatos (solo TuManga) */}
-                          {selectedSource === 'tumanga' && currentFilters.formats.length > 0 && (
-                            <div>
-                              <div className="flex items-center gap-2 mb-4 ml-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-potaxie-green" />
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Formato Potaxio</h4>
-                              </div>
-                              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-start">
-                                {currentFilters.formats.map(format => {
-                                  const isActive = selectedFormats.includes(format.name);
-                                  const isManga = format.name.includes("Manga");
-                                  return (
-                                    <motion.button
-                                      key={format.name}
-                                      whileHover={{ scale: 1.02 }}
-                                      whileTap={{ scale: 0.98 }}
-                                      onClick={() => toggleFormat(format.name)}
-                                      className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold chip-transition flex items-center justify-center gap-1 sm:gap-2 border-2 box-border
-                                    ${isActive
-                                          ? isManga
-                                            ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30'
-                                            : 'bg-potaxie-green text-white border-potaxie-green shadow-lg shadow-potaxie-green/30'
-                                          : 'bg-white/50 dark:bg-gray-900/50 text-gray-500 border-transparent hover:border-potaxie-200'}
-                                  `}
-                                    >
-                                      <div className={`w-3 sm:w-4 h-3 sm:h-4 flex items-center justify-center transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
-                                        <Sparkles size={12} className="animate-pulse" />
-                                      </div>
-                                      {format.name}
-                                    </motion.button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
 
                           {/* Ordenamiento (solo TuManga) */}
                           {selectedSource === 'tumanga' && (
@@ -1005,7 +961,7 @@ const MainApp = ({ userName }) => {
                   </motion.div>
                 )}
 
-                {!loading && searchResults.length === 0 && (searchQuery || selectedGenres.length > 0 || selectedFormats.length > 0) && (
+                {!loading && searchResults.length === 0 && (searchQuery || selectedGenres.length > 0) && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
