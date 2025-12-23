@@ -32,8 +32,8 @@ const MainApp = ({ userName }) => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedErotic, setSelectedErotic] = useState('');
   const [selectedDemographic, setSelectedDemographic] = useState('');
-  const [selectedSortBy, setSelectedSortBy] = useState('');
-  const [selectedSortOrder, setSelectedSortOrder] = useState('');
+  const [selectedSortBy, setSelectedSortBy] = useState('alfabetico');  // Por defecto: alfabético
+  const [selectedSortOrder, setSelectedSortOrder] = useState('desc');   // Por defecto: descendente
 
   // Estados de ordenamiento específicos de TuManga
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
@@ -341,8 +341,8 @@ const MainApp = ({ userName }) => {
     setSelectedStatus('');
     setSelectedErotic('');
     setSelectedDemographic('');
-    setSelectedSortBy('');
-    setSelectedSortOrder('');
+    setSelectedSortBy('alfabetico');   // Por defecto: alfabético
+    setSelectedSortOrder('desc');      // Por defecto: descendente
     // Resetear ordenamiento de TuManga
     setSelectedTuMangaSortBy('title');
     setSelectedTuMangaSortOrder('asc');
@@ -474,8 +474,8 @@ const MainApp = ({ userName }) => {
                             setSelectedStatus('');
                             setSelectedErotic('');
                             setSelectedDemographic('');
-                            setSelectedSortBy('');
-                            setSelectedSortOrder('');
+                            setSelectedSortBy('alfabetico');   // Por defecto: alfabético
+                            setSelectedSortOrder('desc');      // Por defecto: descendente
                             // Resetear ordenamiento de TuManga
                             setSelectedTuMangaSortBy('title');
                             setSelectedTuMangaSortOrder('asc');
@@ -801,7 +801,6 @@ const MainApp = ({ userName }) => {
                                     onChange={(e) => setSelectedSortBy(e.target.value)}
                                     className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 outline-none"
                                   >
-                                    <option value="">Criterio...</option>
                                     {currentFilters.sortBy.map(sort => (
                                       <option key={sort.id} value={sort.value}>
                                         {sort.name}
@@ -813,7 +812,6 @@ const MainApp = ({ userName }) => {
                                     onChange={(e) => setSelectedSortOrder(e.target.value)}
                                     className="px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-purple-500 outline-none"
                                   >
-                                    <option value="">Orden...</option>
                                     {currentFilters.sortOrder.map(order => (
                                       <option key={order.id} value={order.value}>
                                         {order.name}
