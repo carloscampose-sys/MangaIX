@@ -317,16 +317,16 @@ export default async function handler(req, res) {
             if (authors.length === 0) {
                 const bodyText = document.body.innerText || '';
                 
-                // Patrón más flexible para capturar autores
+                // Patrones más estrictos para capturar autores
                 const patterns = [
-                    // "Autores: Nombre" con lookahead para detectar fin
-                    /Autor(?:es)?[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|Capítulos?|$))/i,
+                    // "Autores: Nombre" - debe estar seguido de Géneros, Estado, Nombres o Capítulos
+                    /Autor(?:es)?[:\s]+([A-Z][^\n\r]{1,50}?)(?=\s*(?:Género|Estado|Nombre|Capítulo))/i,
+                    // "Autores Nombre" sin dos puntos - nombre debe empezar con mayúscula
+                    /Autor(?:es)?\s+([A-Z][a-zA-Z0-9\s]{2,40})(?=\s*(?:Género|Estado))/,
                     // "Artist: Nombre"
-                    /Artist[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Genres?|Status|Alternative|Chapters?|$))/i,
-                    // "By Nombre" o "De Nombre"
-                    /(?:By|De)[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i,
-                    // Autor sin ":" → "Autor Nombre"
-                    /Autor(?:es)?\s+([A-Z][a-zA-Z0-9\s]{2,40})(?=\s*(?:Géneros?|Estado|$))/i
+                    /Artist[:\s]+([A-Z][^\n\r]{1,50}?)(?=\s*(?:Genre|Status|Alternative|Chapter))/i,
+                    // "By Nombre" - nombre debe empezar con mayúscula
+                    /By[:\s]+([A-Z][a-zA-Z0-9\s]{2,40})(?=\s*(?:Genre|Status|$))/
                 ];
                 
                 for (const pattern of patterns) {
@@ -336,18 +336,26 @@ export default async function handler(req, res) {
                         // Verificar que no sea metadata u otro campo
                         const lower = authorName.toLowerCase();
                         
-                        // Palabras prohibidas
+                        // Palabras prohibidas ampliadas
                         const invalidWords = [
                             'género', 'genero', 'estado', 'nombre', 'capítulo',
                             'todos', 'all', 'ver', 'más', 'leer', 'desconocido',
-                            'unknown', 'n/a', 'none', 'sin', 'without'
+                            'unknown', 'n/a', 'none', 'sin', 'without',
+                            'vida', 'life', 'recuentos', 'romance', 'comedia',
+                            'acción', 'drama', 'fantasía', 'aventura', 'misterio',
+                            'seinen', 'shounen', 'josei', 'shoujo',
+                            'manhwa', 'manhua', 'manga', 'webtoon'
                         ];
                         
                         const hasInvalidWords = invalidWords.some(word => lower.includes(word));
                         
+                        // El nombre debe empezar con mayúscula (nombres propios)
+                        const startsWithCapital = /^[A-Z]/.test(authorName);
+                        
                         const isValid = authorName.length >= 3 && 
                                        authorName.length < 100 &&
                                        !hasInvalidWords &&
+                                       startsWithCapital && // NUEVO: debe empezar con mayúscula
                                        !/^\d+$/.test(authorName) && // No solo números
                                        !/^[^a-zA-Z0-9]+$/.test(authorName) && // Debe tener letras/números
                                        authorName.split(/\s+/).length <= 6; // Máximo 6 palabras
@@ -368,7 +376,11 @@ export default async function handler(req, res) {
                 const invalidWords = [
                     'género', 'genero', 'estado', 'capítulo', 'nombre',
                     'todos', 'all', 'ver', 'más', 'leer', 'desconocido',
-                    'comentar', 'suscríbete', 'iniciar', 'sesión'
+                    'comentar', 'suscríbete', 'iniciar', 'sesión',
+                    'vida', 'life', 'recuentos', 'romance', 'comedia',
+                    'acción', 'drama', 'fantasía', 'aventura', 'misterio',
+                    'seinen', 'shounen', 'josei', 'shoujo',
+                    'manhwa', 'manhua', 'manga', 'webtoon'
                 ];
                 
                 const possibleAuthors = Array.from(document.querySelectorAll('span, div'))
@@ -378,11 +390,13 @@ export default async function handler(req, res) {
                         const words = text.split(/\s+/);
                         const lower = text.toLowerCase();
                         const hasInvalidWords = invalidWords.some(word => lower.includes(word));
+                        const startsWithCapital = /^[A-Z]/.test(text);
                         
                         return text.length >= 3 && 
                                text.length < 50 &&
                                words.length <= 4 && // Máximo 4 palabras
                                !hasInvalidWords &&
+                               startsWithCapital && // Debe empezar con mayúscula
                                !/^\d+$/.test(text) && // No solo números
                                !/^[^a-zA-Z0-9]+$/.test(text); // Debe tener letras/números
                     });
