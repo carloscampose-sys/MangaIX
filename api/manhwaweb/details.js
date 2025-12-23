@@ -101,6 +101,34 @@ export default async function handler(req, res) {
             console.warn('[ManhwaWeb Details] Contenido no cargó completamente, continuando de todas formas...');
         }
 
+        // Debug: Capturar estructura HTML para entender los selectores
+        const debugInfo = await page.evaluate(() => {
+            const allClasses = Array.from(document.querySelectorAll('[class]'))
+                .map(el => el.className)
+                .filter(c => c && typeof c === 'string')
+                .slice(0, 50);
+            
+            const allIds = Array.from(document.querySelectorAll('[id]'))
+                .map(el => el.id)
+                .filter(id => id)
+                .slice(0, 20);
+            
+            const h1Text = document.querySelector('h1')?.textContent || 'NO H1';
+            const h2Text = document.querySelector('h2')?.textContent || 'NO H2';
+            const firstPText = document.querySelector('p')?.textContent?.substring(0, 100) || 'NO P';
+            
+            return {
+                sampleClasses: [...new Set(allClasses)].slice(0, 20),
+                sampleIds: allIds,
+                h1Text,
+                h2Text,
+                firstPText,
+                bodyTextLength: document.body.innerText?.length || 0
+            };
+        });
+        
+        console.log('[ManhwaWeb Details] Debug Info:', JSON.stringify(debugInfo, null, 2));
+
         // Extraer datos de la página
         console.log('[ManhwaWeb Details] Extrayendo información...');
         const details = await page.evaluate(() => {
