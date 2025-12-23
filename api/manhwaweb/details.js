@@ -228,18 +228,49 @@ export default async function handler(req, res) {
             const authorSelectors = [
                 '.author',
                 '.authors',
+                '.artist',
                 '[class*="author"]',
-                '[class*="Author"]'
+                '[class*="Author"]',
+                '[class*="artist"]',
+                '[class*="Artist"]',
+                '.creator',
+                '[class*="creator"]'
             ];
             
             for (const selector of authorSelectors) {
-                const el = document.querySelector(selector);
-                if (el) {
-                    const authorText = cleanText(el.textContent);
-                    if (authorText && !authorText.toLowerCase().includes('autor')) {
-                        authors = [authorText];
-                        console.log('[Autor] Encontrado:', authorText);
-                        break;
+                const elements = document.querySelectorAll(selector);
+                if (elements.length > 0) {
+                    elements.forEach(el => {
+                        const authorText = cleanText(el.textContent);
+                        // Filtrar texto que no sea realmente un autor
+                        const lower = authorText.toLowerCase();
+                        const isValidAuthor = authorText && 
+                                             authorText.length > 2 && 
+                                             authorText.length < 100 &&
+                                             !lower.includes('autor:') &&
+                                             !lower.includes('autores:') &&
+                                             !lower.includes('artist:') &&
+                                             !lower.includes('by:');
+                        
+                        if (isValidAuthor && !authors.includes(authorText)) {
+                            authors.push(authorText);
+                            console.log('[Autor] Encontrado:', authorText);
+                        }
+                    });
+                    
+                    if (authors.length > 0) break;
+                }
+            }
+            
+            // Buscar también en el texto si hay "Autor: Nombre"
+            if (authors.length === 0) {
+                const bodyText = document.body.innerText || '';
+                const authorMatch = bodyText.match(/Autor(?:es)?:\s*([^\n]{3,50})/i);
+                if (authorMatch && authorMatch[1]) {
+                    const authorName = cleanText(authorMatch[1]);
+                    if (authorName) {
+                        authors.push(authorName);
+                        console.log('[Autor] Encontrado en texto:', authorName);
                     }
                 }
             }
@@ -293,10 +324,23 @@ export default async function handler(req, res) {
             if (!description) {
                 const divs = Array.from(document.querySelectorAll('div'));
                 for (const div of divs) {
+                    // Excluir divs de comentarios
+                    if (div.closest('#comments, .comments, [class*="comment"], [id*="comment"], [class*="intensedebate"], [class*="disqus"]')) {
+                        continue;
+                    }
+                    
                     const paragraphs = Array.from(div.querySelectorAll('p'));
                     if (paragraphs.length > 0) {
                         const combinedText = paragraphs.map(p => p.textContent).join(' ').trim();
-                        if (combinedText.length > 100 && combinedText.length < 2000) {
+                        const lower = combinedText.toLowerCase();
+                        
+                        // Verificar que no sea sección de comentarios
+                        const isCommentSection = lower.includes('comentar') || 
+                                                lower.includes('suscríbete') || 
+                                                lower.includes('intensedebate') ||
+                                                lower.includes('iniciar sesión');
+                        
+                        if (combinedText.length > 100 && combinedText.length < 2000 && !isCommentSection) {
                             description = cleanText(combinedText);
                             console.log('[Descripción] Encontrada en div con múltiples párrafos');
                             break;
@@ -310,19 +354,37 @@ export default async function handler(req, res) {
                 const paragraphs = Array.from(document.querySelectorAll('p'));
                 const longParagraphs = paragraphs.filter(p => {
                     const text = p.textContent.trim();
-                    return text.length > 100 && text.length < 2000;
+                    const lower = text.toLowerCase();
+                    
+                    // Excluir secciones de comentarios, login, RSS, etc.
+                    const excludeKeywords = [
+                        'comentar', 'comment', 'intensedebate', 'disqus',
+                        'suscríbete', 'subscribe', 'rss', 'feed',
+                        'iniciar sesión', 'login', 'sign in', 'register',
+                        'olvidaste', 'forgot password', 'lost password',
+                        'admin options', 'disable comments',
+                        'publicando anónimamente', 'posting anonymously',
+                        'se muestra junto a tus comentarios',
+                        'twitter', 'facebook', 'share'
+                    ];
+                    
+                    const isCommentSection = excludeKeywords.some(kw => lower.includes(kw));
+                    
+                    return text.length > 100 && 
+                           text.length < 2000 && 
+                           !isCommentSection;
                 });
                 
                 if (longParagraphs.length > 0) {
-                    // Preferir el primer párrafo largo que NO esté en header/nav/footer
+                    // Preferir el primer párrafo largo que NO esté en header/nav/footer/comments
                     const validParagraph = longParagraphs.find(p => {
-                        const parent = p.closest('header, nav, footer, aside');
+                        const parent = p.closest('header, nav, footer, aside, #comments, .comments, [class*="comment"], [id*="comment"]');
                         return !parent;
                     });
                     
                     if (validParagraph) {
                         description = cleanText(validParagraph.textContent);
-                        console.log('[Descripción] Encontrada en párrafo largo fuera de nav/header/footer');
+                        console.log('[Descripción] Encontrada en párrafo largo fuera de nav/header/footer/comments');
                     } else if (longParagraphs[0]) {
                         description = cleanText(longParagraphs[0].textContent);
                         console.log('[Descripción] Encontrada en primer párrafo largo disponible');
@@ -332,17 +394,28 @@ export default async function handler(req, res) {
 
             // Estrategia 4: Buscar por texto que contenga palabras clave de sinopsis
             if (!description) {
-                const allText = Array.from(document.querySelectorAll('p, div')).map(el => ({
-                    text: el.textContent.trim(),
-                    element: el
-                }));
+                const allText = Array.from(document.querySelectorAll('p, div'))
+                    .filter(el => {
+                        // Excluir elementos de comentarios
+                        return !el.closest('#comments, .comments, [class*="comment"], [id*="comment"], [class*="intensedebate"]');
+                    })
+                    .map(el => ({
+                        text: el.textContent.trim(),
+                        element: el
+                    }));
                 
-                const keywords = ['historia', 'protagonista', 'mundo', 'aventura', 'poder', 'vida'];
+                const keywords = ['historia', 'protagonista', 'mundo', 'aventura', 'poder', 'vida', 'año', 'cuando'];
+                const excludeKeywords = ['comentar', 'suscríbete', 'intensedebate', 'iniciar sesión'];
+                
                 const textWithKeywords = allText.find(item => {
                     const lower = item.text.toLowerCase();
+                    const hasStoryKeywords = keywords.some(keyword => lower.includes(keyword));
+                    const hasExcludeKeywords = excludeKeywords.some(keyword => lower.includes(keyword));
+                    
                     return item.text.length > 100 && 
                            item.text.length < 2000 &&
-                           keywords.some(keyword => lower.includes(keyword));
+                           hasStoryKeywords &&
+                           !hasExcludeKeywords;
                 });
                 
                 if (textWithKeywords) {
@@ -351,24 +424,64 @@ export default async function handler(req, res) {
                 }
             }
             
-            // LIMPIAR DESCRIPCIÓN: Eliminar metadata que pueda haberse colado
+            // LIMPIAR DESCRIPCIÓN: Eliminar metadata y secciones no deseadas
             if (description) {
-                // Eliminar líneas que contengan palabras clave de metadata
+                // Lista expandida de keywords a eliminar
                 const metadataKeywords = [
-                    'género', 'genero', 'romance', 'comedia', 'acción', 'drama', 'fantasía',
-                    'estado', 'publicandose', 'finalizado', 'completado',
-                    'nombres asociados', 'alternative', 'también conocido',
-                    'autor', 'autores', 'artista'
+                    // Metadata de la obra
+                    'género', 'genero', 'géneros', 'generos', 'romance', 'comedia', 'acción', 'drama', 'fantasía',
+                    'estado', 'publicandose', 'publicándose', 'finalizado', 'completado', 'en emisión',
+                    'nombres asociados', 'alternative', 'también conocido', 'otros nombres',
+                    'autor', 'autores', 'artista', 'artist',
+                    // Comentarios y social
+                    'comentar', 'comment', 'intensedebate', 'disqus',
+                    'suscríbete', 'suscribete', 'subscribe', 'rss', 'feed',
+                    'iniciar sesión', 'login', 'sign in', 'register',
+                    'olvidaste', 'forgot password', 'lost password',
+                    'admin options', 'disable comments', 'save settings',
+                    'publicando anónimamente', 'posting anonymously',
+                    'se muestra junto', 'comentarios de esta entrada',
+                    'twitter', 'facebook', 'compartir', 'share',
+                    'ordenar por:', 'sort by:',
+                    'cerrar mensaje', 'close message',
+                    'responder como', 'reply as',
+                    'comments by', 'powered by'
                 ];
                 
-                const lines = description.split('\n');
+                const lines = description.split('\n').map(l => l.trim()).filter(l => l);
                 const cleanLines = lines.filter(line => {
-                    const lower = line.toLowerCase().trim();
-                    // Mantener solo líneas que NO sean metadata (más de 30 caracteres y no contienen keywords)
-                    return line.length > 30 && !metadataKeywords.some(kw => lower.startsWith(kw));
+                    const lower = line.toLowerCase();
+                    
+                    // Verificar si la línea contiene keywords no deseadas
+                    const hasUnwantedKeywords = metadataKeywords.some(kw => lower.includes(kw));
+                    
+                    // Verificar si es una línea muy corta (probablemente no es sinopsis)
+                    const isTooShort = line.length < 40;
+                    
+                    // Verificar si tiene muchos números o caracteres especiales (probablemente spam)
+                    const specialCharRatio = (line.match(/[0-9@#$%&*()_+=[\]{}|;:'",.<>?/\\-]/g) || []).length / line.length;
+                    const hasTooManySpecialChars = specialCharRatio > 0.3;
+                    
+                    return !hasUnwantedKeywords && !isTooShort && !hasTooManySpecialChars;
                 });
                 
-                description = cleanLines.join(' ').trim();
+                // Si quedan líneas válidas, unirlas
+                if (cleanLines.length > 0) {
+                    description = cleanLines.join(' ').trim();
+                } else {
+                    // Si todo fue filtrado, intentar obtener solo el primer párrafo largo original
+                    const firstLongLine = lines.find(l => l.length > 100);
+                    description = firstLongLine || description;
+                }
+                
+                // Última limpieza: eliminar texto después de keywords específicas
+                const cutoffKeywords = ['Cerrar mensaje', 'Suscríbete', 'Comentar como', 'Comments by'];
+                for (const keyword of cutoffKeywords) {
+                    const idx = description.indexOf(keyword);
+                    if (idx > 50) { // Solo cortar si hay al menos 50 caracteres antes
+                        description = description.substring(0, idx).trim();
+                    }
+                }
             }
 
             // Usar el autor ya extraído o buscar de nuevo
