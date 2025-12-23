@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { Navbar } from './components/Navbar';
@@ -6,6 +6,7 @@ import { ManhwaCard } from './components/ManhwaCard';
 import { Oracle } from './components/Oracle';
 import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
+import { PageLoader } from './components/PageLoader';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
@@ -41,7 +42,11 @@ const MainApp = ({ userName }) => {
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
-  
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
+
+  // Referencia a la sección de resultados para scroll
+  const resultsRef = useRef(null);
+
   const { showToast } = useToast();
   
   // Obtener filtros dinámicos según fuente seleccionada
@@ -275,13 +280,18 @@ const MainApp = ({ userName }) => {
   const goToNextPage = async () => {
     const nextPage = currentPage + 1;
     setCurrentPage(nextPage);
-    setLoading(true);
-    
-    // Hacer scroll al inicio
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+    setIsPaginationLoading(true);
+
+    // Scroll a la sección de resultados (no al inicio)
+    if (resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     // Ejecutar búsqueda pasando la página directamente
-    handleSearch(null, nextPage);
+    await handleSearch(null, nextPage);
+
+    // Ocultar loader
+    setIsPaginationLoading(false);
   };
   
   // Función para ir a la página anterior
@@ -289,13 +299,18 @@ const MainApp = ({ userName }) => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
-      setLoading(true);
-      
-      // Hacer scroll al inicio
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+      setIsPaginationLoading(true);
+
+      // Scroll a la sección de resultados (no al inicio)
+      if (resultsRef.current) {
+        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
       // Ejecutar búsqueda pasando la página directamente
-      handleSearch(null, prevPage);
+      await handleSearch(null, prevPage);
+
+      // Ocultar loader
+      setIsPaginationLoading(false);
     }
   };
 
@@ -845,6 +860,7 @@ const MainApp = ({ userName }) => {
                 )}
 
                 <motion.div
+                  ref={resultsRef}
                   layout
                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
                 >
@@ -1090,6 +1106,9 @@ const MainApp = ({ userName }) => {
           onClose={() => setIsLuckModalOpen(false)}
           library={library}
         />
+
+        {/* Page Loader para paginación */}
+        <PageLoader isLoading={isPaginationLoading} />
       </main>
     </div>
   );
