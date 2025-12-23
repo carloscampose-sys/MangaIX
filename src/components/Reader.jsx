@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home } from 'lucide-react';
 
-export const Reader = ({ pages, title, chapter, onClose }) => {
+export const Reader = ({ 
+    pages, 
+    title, 
+    chapter, 
+    onClose,
+    onNextChapter = null,
+    onPreviousChapter = null,
+    hasNextChapter = false,
+    hasPreviousChapter = false,
+    isLoadingChapter = false
+}) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [fullWidth, setFullWidth] = useState(true);
 
@@ -19,6 +29,16 @@ export const Reader = ({ pages, title, chapter, onClose }) => {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, []);
+
+    // Scroll automático al inicio cuando cambian las páginas (nuevo capítulo)
+    useEffect(() => {
+        if (pages && pages.length > 0) {
+            const scrollContainer = document.querySelector('.overflow-y-auto.custom-scrollbar');
+            if (scrollContainer) {
+                scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }, [pages]);
 
     const next = () => {
         if (currentPage < pages.length - 1) setCurrentPage(v => v + 1);
@@ -79,17 +99,61 @@ export const Reader = ({ pages, title, chapter, onClose }) => {
                 ))}
 
                 <div className="py-10 sm:py-16 md:py-20 flex flex-col items-center gap-4 sm:gap-6 px-4">
+                    {/* Mensaje de finalización */}
                     <div className="text-white font-black text-base sm:text-lg md:text-xl flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
                         <span className="p-2 sm:p-3 bg-potaxie-green rounded-full animate-bounce">🥑</span>
                         <span className="text-center">¡DEVORASTE ESTE CAPÍTULO!</span>
                         <span className="p-2 sm:p-3 bg-potaxie-green rounded-full animate-bounce">🥑</span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-black font-black rounded-xl sm:rounded-2xl hover:scale-105 transition-transform shadow-2xl text-sm sm:text-base"
-                    >
-                        VOLVER AL SANTUARIO
-                    </button>
+                    
+                    {/* Navegación de capítulos */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full max-w-2xl">
+                        {/* Botón Capítulo Anterior */}
+                        {hasPreviousChapter && onPreviousChapter && (
+                            <button
+                                onClick={onPreviousChapter}
+                                disabled={isLoadingChapter}
+                                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gray-700 hover:bg-gray-600 text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                            >
+                                <ArrowLeft size={20} />
+                                <span className="hidden sm:inline">CAPÍTULO ANTERIOR</span>
+                                <span className="sm:hidden">ANTERIOR</span>
+                            </button>
+                        )}
+                        
+                        {/* Botón Volver al Santuario */}
+                        <button
+                            onClick={onClose}
+                            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-white text-black font-black rounded-xl sm:rounded-2xl hover:scale-105 transition-transform shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2"
+                        >
+                            <Home size={20} />
+                            <span className="hidden sm:inline">VOLVER AL SANTUARIO</span>
+                            <span className="sm:hidden">INICIO</span>
+                        </button>
+                        
+                        {/* Botón Siguiente Capítulo */}
+                        {hasNextChapter && onNextChapter && (
+                            <button
+                                onClick={onNextChapter}
+                                disabled={isLoadingChapter}
+                                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-potaxie-green hover:bg-[#A3E635] text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                            >
+                                <span className="hidden sm:inline">SIGUIENTE CAPÍTULO</span>
+                                <span className="sm:hidden">SIGUIENTE</span>
+                                <ArrowRight size={20} />
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Indicador de carga */}
+                    {isLoadingChapter && (
+                        <div className="flex items-center gap-2 text-white text-sm animate-pulse">
+                            <div className="w-2 h-2 bg-potaxie-green rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-potaxie-green rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-potaxie-green rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <span className="ml-2">Cargando capítulo...</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </motion.div>

@@ -36,6 +36,7 @@ export const DetailModal = ({
     const [selectedChapter, setSelectedChapter] = useState(null);
     const [readerPages, setReaderPages] = useState(null);
     const [isOpeningReader, setIsOpeningReader] = useState(false);
+    const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
 
     useEffect(() => {
         if (isOpen && manga) {
@@ -116,6 +117,11 @@ export const DetailModal = ({
     const openReader = async (chapter, source) => {
         if (!manga?.slug) return;
 
+        // Encontrar el índice del capítulo en la lista
+        const chapters = chaptersBySource[source || selectedChapterSource] || [];
+        const chapterIndex = chapters.findIndex(ch => ch.chapter === chapter.chapter);
+        setCurrentChapterIndex(chapterIndex);
+
         setSelectedChapter(chapter.chapter);
         setIsOpeningReader(true);
 
@@ -137,6 +143,58 @@ export const DetailModal = ({
             showToast("¡Error de conexión! Intenta de nuevo 💅");
         }
         setIsOpeningReader(false);
+    };
+
+    const goToNextChapter = async () => {
+        const chapters = chaptersBySource[selectedChapterSource] || [];
+        
+        if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length - 1) {
+            const nextChapter = chapters[currentChapterIndex + 1];
+            setCurrentChapterIndex(currentChapterIndex + 1);
+            setSelectedChapter(nextChapter.chapter);
+            setIsOpeningReader(true);
+            
+            try {
+                const pages = await unifiedGetPages(manga.slug, nextChapter.chapter, selectedChapterSource);
+                if (pages && pages.length > 0) {
+                    setReaderPages(pages);
+                    showToast(`¡Siguiente capítulo cargado! Cap ${nextChapter.chapter} 🥑`);
+                } else {
+                    showToast("No se pudieron cargar las páginas del siguiente capítulo 😭");
+                }
+            } catch (error) {
+                console.error('Error loading next chapter:', error);
+                showToast("Error cargando el siguiente capítulo 💅");
+            }
+            
+            setIsOpeningReader(false);
+        }
+    };
+
+    const goToPreviousChapter = async () => {
+        const chapters = chaptersBySource[selectedChapterSource] || [];
+        
+        if (currentChapterIndex > 0) {
+            const prevChapter = chapters[currentChapterIndex - 1];
+            setCurrentChapterIndex(currentChapterIndex - 1);
+            setSelectedChapter(prevChapter.chapter);
+            setIsOpeningReader(true);
+            
+            try {
+                const pages = await unifiedGetPages(manga.slug, prevChapter.chapter, selectedChapterSource);
+                if (pages && pages.length > 0) {
+                    setReaderPages(pages);
+                    showToast(`¡Capítulo anterior cargado! Cap ${prevChapter.chapter} 🥑`);
+                } else {
+                    showToast("No se pudieron cargar las páginas del capítulo anterior 😭");
+                }
+            } catch (error) {
+                console.error('Error loading previous chapter:', error);
+                showToast("Error cargando el capítulo anterior 💅");
+            }
+            
+            setIsOpeningReader(false);
+        }
     };
 
     // Usar detalles cargados o datos del manga original
@@ -380,14 +438,28 @@ export const DetailModal = ({
 
             {/* Reader Portal */}
             <AnimatePresence>
-                {readerPages && (
-                    <Reader
-                        pages={readerPages}
-                        title={manga.title}
-                        chapter={selectedChapter}
-                        onClose={() => setReaderPages(null)}
-                    />
-                )}
+                {readerPages && (() => {
+                    const chapters = chaptersBySource[selectedChapterSource] || [];
+                    const hasNextChapter = currentChapterIndex >= 0 && currentChapterIndex < chapters.length - 1;
+                    const hasPreviousChapter = currentChapterIndex > 0;
+                    
+                    return (
+                        <Reader
+                            pages={readerPages}
+                            title={manga.title}
+                            chapter={selectedChapter}
+                            onClose={() => {
+                                setReaderPages(null);
+                                setCurrentChapterIndex(-1);
+                            }}
+                            onNextChapter={goToNextChapter}
+                            onPreviousChapter={goToPreviousChapter}
+                            hasNextChapter={hasNextChapter}
+                            hasPreviousChapter={hasPreviousChapter}
+                            isLoadingChapter={isOpeningReader}
+                        />
+                    );
+                })()}
             </AnimatePresence>
         </AnimatePresence>
     );
