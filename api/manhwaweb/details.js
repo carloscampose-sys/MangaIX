@@ -279,19 +279,33 @@ export default async function handler(req, res) {
                         const authorText = cleanText(el.textContent);
                         // Filtrar texto que no sea realmente un autor
                         const lower = authorText.toLowerCase();
+                        
+                        // Lista de palabras prohibidas (no pueden ser autores)
+                        const invalidWords = [
+                            'autor', 'autores', 'artist', 'by', 'de',
+                            'género', 'genero', 'géneros', 'generos',
+                            'estado', 'status',
+                            'todos', 'all', 'ver', 'see', 'más', 'more',
+                            'capítulo', 'chapter', 'leer', 'read',
+                            'suscríbete', 'subscribe', 'comentar', 'comment'
+                        ];
+                        
+                        const hasInvalidWords = invalidWords.some(word => lower.includes(word));
+                        
+                        // Validaciones para que sea un nombre válido
                         const isValidAuthor = authorText && 
-                                             authorText.length > 2 && 
+                                             authorText.length >= 3 && 
                                              authorText.length < 100 &&
-                                             !lower.includes('autor:') &&
-                                             !lower.includes('autores:') &&
-                                             !lower.includes('artist:') &&
-                                             !lower.includes('by:') &&
-                                             !lower.includes('género') &&
-                                             !lower.includes('estado');
+                                             !hasInvalidWords &&
+                                             !/^\d+$/.test(authorText) && // No solo números
+                                             !/^[^a-zA-Z0-9]+$/.test(authorText) && // Debe tener letras/números
+                                             authorText.split(/\s+/).length <= 6; // Máximo 6 palabras
                         
                         if (isValidAuthor && !authors.includes(authorText)) {
                             authors.push(authorText);
                             console.log('[Autor] Encontrado con selector:', authorText);
+                        } else if (authorText && authorText.length > 0) {
+                            console.log('[Autor] Rechazado (inválido):', authorText);
                         }
                     });
                     
@@ -321,17 +335,29 @@ export default async function handler(req, res) {
                         const authorName = cleanText(match[1]);
                         // Verificar que no sea metadata u otro campo
                         const lower = authorName.toLowerCase();
-                        const isValid = authorName.length > 2 && 
+                        
+                        // Palabras prohibidas
+                        const invalidWords = [
+                            'género', 'genero', 'estado', 'nombre', 'capítulo',
+                            'todos', 'all', 'ver', 'más', 'leer', 'desconocido',
+                            'unknown', 'n/a', 'none', 'sin', 'without'
+                        ];
+                        
+                        const hasInvalidWords = invalidWords.some(word => lower.includes(word));
+                        
+                        const isValid = authorName.length >= 3 && 
                                        authorName.length < 100 &&
-                                       !lower.includes('género') &&
-                                       !lower.includes('estado') &&
-                                       !lower.includes('nombre') &&
-                                       !lower.includes('capítulo');
+                                       !hasInvalidWords &&
+                                       !/^\d+$/.test(authorName) && // No solo números
+                                       !/^[^a-zA-Z0-9]+$/.test(authorName) && // Debe tener letras/números
+                                       authorName.split(/\s+/).length <= 6; // Máximo 6 palabras
                         
                         if (isValid && !authors.includes(authorName)) {
                             authors.push(authorName);
                             console.log('[Autor] Encontrado en texto con patrón:', authorName);
                             break;
+                        } else {
+                            console.log('[Autor] Rechazado (inválido) del patrón:', authorName);
                         }
                     }
                 }
@@ -339,16 +365,26 @@ export default async function handler(req, res) {
             
             // Estrategia 3: Buscar spans o divs que contengan solo un nombre (probable autor)
             if (authors.length === 0) {
+                const invalidWords = [
+                    'género', 'genero', 'estado', 'capítulo', 'nombre',
+                    'todos', 'all', 'ver', 'más', 'leer', 'desconocido',
+                    'comentar', 'suscríbete', 'iniciar', 'sesión'
+                ];
+                
                 const possibleAuthors = Array.from(document.querySelectorAll('span, div'))
                     .map(el => cleanText(el.textContent))
                     .filter(text => {
                         // Nombre corto, sin números, sin keywords de metadata
                         const words = text.split(/\s+/);
-                        return text.length > 2 && 
+                        const lower = text.toLowerCase();
+                        const hasInvalidWords = invalidWords.some(word => lower.includes(word));
+                        
+                        return text.length >= 3 && 
                                text.length < 50 &&
                                words.length <= 4 && // Máximo 4 palabras
-                               !/\d/.test(text) && // Sin números
-                               !/género|estado|capítulo|nombre/i.test(text);
+                               !hasInvalidWords &&
+                               !/^\d+$/.test(text) && // No solo números
+                               !/^[^a-zA-Z0-9]+$/.test(text); // Debe tener letras/números
                     });
                 
                 // Buscar en el contexto si alguno aparece después de "Autor" o "Artist"
