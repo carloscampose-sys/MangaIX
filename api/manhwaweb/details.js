@@ -69,43 +69,115 @@ export default async function handler(req, res) {
             timeout: 30000
         });
 
-        // Esperar a que la página cargue - ManhwaWeb es un SPA
+        // ===== PASO 1: ESPERA INTELIGENTE HASTA QUE EL CONTENIDO REALMENTE CARGUE =====
         console.log('[ManhwaWeb Details] Esperando carga de contenido SPA...');
         
-        // Esperar a que React/Vue renderice contenido
-        // Estrategia mejorada: esperar más tiempo y verificar contenido específico
         let contentLoaded = false;
-        const maxAttempts = 10; // 10 intentos * 1.5 segundos = 15 segundos máximo
         
-        for (let i = 0; i < maxAttempts; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Aumentado de 1000 a 1500ms
-            
-            const hasContent = await page.evaluate(() => {
-                // Verificar si hay contenido significativo renderizado
+        try {
+            // Esperar hasta que el contenido REAL se renderice
+            await page.waitForFunction(() => {
+                const h1 = document.querySelector('h1');
+                const h2 = document.querySelector('h2');
+                const paragraphs = document.querySelectorAll('p');
                 const bodyText = document.body.innerText || '';
-                const hasImages = document.querySelectorAll('img').length > 2;
-                const hasParagraphs = document.querySelectorAll('p').length > 2;
-                const hasH1 = document.querySelector('h1')?.textContent?.length > 5;
+                
+                // Validaciones
+                const hasTitle = (h1?.textContent?.trim().length > 5) || (h2?.textContent?.trim().length > 10);
+                const hasParagraphs = paragraphs.length >= 3;
                 const bodyLength = bodyText.length;
+                const hasSubstantialContent = bodyLength > 1000;
                 
-                // También verificar que no estemos en una página de error
+                // Verificar que NO sea página de error
                 const isErrorPage = bodyText.toLowerCase().includes('404') || 
-                                   bodyText.toLowerCase().includes('not found');
+                                   bodyText.toLowerCase().includes('not found') ||
+                                   bodyText.toLowerCase().includes('no existe');
                 
-                return (bodyLength > 500 || (hasImages && hasParagraphs && hasH1)) && !isErrorPage;
+                console.log('[Puppeteer] Esperando contenido...', {
+                    hasTitle,
+                    hasParagraphs,
+                    paragraphCount: paragraphs.length,
+                    bodyLength,
+                    hasSubstantialContent
+                });
+                
+                return hasTitle && hasParagraphs && hasSubstantialContent && !isErrorPage;
+            }, { 
+                timeout: 20000, // 20 segundos máximo
+                polling: 1000   // Verificar cada segundo
             });
             
-            if (hasContent) {
-                console.log(`[ManhwaWeb Details] Contenido cargado después de ${(i + 1) * 1.5} segundos`);
-                contentLoaded = true;
-                break;
-            }
+            console.log('[ManhwaWeb Details] ✅ Contenido principal cargado');
+            contentLoaded = true;
+            
+        } catch (timeoutError) {
+            console.warn('[ManhwaWeb Details] ⚠️ Timeout esperando contenido completo:', timeoutError.message);
+            console.warn('[ManhwaWeb Details] Intentando extraer lo que haya disponible...');
         }
         
-        if (!contentLoaded) {
-            console.warn('[ManhwaWeb Details] Contenido no cargó completamente, continuando de todas formas...');
+        // ===== PASO 2: SCROLL PARA ACTIVAR LAZY LOADING =====
+        console.log('[ManhwaWeb Details] Haciendo scroll para activar lazy loading...');
+        
+        try {
+            await page.evaluate(() => {
+                // Scroll a la mitad de la página
+                window.scrollTo(0, document.body.scrollHeight / 2);
+            });
+            
+            // Esperar a que cargue contenido lazy
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Scroll de vuelta arriba
+            await page.evaluate(() => {
+                window.scrollTo(0, 0);
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('[ManhwaWeb Details] ✅ Scroll completado');
+            
+        } catch (scrollError) {
+            console.warn('[ManhwaWeb Details] Error en scroll:', scrollError.message);
         }
 
+        // ===== PASO 4: FALLBACK CON JSON-LD =====
+        console.log('[ManhwaWeb Details] Buscando JSON-LD estructurado...');
+        
+        const jsonLdData = await page.evaluate(() => {
+            // Buscar script con tipo application/ld+json
+            const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+            
+            const parsedData = [];
+            for (const script of scripts) {
+                try {
+                    const data = JSON.parse(script.textContent);
+                    parsedData.push(data);
+                } catch (e) {
+                    console.log('[JSON-LD] Error parseando:', e.message);
+                }
+            }
+            
+            return parsedData;
+        });
+        
+        if (jsonLdData && jsonLdData.length > 0) {
+            console.log('[ManhwaWeb Details] JSON-LD encontrado:', JSON.stringify(jsonLdData, null, 2));
+            
+            // Intentar extraer datos del JSON-LD
+            for (const data of jsonLdData) {
+                if (data.name || data.title) {
+                    console.log('[JSON-LD] Título encontrado:', data.name || data.title);
+                }
+                if (data.description) {
+                    console.log('[JSON-LD] Descripción encontrada:', data.description.substring(0, 100));
+                }
+                if (data.author) {
+                    console.log('[JSON-LD] Autor encontrado:', data.author?.name || data.author);
+                }
+            }
+        } else {
+            console.log('[ManhwaWeb Details] No se encontró JSON-LD');
+        }
+        
         // Debug: Capturar estructura HTML para entender los selectores
         const debugInfo = await page.evaluate(() => {
             const allClasses = Array.from(document.querySelectorAll('[class]'))
@@ -153,7 +225,7 @@ export default async function handler(req, res) {
 
         // Extraer datos de la página
         console.log('[ManhwaWeb Details] Extrayendo información...');
-        const details = await page.evaluate(() => {
+        const details = await page.evaluate((jsonLdDataParam) => {
             // Función helper para limpiar texto
             const cleanText = (text) => {
                 if (!text) return '';
@@ -565,6 +637,49 @@ export default async function handler(req, res) {
                 }
             }
             
+            // ===== PASO 3: EXTRACCIÓN DIRECTA DEL DOM (FALLBACK) =====
+            if (!description) {
+                console.log('[Descripción] Intentando extracción directa del DOM...');
+                
+                // Buscar todos los divs que NO estén en nav/footer/header/comments
+                const allDivs = Array.from(document.querySelectorAll('div'))
+                    .filter(div => {
+                        // Excluir elementos de navegación, comentarios, etc.
+                        const inExcludedElement = div.closest('nav, footer, header, aside, [id*="comment"], [class*="comment"], [class*="intensedebate"], [class*="navbar"]');
+                        return !inExcludedElement;
+                    });
+                
+                // Buscar el div con el texto más largo y sustancial
+                let bestCandidate = null;
+                let bestScore = 0;
+                
+                for (const div of allDivs) {
+                    const text = div.innerText?.trim() || '';
+                    const childDivCount = div.querySelectorAll('div').length;
+                    
+                    // Calcular score basado en:
+                    // - Longitud del texto
+                    // - Pocos divs hijos (no es un contenedor)
+                    // - Ratio de palabras vs caracteres especiales
+                    const wordCount = text.split(/\s+/).length;
+                    const specialCharCount = (text.match(/[@#$%&*()_+=[\]{}|;:'",.<>?/\\]/g) || []).length;
+                    const wordRatio = wordCount / (text.length || 1);
+                    
+                    const score = (text.length > 100 && text.length < 3000) ? 
+                                 (text.length * wordRatio * (1 / (childDivCount + 1))) : 0;
+                    
+                    if (score > bestScore && specialCharCount < text.length * 0.1) {
+                        bestScore = score;
+                        bestCandidate = text;
+                    }
+                }
+                
+                if (bestCandidate && bestCandidate.length > 100) {
+                    description = cleanText(bestCandidate);
+                    console.log('[Descripción] Encontrada por extracción directa del DOM');
+                }
+            }
+            
             // LIMPIAR DESCRIPCIÓN: Eliminar metadata y secciones no deseadas
             if (description) {
                 console.log('[Limpieza] Descripción original (primeros 500 chars):', description.substring(0, 500));
@@ -708,6 +823,50 @@ export default async function handler(req, res) {
                 cover = imgEl.src || imgEl.getAttribute('data-src') || '';
             }
 
+            // ===== PASO 4: USAR JSON-LD COMO FALLBACK =====
+            if (jsonLdDataParam && jsonLdDataParam.length > 0) {
+                console.log('[JSON-LD Fallback] Aplicando datos de JSON-LD...');
+                
+                for (const data of jsonLdDataParam) {
+                    // Título
+                    if (!title && (data.name || data.title)) {
+                        title = data.name || data.title;
+                        console.log('[JSON-LD Fallback] Título desde JSON-LD:', title);
+                    }
+                    
+                    // Descripción
+                    if (!description && data.description) {
+                        description = data.description;
+                        console.log('[JSON-LD Fallback] Descripción desde JSON-LD');
+                    }
+                    
+                    // Autor
+                    if (!author && data.author) {
+                        author = data.author?.name || (typeof data.author === 'string' ? data.author : '');
+                        console.log('[JSON-LD Fallback] Autor desde JSON-LD:', author);
+                    }
+                    
+                    // Géneros
+                    if (genres.length === 0 && data.genre) {
+                        if (Array.isArray(data.genre)) {
+                            genres.push(...data.genre);
+                        } else if (typeof data.genre === 'string') {
+                            genres.push(data.genre);
+                        }
+                        console.log('[JSON-LD Fallback] Géneros desde JSON-LD:', genres);
+                    }
+                    
+                    // Cover/imagen
+                    if (!cover && (data.image || data.thumbnail)) {
+                        cover = data.image || data.thumbnail;
+                        if (typeof cover === 'object') {
+                            cover = cover.url || cover['@url'] || '';
+                        }
+                        console.log('[JSON-LD Fallback] Cover desde JSON-LD');
+                    }
+                }
+            }
+            
             return {
                 title,
                 description,
@@ -719,11 +878,25 @@ export default async function handler(req, res) {
                 chaptersCount,
                 cover
             };
-        });
+        }, jsonLdData);
 
         await browser.close();
         browser = null;
 
+        // ===== PASO 5: LOGGING MEJORADO PARA DEBUG =====
+        console.log('[ManhwaWeb Details] ===== DEBUG SNAPSHOT =====');
+        console.log('[ManhwaWeb Details] URL:', url);
+        console.log('[ManhwaWeb Details] Contenido cargado:', contentLoaded ? '✅ SÍ' : '⚠️ NO (timeout)');
+        console.log('[ManhwaWeb Details] -------- RESULTADOS --------');
+        console.log('[ManhwaWeb Details] Título extraído:', details.title || '❌ VACÍO');
+        console.log('[ManhwaWeb Details] Autor extraído:', details.author || '❌ VACÍO');
+        console.log('[ManhwaWeb Details] Géneros encontrados:', details.genres.length > 0 ? `✅ ${details.genres.length} (${details.genres.join(', ')})` : '❌ NINGUNO');
+        console.log('[ManhwaWeb Details] Estado extraído:', details.statusRaw || 'N/A');
+        console.log('[ManhwaWeb Details] Sinopsis extraída:', details.description ? `✅ ${details.description.length} caracteres` : '❌ VACÍA');
+        console.log('[ManhwaWeb Details] Sinopsis (primeros 200 chars):', details.description?.substring(0, 200) || 'VACÍO');
+        console.log('[ManhwaWeb Details] Cover encontrado:', details.cover ? '✅ SÍ' : '❌ NO');
+        console.log('[ManhwaWeb Details] ============================');
+        
         console.log('[ManhwaWeb Details] Detalles extraídos:', {
             title: details.title,
             descriptionLength: details.description.length,
