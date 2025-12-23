@@ -166,8 +166,14 @@ const MainApp = ({ userName }) => {
         page: pageToUse - 1  // TuManga usa paginación 0-based (0, 1, 2...)
       };
     } else if (selectedSource === 'manhwaweb') {
+      // Para ManhwaWeb, convertir IDs a values numéricos
+      const genreValues = selectedGenres.map(genreId => {
+        const genre = currentFilters.genres.find(g => g.id === genreId);
+        return genre ? genre.value : genreId;
+      });
+
       filters = {
-        genres: selectedGenres,
+        genres: genreValues,  // Usar values numéricos para la API
         type: selectedType,
         status: selectedStatus,
         erotic: selectedErotic,

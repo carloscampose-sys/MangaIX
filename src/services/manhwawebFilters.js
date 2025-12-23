@@ -90,42 +90,48 @@ export const MANHWAWEB_MOODS = [
     {
         name: "Quiero llorar 😭",
         id: "cry",
-        genres: [1, 25],  // Drama (1), Tragedia (25)
+        genres: ["drama", "tragedia"],  // IDs string que coinciden con genre.id
+        genreValues: ["1", "25"],       // Values numéricos para la API
         toast: "Busca los pañuelos, que hoy se llora... 😭",
         color: "from-blue-400 to-blue-600"
     },
     {
         name: "Colapso de amor 😍",
         id: "love",
-        genres: [2, 18],  // Romance (2), Comedia (18)
+        genres: ["romance", "comedia"],  // IDs string
+        genreValues: ["2", "18"],        // Values para API
         toast: "Prepárate para el colapso de azúcar, divina... 😍",
         color: "from-pink-400 to-rose-600"
     },
     {
         name: "Chisme y traición 🐍",
         id: "tea",
-        genres: [1, 43],  // Drama (1), Psicológico (43)
+        genres: ["drama", "psicologico"],  // IDs string
+        genreValues: ["1", "43"],          // Values para API
         toast: "Prepárate, que el chisme viene fuerte... 🐍☕",
         color: "from-indigo-400 to-purple-600"
     },
     {
         name: "¡A devorar! 💅",
         id: "devour",
-        genres: [3, 23, 40],  // Acción (3), Fantasía (23), Superpoderes (40)
+        genres: ["accion", "fantasia", "superpoderes"],  // IDs string
+        genreValues: ["3", "23", "40"],                  // Values para API
         toast: "¡Poder total activado! Vas a devorar... 💅",
         color: "from-potaxie-green to-teal-600"
     },
     {
         name: "Noche de terror 🕯️",
         id: "fear",
-        genres: [32, 44],  // Horror (32), Thriller (44)
+        genres: ["horror", "thriller"],  // IDs string
+        genreValues: ["32", "44"],       // Values para API
         toast: "No mires atrás... el misterio te espera... 🕯️",
         color: "from-gray-700 to-gray-900"
     },
     {
         name: "Poder sin límites ⚡",
         id: "power",
-        genres: [37, 35, 41],  // Sistema niveles (37), Cultivación (35), Reencarnación (41)
+        genres: ["sistema-niveles", "cultivacion", "reencarnacion"],  // IDs string
+        genreValues: ["37", "35", "41"],                              // Values para API
         toast: "¡Level up! Prepárate para el OP... ⚡",
         color: "from-yellow-400 to-orange-600"
     }
