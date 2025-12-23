@@ -101,6 +101,41 @@ body {
   /* Darker pastel green on hover */
 }
 
+/* ========== CUSTOM SCROLLBAR PARA COMPONENTES ESPECÍFICOS ========== */
+
+/* Scrollbar más grueso para lector y componentes con scroll largo */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 16px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #BEE3B0;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #A3E635;
+  border: 2px solid transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: #84CC16;
+}
+
+/* Soporte Firefox */
+.custom-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: #BEE3B0 rgba(0, 0, 0, 0.2);
+}
+
 /* Manhwa Card Glow in Dark Mode */
 .dark .manhwa-card {
   box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
