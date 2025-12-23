@@ -63,13 +63,8 @@ const MainApp = ({ userName }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Ejecutar búsqueda automáticamente cuando cambie la página
-  useEffect(() => {
-    if (currentPage > 1 && searchResults.length > 0) {
-      // Solo ejecutar si ya hay resultados (para no ejecutar en la carga inicial)
-      handleSearch();
-    }
-  }, [currentPage]);
+  // REMOVIDO: El useEffect que causaba problemas
+  // Ahora goToNextPage y goToPreviousPage llaman directamente a handleSearch()
 
   const navigateToPage = (newPage) => {
     const currentIndex = PAGES_ORDER.indexOf(page);
@@ -216,18 +211,30 @@ const MainApp = ({ userName }) => {
   };
   
   // Función para ir a la página siguiente
-  const goToNextPage = () => {
-    setCurrentPage(prev => prev + 1);
+  const goToNextPage = async () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    setLoading(true);
+    
     // Hacer scroll al inicio
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Ejecutar búsqueda con la nueva página
+    setTimeout(() => handleSearch(), 100);
   };
   
   // Función para ir a la página anterior
-  const goToPreviousPage = () => {
+  const goToPreviousPage = async () => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      setLoading(true);
+      
       // Hacer scroll al inicio
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Ejecutar búsqueda con la nueva página
+      setTimeout(() => handleSearch(), 100);
     }
   };
 
