@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     }
 
     // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar, página)
-    const { query, genres, type, status, erotic, demographic, sortBy, sortOrder, page } = req.query;
+    const { query, genres, type, status, erotic, demographic, sortBy, sortOrder, page: pageParam } = req.query;
 
     // Permitir búsquedas solo con filtros (sin query de texto)
     // if (!query && !genres) {
@@ -179,8 +179,8 @@ export default async function handler(req, res) {
         }
         
         // Agregar paginación (page=1, page=2, etc.)
-        const pageNumber = page ? parseInt(page, 10) : 1;
-        console.log('[ManhwaWeb Search] Página recibida:', page, 'tipo:', typeof page);
+        const pageNumber = pageParam ? parseInt(pageParam, 10) : 1;
+        console.log('[ManhwaWeb Search] Página recibida:', pageParam, 'tipo:', typeof pageParam);
         console.log('[ManhwaWeb Search] Página parseada:', pageNumber);
         
         if (isNaN(pageNumber)) {
