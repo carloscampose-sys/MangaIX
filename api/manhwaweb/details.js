@@ -195,7 +195,8 @@ export default async function handler(req, res) {
             const firstPText = document.querySelector('p')?.textContent?.substring(0, 100) || 'NO P';
             
             // Encontrar todos los párrafos con texto largo
-            const longParagraphs = Array.from(document.querySelectorAll('p'))
+            const allParagraphs = Array.from(document.querySelectorAll('p'));
+            const longParagraphs = allParagraphs
                 .filter(p => p.textContent.trim().length > 100)
                 .map((p, i) => ({
                     index: i,
@@ -207,6 +208,17 @@ export default async function handler(req, res) {
                 }))
                 .slice(0, 5);
             
+            // Si no hay párrafos largos, mostrar los primeros 5 párrafos de cualquier longitud
+            const sampleParagraphs = longParagraphs.length > 0 ? longParagraphs : 
+                allParagraphs.slice(0, 5).map((p, i) => ({
+                    index: i,
+                    length: p.textContent.trim().length,
+                    className: p.className,
+                    id: p.id,
+                    parentClass: p.parentElement?.className || '',
+                    text: p.textContent.trim().substring(0, 100)
+                }));
+            
             return {
                 sampleClasses: [...new Set(allClasses)].slice(0, 20),
                 sampleIds: allIds,
@@ -216,6 +228,7 @@ export default async function handler(req, res) {
                 bodyTextLength: document.body.innerText?.length || 0,
                 paragraphCount: document.querySelectorAll('p').length,
                 longParagraphs,
+                sampleParagraphs, // Nuevos: mostrar párrafos de muestra
                 hasDescriptionClass: !!document.querySelector('.description, [class*="description"]'),
                 hasSynopsisClass: !!document.querySelector('.synopsis, [class*="synopsis"]')
             };
@@ -232,9 +245,22 @@ export default async function handler(req, res) {
                 return text.replace(/\s+/g, ' ').trim();
             };
 
-            // Título
-            const titleEl = document.querySelector('h1, .title, [class*="title"]');
-            const title = titleEl ? cleanText(titleEl.textContent) : '';
+            // Título - Buscar en H1, H2 o clases con "title"
+            let title = '';
+            const h1 = document.querySelector('h1');
+            const h2 = document.querySelector('h2');
+            const titleEl = document.querySelector('.title, [class*="title"]');
+            
+            if (h1 && h1.textContent.trim().length > 5) {
+                title = cleanText(h1.textContent);
+                console.log('[Título] Encontrado en H1:', title);
+            } else if (h2 && h2.textContent.trim().length > 10) {
+                title = cleanText(h2.textContent);
+                console.log('[Título] Encontrado en H2:', title);
+            } else if (titleEl) {
+                title = cleanText(titleEl.textContent);
+                console.log('[Título] Encontrado con clase .title:', title);
+            }
 
             // EXTRAER METADATA Y SINOPSIS POR SEPARADO
             
@@ -637,7 +663,7 @@ export default async function handler(req, res) {
                 }
             }
             
-            // ===== PASO 3: EXTRACCIÓN DIRECTA DEL DOM (FALLBACK) =====
+            // ===== PASO 3: EXTRACCIÓN DIRECTA DEL DOM (FALLBACK MEJORADO) =====
             if (!description) {
                 console.log('[Descripción] Intentando extracción directa del DOM...');
                 
@@ -657,6 +683,18 @@ export default async function handler(req, res) {
                     const text = div.innerText?.trim() || '';
                     const childDivCount = div.querySelectorAll('div').length;
                     
+                    // ===== FILTRO CRÍTICO: Excluir listas de capítulos =====
+                    const hasChapterList = text.includes('Ocultar previews') || 
+                                          text.includes('Desmarcar todos') ||
+                                          text.includes('Invertir orden') ||
+                                          /Capítulo \d+/i.test(text) ||
+                                          /Chapter \d+/i.test(text);
+                    
+                    if (hasChapterList) {
+                        console.log('[Descripción] Rechazado (lista de capítulos):', text.substring(0, 50));
+                        continue;
+                    }
+                    
                     // Calcular score basado en:
                     // - Longitud del texto
                     // - Pocos divs hijos (no es un contenedor)
@@ -665,8 +703,12 @@ export default async function handler(req, res) {
                     const specialCharCount = (text.match(/[@#$%&*()_+=[\]{}|;:'",.<>?/\\]/g) || []).length;
                     const wordRatio = wordCount / (text.length || 1);
                     
+                    // Penalizar si tiene muchos números (probablemente es lista)
+                    const numberCount = (text.match(/\d+/g) || []).length;
+                    const numberPenalty = numberCount > 10 ? 0.5 : 1;
+                    
                     const score = (text.length > 100 && text.length < 3000) ? 
-                                 (text.length * wordRatio * (1 / (childDivCount + 1))) : 0;
+                                 (text.length * wordRatio * (1 / (childDivCount + 1)) * numberPenalty) : 0;
                     
                     if (score > bestScore && specialCharCount < text.length * 0.1) {
                         bestScore = score;
@@ -715,8 +757,14 @@ export default async function handler(req, res) {
                     'Cerrar mensaje', 
                     'Suscríbete', 
                     'Comentar como', 
-                    'Comments by'
-                    // NO incluir géneros aquí porque pueden estar en la sinopsis
+                    'Comments by',
+                    // ===== CRÍTICO: Lista de capítulos =====
+                    'Ocultar previews',
+                    'Desmarcar todos',
+                    'Invertir orden',
+                    'Capítulo 1',
+                    'Capitulo 1',
+                    'Chapter 1'
                 ];
                 
                 let shortestCutIndex = description.length;
