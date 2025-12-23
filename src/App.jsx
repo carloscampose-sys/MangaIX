@@ -114,8 +114,11 @@ const MainApp = ({ userName }) => {
     })
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = async (e, pageOverride = null) => {
     if (e) e.preventDefault();
+    
+    // Usar pageOverride si se proporciona, sino usar currentPage
+    const pageToUse = pageOverride !== null ? pageOverride : currentPage;
 
     // Construir término de búsqueda
     let searchTerm = searchQuery;
@@ -180,7 +183,8 @@ const MainApp = ({ userName }) => {
     }
     
     // Usar servicio unificado según la fuente seleccionada con página actual
-    let results = await unifiedSearch(searchTerm, filters, selectedSource, currentPage);
+    console.log('[App] Ejecutando búsqueda con página:', pageToUse);
+    let results = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
 
     // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
     const resultCount = results.length;
@@ -219,8 +223,8 @@ const MainApp = ({ userName }) => {
     // Hacer scroll al inicio
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Ejecutar búsqueda con la nueva página
-    setTimeout(() => handleSearch(), 100);
+    // Ejecutar búsqueda pasando la página directamente
+    handleSearch(null, nextPage);
   };
   
   // Función para ir a la página anterior
@@ -233,8 +237,8 @@ const MainApp = ({ userName }) => {
       // Hacer scroll al inicio
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // Ejecutar búsqueda con la nueva página
-      setTimeout(() => handleSearch(), 100);
+      // Ejecutar búsqueda pasando la página directamente
+      handleSearch(null, prevPage);
     }
   };
 
