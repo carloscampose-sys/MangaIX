@@ -73,25 +73,30 @@ export default async function handler(req, res) {
         console.log('[ManhwaWeb Details] Esperando carga de contenido SPA...');
         
         // Esperar a que React/Vue renderice contenido
-        // Intentar esperar por múltiples indicadores de que el contenido cargó
+        // Estrategia mejorada: esperar más tiempo y verificar contenido específico
         let contentLoaded = false;
-        const maxAttempts = 6; // 6 intentos * 1 segundo = 6 segundos máximo
+        const maxAttempts = 10; // 10 intentos * 1.5 segundos = 15 segundos máximo
         
         for (let i = 0; i < maxAttempts; i++) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await page.waitForTimeout(1500); // Aumentado de 1000 a 1500ms
             
             const hasContent = await page.evaluate(() => {
                 // Verificar si hay contenido significativo renderizado
                 const bodyText = document.body.innerText || '';
                 const hasImages = document.querySelectorAll('img').length > 2;
                 const hasParagraphs = document.querySelectorAll('p').length > 2;
+                const hasH1 = document.querySelector('h1')?.textContent?.length > 5;
                 const bodyLength = bodyText.length;
                 
-                return bodyLength > 500 || hasImages || hasParagraphs;
+                // También verificar que no estemos en una página de error
+                const isErrorPage = bodyText.toLowerCase().includes('404') || 
+                                   bodyText.toLowerCase().includes('not found');
+                
+                return (bodyLength > 500 || (hasImages && hasParagraphs && hasH1)) && !isErrorPage;
             });
             
             if (hasContent) {
-                console.log(`[ManhwaWeb Details] Contenido cargado después de ${i + 1} segundos`);
+                console.log(`[ManhwaWeb Details] Contenido cargado después de ${(i + 1) * 1.5} segundos`);
                 contentLoaded = true;
                 break;
             }
@@ -117,13 +122,30 @@ export default async function handler(req, res) {
             const h2Text = document.querySelector('h2')?.textContent || 'NO H2';
             const firstPText = document.querySelector('p')?.textContent?.substring(0, 100) || 'NO P';
             
+            // Encontrar todos los párrafos con texto largo
+            const longParagraphs = Array.from(document.querySelectorAll('p'))
+                .filter(p => p.textContent.trim().length > 100)
+                .map((p, i) => ({
+                    index: i,
+                    length: p.textContent.trim().length,
+                    className: p.className,
+                    id: p.id,
+                    parentClass: p.parentElement?.className || '',
+                    text: p.textContent.trim().substring(0, 150) + '...'
+                }))
+                .slice(0, 5);
+            
             return {
                 sampleClasses: [...new Set(allClasses)].slice(0, 20),
                 sampleIds: allIds,
                 h1Text,
                 h2Text,
                 firstPText,
-                bodyTextLength: document.body.innerText?.length || 0
+                bodyTextLength: document.body.innerText?.length || 0,
+                paragraphCount: document.querySelectorAll('p').length,
+                longParagraphs,
+                hasDescriptionClass: !!document.querySelector('.description, [class*="description"]'),
+                hasSynopsisClass: !!document.querySelector('.synopsis, [class*="synopsis"]')
             };
         });
         
@@ -142,32 +164,110 @@ export default async function handler(req, res) {
             const titleEl = document.querySelector('h1, .title, [class*="title"]');
             const title = titleEl ? cleanText(titleEl.textContent) : '';
 
-            // Sinopsis/Descripción
+            // Sinopsis/Descripción - ESTRATEGIA MEJORADA
             let description = '';
+            
+            // Estrategia 1: Selectores CSS comunes
             const descSelectors = [
                 '.description',
                 '.synopsis', 
                 '.summary',
+                '.about',
+                '.story',
+                '.overview',
                 '[class*="description"]',
+                '[class*="Description"]',
                 '[class*="synopsis"]',
+                '[class*="Synopsis"]',
                 '[class*="summary"]',
-                'p[class*="text"]'
+                '[class*="Summary"]',
+                '[class*="about"]',
+                '[class*="About"]',
+                '[class*="story"]',
+                '[class*="Story"]',
+                '[class*="overview"]',
+                '[class*="content"]',
+                '[class*="Content"]',
+                'div[class*="text"] p',
+                'div[class*="Text"] p',
+                '.info p',
+                '.detail p',
+                '.manga-info p',
+                '.manhwa-info p'
             ];
             
             for (const selector of descSelectors) {
-                const el = document.querySelector(selector);
-                if (el && el.textContent.length > 50) {
-                    description = cleanText(el.textContent);
-                    break;
+                try {
+                    const el = document.querySelector(selector);
+                    if (el && el.textContent.length > 50) {
+                        description = cleanText(el.textContent);
+                        console.log(`[Descripción] Encontrada con selector: ${selector}`);
+                        break;
+                    }
+                } catch (e) {
+                    // Ignorar errores de selectores inválidos
                 }
             }
 
-            // Si no encontró descripción, buscar cualquier párrafo largo
+            // Estrategia 2: Buscar por estructura (div que contenga párrafos largos)
+            if (!description) {
+                const divs = Array.from(document.querySelectorAll('div'));
+                for (const div of divs) {
+                    const paragraphs = Array.from(div.querySelectorAll('p'));
+                    if (paragraphs.length > 0) {
+                        const combinedText = paragraphs.map(p => p.textContent).join(' ').trim();
+                        if (combinedText.length > 100 && combinedText.length < 2000) {
+                            description = cleanText(combinedText);
+                            console.log('[Descripción] Encontrada en div con múltiples párrafos');
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Estrategia 3: Buscar cualquier párrafo largo (como última opción)
             if (!description) {
                 const paragraphs = Array.from(document.querySelectorAll('p'));
-                const longParagraph = paragraphs.find(p => p.textContent.length > 100);
-                if (longParagraph) {
-                    description = cleanText(longParagraph.textContent);
+                const longParagraphs = paragraphs.filter(p => {
+                    const text = p.textContent.trim();
+                    return text.length > 100 && text.length < 2000;
+                });
+                
+                if (longParagraphs.length > 0) {
+                    // Preferir el primer párrafo largo que NO esté en header/nav/footer
+                    const validParagraph = longParagraphs.find(p => {
+                        const parent = p.closest('header, nav, footer, aside');
+                        return !parent;
+                    });
+                    
+                    if (validParagraph) {
+                        description = cleanText(validParagraph.textContent);
+                        console.log('[Descripción] Encontrada en párrafo largo fuera de nav/header/footer');
+                    } else if (longParagraphs[0]) {
+                        description = cleanText(longParagraphs[0].textContent);
+                        console.log('[Descripción] Encontrada en primer párrafo largo disponible');
+                    }
+                }
+            }
+
+            // Estrategia 4: Buscar por texto que contenga palabras clave de sinopsis
+            if (!description) {
+                const allText = Array.from(document.querySelectorAll('p, div')).map(el => ({
+                    text: el.textContent.trim(),
+                    element: el
+                }));
+                
+                const keywords = ['historia', 'protagonista', 'mundo', 'aventura', 'poder', 'vida'];
+                const textWithKeywords = allText.find(item => {
+                    const lower = item.text.toLowerCase();
+                    return item.text.length > 100 && 
+                           item.text.length < 2000 &&
+                           keywords.some(keyword => lower.includes(keyword));
+                });
+                
+                if (textWithKeywords) {
+                    description = cleanText(textWithKeywords.text);
+                    console.log('[Descripción] Encontrada usando keywords');
                 }
             }
 
