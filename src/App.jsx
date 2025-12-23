@@ -8,7 +8,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
-import { unifiedSearch } from './services/unified';
+import { unifiedSearch, unifiedGetDetails } from './services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
 // Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
 import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
