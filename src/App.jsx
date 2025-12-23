@@ -7,7 +7,7 @@ import { Oracle } from './components/Oracle';
 import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { ToastProvider, useToast } from './context/ToastContext';
-import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS } from './services/tumanga';
+import { searchTuManga, TUMANGA_GENRES, TUMANGA_FORMATS, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
 import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
 // Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
@@ -34,7 +34,11 @@ const MainApp = ({ userName }) => {
   const [selectedDemographic, setSelectedDemographic] = useState('');
   const [selectedSortBy, setSelectedSortBy] = useState('');
   const [selectedSortOrder, setSelectedSortOrder] = useState('');
-  
+
+  // Estados de ordenamiento específicos de TuManga
+  const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
+  const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
+
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
@@ -168,7 +172,9 @@ const MainApp = ({ userName }) => {
     if (selectedSource === 'tumanga') {
       filters = {
         genres: selectedGenres,
-        formats: selectedFormats
+        formats: selectedFormats,
+        sortBy: selectedTuMangaSortBy,
+        sortOrder: selectedTuMangaSortOrder
       };
     } else if (selectedSource === 'manhwaweb') {
       filters = {
@@ -345,6 +351,9 @@ const MainApp = ({ userName }) => {
     setSelectedDemographic('');
     setSelectedSortBy('');
     setSelectedSortOrder('');
+    // Resetear ordenamiento de TuManga
+    setSelectedTuMangaSortBy('title');
+    setSelectedTuMangaSortOrder('asc');
     setCurrentPage(1); // Reset página también
   };
 
@@ -476,6 +485,9 @@ const MainApp = ({ userName }) => {
                             setSelectedDemographic('');
                             setSelectedSortBy('');
                             setSelectedSortOrder('');
+                            // Resetear ordenamiento de TuManga
+                            setSelectedTuMangaSortBy('title');
+                            setSelectedTuMangaSortOrder('asc');
                             setCurrentPage(1); // Reset página también
                             
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
@@ -615,6 +627,76 @@ const MainApp = ({ userName }) => {
                                     </motion.button>
                                   );
                                 })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Ordenamiento (solo TuManga) */}
+                          {selectedSource === 'tumanga' && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-4 ml-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Ordenar Resultados</h4>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* Selector de criterio (Título, Año, Fecha) */}
+                                <div>
+                                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                                    Ordenar por
+                                  </label>
+                                  <select
+                                    value={selectedTuMangaSortBy}
+                                    onChange={(e) => {
+                                      setSelectedTuMangaSortBy(e.target.value);
+                                      setCurrentPage(1); // Reset página al cambiar orden
+                                    }}
+                                    className="w-full px-4 py-2.5 rounded-xl text-sm font-bold bg-white/50 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all hover:border-indigo-300"
+                                  >
+                                    {TUMANGA_SORT_BY.map(sort => (
+                                      <option key={sort.id} value={sort.value}>
+                                        {sort.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                {/* Selector de orden (ASC/DESC) */}
+                                <div>
+                                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                                    Orden
+                                  </label>
+                                  <select
+                                    value={selectedTuMangaSortOrder}
+                                    onChange={(e) => {
+                                      setSelectedTuMangaSortOrder(e.target.value);
+                                      setCurrentPage(1); // Reset página al cambiar orden
+                                    }}
+                                    className="w-full px-4 py-2.5 rounded-xl text-sm font-bold bg-white/50 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all hover:border-indigo-300"
+                                  >
+                                    {TUMANGA_SORT_ORDER.map(order => (
+                                      <option key={order.id} value={order.value}>
+                                        {order.icon} {order.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* Indicador visual del orden actual */}
+                              <div className="mt-3 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                                <p className="text-xs text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-2">
+                                  <span className="text-base">
+                                    {TUMANGA_SORT_ORDER.find(o => o.value === selectedTuMangaSortOrder)?.icon || '↑'}
+                                  </span>
+                                  Ordenando por{' '}
+                                  <span className="text-indigo-900 dark:text-indigo-200">
+                                    {TUMANGA_SORT_BY.find(s => s.value === selectedTuMangaSortBy)?.name || 'Título'}
+                                  </span>
+                                  {' '}
+                                  <span className="lowercase">
+                                    {selectedTuMangaSortOrder === 'asc' ? '(A→Z)' : '(Z→A)'}
+                                  </span>
+                                </p>
                               </div>
                             </div>
                           )}
@@ -849,15 +931,28 @@ const MainApp = ({ userName }) => {
                     className="flex flex-col items-center gap-4 mt-8 mb-4"
                   >
                     {/* Información de resultados */}
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold text-center">
-                      Mostrando {searchResults.length} manhwas en esta página
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold text-center space-y-1">
+                      <div>
+                        Mostrando {searchResults.length} manhwas en página {currentPage}
+                      </div>
+
+                      {/* Indicador de orden (solo TuManga) */}
+                      {selectedSource === 'tumanga' && (
+                        <div className="text-indigo-600 dark:text-indigo-400">
+                          {TUMANGA_SORT_ORDER.find(o => o.value === selectedTuMangaSortOrder)?.icon || '↑'}
+                          {' '}
+                          Ordenado por{' '}
+                          {TUMANGA_SORT_BY.find(s => s.value === selectedTuMangaSortBy)?.name || 'Título'}
+                        </div>
+                      )}
+
                       {hasMorePages && (
-                        <span className="text-potaxie-green ml-1 block sm:inline">
+                        <span className="text-potaxie-green block">
                           • Continúa navegando para ver más 📚
                         </span>
                       )}
                       {!hasMorePages && currentPage > 1 && (
-                        <span className="text-gray-400 ml-1 block sm:inline">
+                        <span className="text-gray-400 block">
                           • Has llegado al final 🎉
                         </span>
                       )}

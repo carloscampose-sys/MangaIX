@@ -8,7 +8,9 @@
 import { 
     TUMANGA_GENRES, 
     TUMANGA_FORMATS, 
-    TUMANGA_MOODS 
+    TUMANGA_MOODS,
+    TUMANGA_SORT_BY,
+    TUMANGA_SORT_ORDER
 } from './tumanga';
 
 import {
@@ -33,14 +35,16 @@ export const getFiltersForSource = (source) => {
             genres: TUMANGA_GENRES,
             formats: TUMANGA_FORMATS,
             moods: TUMANGA_MOODS,
-            hasAdvancedFilters: false,
+            sortBy: TUMANGA_SORT_BY,
+            sortOrder: TUMANGA_SORT_ORDER,
+            hasAdvancedFilters: true,
+            hasSortOptions: true,
+            hasPagination: true,
             // Campos adicionales vacíos para consistencia
             types: [],
             status: [],
             erotic: [],
-            demographics: [],
-            sortBy: [],
-            sortOrder: []
+            demographics: []
         };
     }
     
@@ -96,9 +100,12 @@ export const validateFiltersForSource = (filters, source) => {
     const validatedFilters = {};
     
     if (source === 'tumanga') {
-        // Solo permitir genres y formats
+        // Permitir genres, formats, sortBy, sortOrder, page
         if (filters.genres) validatedFilters.genres = filters.genres;
         if (filters.formats) validatedFilters.formats = filters.formats;
+        if (filters.sortBy) validatedFilters.sortBy = filters.sortBy;
+        if (filters.sortOrder) validatedFilters.sortOrder = filters.sortOrder;
+        if (filters.page !== undefined) validatedFilters.page = filters.page;
     } else if (source === 'manhwaweb') {
         // Permitir todos los filtros avanzados
         if (filters.genres) validatedFilters.genres = filters.genres;
@@ -122,7 +129,10 @@ export const getEmptyFiltersForSource = (source) => {
     if (source === 'tumanga') {
         return {
             genres: [],
-            formats: []
+            formats: [],
+            sortBy: 'title',
+            sortOrder: 'asc',
+            page: 0
         };
     }
     

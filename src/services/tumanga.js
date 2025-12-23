@@ -50,30 +50,68 @@ const fetchWithProxy = async (url, retries = 4) => {
     }
 };
 
-// Géneros disponibles en TuManga con sus IDs
+// Géneros completos de TuManga con sus IDs numéricos (47 géneros)
 export const TUMANGA_GENRES = [
-    { name: "Romance 💞", id: "romance", searchParam: "Romance" },
-    { name: "Boys Love 💕", id: "boys-love", searchParam: "Boys Love" },
-    { name: "Girls Love 🌸", id: "girls-love", searchParam: "Girls Love" },
-    { name: "Acción 💥", id: "accion", searchParam: "Acción" },
-    { name: "Aventura 🗺️", id: "aventura", searchParam: "Aventura" },
-    { name: "Comedia 🤣", id: "comedia", searchParam: "Comedia" },
-    { name: "Drama 🎭", id: "drama", searchParam: "Drama" },
-    { name: "Fantasía 🧚", id: "fantasia", searchParam: "Fantasia" },
-    { name: "Sobrenatural 👻", id: "sobrenatural", searchParam: "Sobrenatural" },
-    { name: "Horror 💀", id: "horror", searchParam: "Horror" },
-    { name: "Misterio 🔍", id: "misterio", searchParam: "Misterio" },
-    { name: "Psicológico 🧠", id: "psicologico", searchParam: "Psicológico" },
-    { name: "Thriller 🔪", id: "thriller", searchParam: "Thriller" },
-    { name: "Sci-fi 🚀", id: "sci-fi", searchParam: "Sci-fi" },
-    { name: "Vida Escolar 🎒", id: "vida-escolar", searchParam: "Vida Escolar" },
-    { name: "Histórico 🏰", id: "historia", searchParam: "Historia" },
-    { name: "Artes Marciales 🥋", id: "artes-marciales", searchParam: "Artes Marciales" },
-    { name: "Reencarnación ✨", id: "reencarnacion", searchParam: "Reencarnación" },
-    { name: "Tragedia 🥀", id: "tragedia", searchParam: "Tragedia" },
-    { name: "Harem 👯", id: "harem", searchParam: "Harem" },
-    { name: "Gore 🩸", id: "gore", searchParam: "Gore" },
-    { name: "Supervivencia 🏃", id: "supervivencia", searchParam: "Supervivencia" }
+    { name: "Acción 💥", id: 1, displayName: "Acción" },
+    { name: "Aventura 🗺️", id: 2, displayName: "Aventura" },
+    { name: "Comedia 🤣", id: 3, displayName: "Comedia" },
+    { name: "Drama 🎭", id: 4, displayName: "Drama" },
+    { name: "Recuentos de la vida 📖", id: 5, displayName: "Recuentos de la vida" },
+    { name: "Ecchi 🔥", id: 6, displayName: "Ecchi" },
+    { name: "Fantasía 🧚", id: 7, displayName: "Fantasía" },
+    { name: "Magia ✨", id: 8, displayName: "Magia" },
+    { name: "Sobrenatural 👻", id: 9, displayName: "Sobrenatural" },
+    { name: "Horror 💀", id: 10, displayName: "Horror" },
+    { name: "Misterio 🔍", id: 11, displayName: "Misterio" },
+    { name: "Psicológico 🧠", id: 12, displayName: "Psicológico" },
+    { name: "Romance 💞", id: 13, displayName: "Romance" },
+    { name: "Sci-fi 🚀", id: 14, displayName: "Sci-fi" },
+    { name: "Thriller 🔪", id: 15, displayName: "Thriller" },
+    { name: "Deporte ⚽", id: 16, displayName: "Deporte" },
+    { name: "Girls Love 🌸", id: 17, displayName: "Girls Love" },
+    { name: "Boys Love 💕", id: 18, displayName: "Boys Love" },
+    { name: "Harem 👯", id: 19, displayName: "Harem" },
+    { name: "Mecha 🤖", id: 20, displayName: "Mecha" },
+    { name: "Supervivencia 🏃", id: 21, displayName: "Supervivencia" },
+    { name: "Reencarnación 🔄", id: 22, displayName: "Reencarnación" },
+    { name: "Gore 🩸", id: 23, displayName: "Gore" },
+    { name: "Apocalíptico 🌋", id: 24, displayName: "Apocalíptico" },
+    { name: "Tragedia 🥀", id: 25, displayName: "Tragedia" },
+    { name: "Vida Escolar 🎒", id: 26, displayName: "Vida Escolar" },
+    { name: "Historia 🏰", id: 27, displayName: "Historia" },
+    { name: "Militar 🪖", id: 28, displayName: "Militar" },
+    { name: "Policiaco 👮", id: 29, displayName: "Policiaco" },
+    { name: "Crimen 🔫", id: 30, displayName: "Crimen" },
+    { name: "Superpoderes 💪", id: 31, displayName: "Superpoderes" },
+    { name: "Vampiros 🧛", id: 32, displayName: "Vampiros" },
+    { name: "Artes Marciales 🥋", id: 33, displayName: "Artes Marciales" },
+    { name: "Samurái ⚔️", id: 34, displayName: "Samurái" },
+    { name: "Género Bender 🔀", id: 35, displayName: "Género Bender" },
+    { name: "VR 🎮", id: 36, displayName: "VR" },
+    { name: "Ciberpunk 🌃", id: 37, displayName: "Ciberpunk" },
+    { name: "Música 🎵", id: 38, displayName: "Música" },
+    { name: "Parodia 🎭", id: 39, displayName: "Parodia" },
+    { name: "Animación 🎬", id: 40, displayName: "Animación" },
+    { name: "Demonios 😈", id: 41, displayName: "Demonios" },
+    { name: "Familia 👨‍👩‍👧", id: 42, displayName: "Familia" },
+    { name: "Extranjero 🌍", id: 43, displayName: "Extranjero" },
+    { name: "Niños 👶", id: 44, displayName: "Niños" },
+    { name: "Realidad 📺", id: 45, displayName: "Realidad" },
+    { name: "Telenovela 📻", id: 46, displayName: "Telenovela" },
+    { name: "Guerra ⚔️", id: 47, displayName: "Guerra" }
+];
+
+// Opciones de ordenamiento para TuManga
+export const TUMANGA_SORT_BY = [
+    { name: "Título", id: "title", value: "title" },
+    { name: "Año", id: "year", value: "year" },
+    { name: "Fecha Añadido", id: "date", value: "date" }
+];
+
+// Opciones de modo de ordenamiento
+export const TUMANGA_SORT_ORDER = [
+    { name: "Ascendente (A-Z, 0-9)", id: "asc", value: "asc", icon: "↑" },
+    { name: "Descendente (Z-A, 9-0)", id: "desc", value: "desc", icon: "↓" }
 ];
 
 // Moods predefinidos que mapean a géneros de TuManga
@@ -223,26 +261,64 @@ function tryDecodeWithKeys(encoded, primaryKey) {
 }
 
 /**
+ * Construye la URL de búsqueda de TuManga con todos los parámetros
+ * @param {string} query - Término de búsqueda
+ * @param {object} filters - Filtros a aplicar
+ * @returns {string} URL completa
+ */
+function buildTuMangaSearchURL(query = '', filters = {}) {
+    const baseUrl = `${BASE_URL}/biblioteca`;
+    const params = new URLSearchParams();
+
+    // 1. Título (búsqueda por texto)
+    params.append('title', query || '');
+
+    // 2. Géneros (c[]=1&c[]=2&c[]=3)
+    if (filters.genres && Array.isArray(filters.genres) && filters.genres.length > 0) {
+        filters.genres.forEach(genreId => {
+            params.append('c[]', genreId);
+        });
+    }
+
+    // 3. Ordenar por (title, year, date)
+    const sortBy = filters.sortBy || 'title';
+    params.append('order_by', sortBy);
+
+    // 4. Modo de ordenamiento (asc, desc)
+    const sortOrder = filters.sortOrder || 'asc';
+    params.append('order_mode', sortOrder);
+
+    // 5. Página (0-based: 0, 1, 2, ...)
+    const page = filters.page !== undefined ? filters.page : 0;
+    params.append('page', page);
+
+    return `${baseUrl}?${params.toString()}`;
+}
+
+/**
  * Busca mangas en TuManga con filtros opcionales
+ * @param {string} query - Término de búsqueda
+ * @param {object} filters - Filtros aplicados
+ * @param {array} filters.genres - Array de IDs de géneros (números)
+ * @param {string} filters.sortBy - 'title', 'year', o 'date'
+ * @param {string} filters.sortOrder - 'asc' o 'desc'
+ * @param {number} filters.page - Número de página (0-based)
+ * @returns {Promise<array>} Array de mangas encontrados
  */
 export const searchTuManga = async (query = '', filters = {}) => {
     try {
-        console.log(`Buscando en TuManga: "${query}"`, filters);
+        console.log(`[TuManga] Buscando: "${query}"`, filters);
 
-        let url = `${BASE_URL}/biblioteca?`;
-        const params = new URLSearchParams();
-
-        if (query) {
-            params.append('title', query);
-        }
-
-        url += params.toString();
+        // Construir URL con parámetros
+        const url = buildTuMangaSearchURL(query, filters);
+        console.log(`[TuManga] URL construida: ${url}`);
 
         const response = await fetchWithProxy(url);
         const parser = new DOMParser();
         const doc = parser.parseFromString(response.data, 'text/html');
         const results = [];
 
+        // Seleccionar elementos de manga
         doc.querySelectorAll('.gm_h .item, ul.gm_h li.item').forEach((el, index) => {
             const link = el.querySelector('a');
             const href = link?.getAttribute('href');
@@ -254,7 +330,6 @@ export const searchTuManga = async (query = '', filters = {}) => {
                 const coverUrl = img?.getAttribute('data-src') || img?.getAttribute('src');
 
                 if (title && slug) {
-                    // Generar un ID único usando slug + timestamp + index
                     const uniqueId = `tumanga-${slug}-${Date.now()}-${index}`;
                     results.push({
                         id: uniqueId,
@@ -267,9 +342,10 @@ export const searchTuManga = async (query = '', filters = {}) => {
             }
         });
 
+        console.log(`[TuManga] Encontrados ${results.length} resultados`);
         return results;
     } catch (error) {
-        console.error('Error searching TuManga:', error);
+        console.error('[TuManga] Error en búsqueda:', error);
         return [];
     }
 };
