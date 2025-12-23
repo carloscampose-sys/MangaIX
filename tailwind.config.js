@@ -9,7 +9,7 @@ export default {
     extend: {
       colors: {
         potaxie: {
-          cream: '#F0F8EC', // Updated to a softer, slightly greenish cream
+          cream: '#FDF5E6', // Updated to a softer, slightly greenish cream
           green: '#A7D08C', // Keep existing green for other uses
           'green-pastel': '#BEE3B0', // New pastel green for accents
           'text-light': '#4A574E', // New soft dark green-gray for light mode text
