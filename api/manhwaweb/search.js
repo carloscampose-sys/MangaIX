@@ -15,6 +15,8 @@ export default async function handler(req, res) {
     }
 
     // Recibir todos los filtros desde el frontend (géneros, tipo, estado, erótico, demografía, ordenar, página)
+    // IMPORTANTE: Renombrado 'page' a 'pageParam' para evitar conflicto con el objeto Puppeteer 'page'
+    // que se crea más adelante con browser.newPage()
     const { query, genres, type, status, erotic, demographic, sortBy, sortOrder, page: pageParam } = req.query;
 
     // Permitir búsquedas solo con filtros (sin query de texto)
@@ -179,6 +181,7 @@ export default async function handler(req, res) {
         }
         
         // Agregar paginación (page=1, page=2, etc.)
+        // Usamos pageParam (no page) porque page es el objeto Puppeteer
         const pageNumber = pageParam ? parseInt(pageParam, 10) : 1;
         console.log('[ManhwaWeb Search] Página recibida:', pageParam, 'tipo:', typeof pageParam);
         console.log('[ManhwaWeb Search] Página parseada:', pageNumber);
