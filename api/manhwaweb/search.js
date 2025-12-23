@@ -179,9 +179,16 @@ export default async function handler(req, res) {
         }
         
         // Agregar paginación (page=1, page=2, etc.)
-        const pageNumber = page ? parseInt(page) : 1;
-        urlParams.append('page', pageNumber);
-        console.log('[ManhwaWeb Search] Página:', pageNumber);
+        const pageNumber = page ? parseInt(page, 10) : 1;
+        console.log('[ManhwaWeb Search] Página recibida:', page, 'tipo:', typeof page);
+        console.log('[ManhwaWeb Search] Página parseada:', pageNumber);
+        
+        if (isNaN(pageNumber)) {
+            console.error('[ManhwaWeb Search] ERROR: pageNumber es NaN, usando 1 por defecto');
+            urlParams.append('page', 1);
+        } else {
+            urlParams.append('page', pageNumber);
+        }
         
         // Construir URL final
         const finalUrl = urlParams.toString() ? `${libraryUrl}?${urlParams.toString()}` : libraryUrl;

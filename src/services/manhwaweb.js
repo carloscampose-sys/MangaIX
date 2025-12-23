@@ -92,6 +92,8 @@ export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
         }
 
         // En producción, usar la API serverless (timeout aumentado)
+        console.log('[ManhwaWeb Service] Enviando búsqueda - Página:', page, 'Tipo:', typeof page);
+        
         const response = await axios.get('/api/manhwaweb/search', {
             params: { 
                 query: query || '',  // Enviar string vacío si no hay query
@@ -104,7 +106,7 @@ export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
                 demographic: filters.demographic || '',
                 sortBy: filters.sortBy || '',
                 sortOrder: filters.sortOrder || '',
-                page: page || 1  // Agregar parámetro de página
+                page: String(page || 1)  // Convertir a string para asegurar que se envíe
             },
             timeout: 60000 // 60 segundos para Puppeteer
         });
