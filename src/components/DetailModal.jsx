@@ -142,7 +142,10 @@ export const DetailModal = ({
     // Usar detalles cargados o datos del manga original
     const displayData = mangaDetails || manga;
     const description = displayData?.description || "Esta obra es tan icónica que no necesita palabras... ¡Devoraste! 🥑";
-    const lastChapter = displayData?.lastChapter || manga?.lastChapter || "?";
+    
+    // Calcular el número real de capítulos desde los capítulos cargados
+    const currentChapters = chaptersBySource[selectedChapterSource] || [];
+    const chaptersCount = currentChapters.length > 0 ? currentChapters.length : (displayData?.lastChapter || manga?.lastChapter || "?");
 
     const modalContent = (
         <AnimatePresence>
@@ -184,8 +187,8 @@ export const DetailModal = ({
                                     <span className="px-2.5 sm:px-3 md:px-4 py-1 sm:py-1.5 bg-potaxie-green/90 backdrop-blur-md rounded-full text-white text-[8px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg">
                                         {displayData?.status === 'completed' ? 'Finalizado' : 'En Emisión'}
                                     </span>
-                                    <span className={`px-2.5 sm:px-3 md:px-4 py-1 sm:py-1.5 bg-white/20 backdrop-blur-md rounded-full text-white text-[8px] sm:text-[10px] font-black uppercase tracking-widest border border-white/10 ${isLoadingDetails ? 'animate-pulse opacity-50' : ''}`}>
-                                        {lastChapter} Caps ✨
+                                    <span className={`px-2.5 sm:px-3 md:px-4 py-1 sm:py-1.5 bg-white/20 backdrop-blur-md rounded-full text-white text-[8px] sm:text-[10px] font-black uppercase tracking-widest border border-white/10 ${isLoadingChapters ? 'animate-pulse opacity-50' : ''}`}>
+                                        {chaptersCount} Caps ✨
                                     </span>
                                 </div>
                             </div>
