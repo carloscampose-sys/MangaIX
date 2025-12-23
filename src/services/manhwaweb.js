@@ -139,25 +139,86 @@ export const getManhwaWebDetails = async (slug) => {
     try {
         console.log(`[ManhwaWeb] Obteniendo detalles de: ${slug}`);
         
-        // Construir detalles básicos desde el slug
+        // Detectar si estamos en local o producción
+        const isLocal = typeof window !== 'undefined' && 
+                       (window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1');
+
+        if (isLocal) {
+            // En local, devolver datos básicos sin API
+            console.warn('[ManhwaWeb] ⚠️ Detalles limitados en local. Despliega a Vercel para sinopsis reales.');
+            
+            const title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            return {
+                id: `manhwaweb-${slug}`,
+                slug,
+                title,
+                cover: '',
+                description: "Sinopsis no disponible en local. Despliega a Vercel para ver detalles completos. 🥑",
+                genres: [],
+                status: 'ongoing',
+                author: '',
+                lastChapter: '?',
+                chaptersCount: 0,
+                source: 'manhwaweb'
+            };
+        }
+
+        // En producción, usar la API serverless con Puppeteer
+        console.log('[ManhwaWeb] Llamando a API de detalles...');
+        
+        const response = await axios.get('/api/manhwaweb/details', {
+            params: { slug },
+            timeout: 35000 // 35 segundos
+        });
+
+        if (response.data.success && response.data.details) {
+            const details = response.data.details;
+            
+            console.log('[ManhwaWeb] Detalles obtenidos:', {
+                title: details.title,
+                descriptionLength: details.description?.length || 0,
+                author: details.author,
+                genresCount: details.genres?.length || 0
+            });
+            
+            return {
+                id: `manhwaweb-${slug}`,
+                slug: details.slug,
+                title: details.title,
+                cover: details.cover || '',
+                description: details.description || "Sinopsis no disponible para esta obra.",
+                genres: details.genres || [],
+                status: details.status || 'ongoing',
+                author: details.author || '',
+                lastChapter: '?',
+                chaptersCount: details.chaptersCount || 0,
+                source: 'manhwaweb'
+            };
+        } else {
+            console.error('[ManhwaWeb] Respuesta inválida de la API de detalles');
+            throw new Error('Invalid API response');
+        }
+    } catch (error) {
+        console.error('[ManhwaWeb] Error obteniendo detalles:', error);
+        
+        // Fallback: devolver datos básicos
         const title = slug.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         
         return {
             id: `manhwaweb-${slug}`,
             slug,
             title,
-            cover: '', // Se cargará de la búsqueda
-            description: "Descubre esta increíble historia en ManhwaWeb. ¡A devorar! 🥑",
+            cover: '',
+            description: "No se pudo cargar la sinopsis. Inténtalo de nuevo más tarde. 🥑",
             genres: [],
             status: 'ongoing',
-            author: 'Autor desconocido',
+            author: '',
             lastChapter: '?',
             chaptersCount: 0,
             source: 'manhwaweb'
         };
-    } catch (error) {
-        console.error('[ManhwaWeb] Error obteniendo detalles:', error);
-        return null;
     }
 };
 
