@@ -126,24 +126,9 @@ const MainApp = ({ userName }) => {
     // Construir término de búsqueda
     let searchTerm = searchQuery;
 
-    // SOLO PARA TUMANGA: Si hay géneros seleccionados y no hay término de búsqueda, usar género como término
-    // ManhwaWeb usa filtros en URL directamente, no necesita texto de búsqueda
-    if (selectedSource === 'tumanga') {
-      if (!searchTerm && selectedGenres.length > 0) {
-        const firstGenre = TUMANGA_GENRES.find(g => selectedGenres.includes(g.id));
-        if (firstGenre) {
-          searchTerm = firstGenre.displayName;
-        }
-      }
-
-      // Si hay mood seleccionado y no hay término, usar género del mood
-      if (!searchTerm && selectedMood) {
-        const moodGenre = TUMANGA_GENRES.find(g => selectedMood.genres.includes(g.id));
-        if (moodGenre) {
-          searchTerm = moodGenre.displayName;
-        }
-      }
-    }
+    // Para TuManga: NO establecer searchTerm cuando solo hay géneros
+    // El parámetro 'title' debe estar vacío para buscar solo por géneros
+    // Solo usar searchTerm si el usuario escribió algo explícitamente
 
     // Validación: Si no hay término de búsqueda ni filtros, no buscar
     if (!searchTerm && selectedGenres.length === 0 && !selectedMood &&
