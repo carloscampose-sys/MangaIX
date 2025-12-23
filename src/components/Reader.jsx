@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home } from 'lucide-react';
 
@@ -15,6 +15,7 @@ export const Reader = ({
 }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [fullWidth, setFullWidth] = useState(true);
+    const scrollContainerRef = useRef(null);
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -32,11 +33,24 @@ export const Reader = ({
 
     // Scroll automático al inicio cuando cambian las páginas (nuevo capítulo)
     useEffect(() => {
-        if (pages && pages.length > 0) {
-            const scrollContainer = document.querySelector('.overflow-y-auto.custom-scrollbar');
-            if (scrollContainer) {
-                scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+        if (pages && pages.length > 0 && scrollContainerRef.current) {
+            // Reset indicador de página
+            setCurrentPage(0);
+            
+            // Scroll inmediato para evitar que el usuario vea la posición anterior
+            scrollContainerRef.current.scrollTop = 0;
+            
+            // Pequeño delay para asegurar que las imágenes se cargaron
+            const timer = setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 100);
+            
+            return () => clearTimeout(timer);
         }
     }, [pages]);
 
@@ -86,7 +100,10 @@ export const Reader = ({
             </div>
 
             {/* Main Content: Scrolled or Paged Viewer */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-zinc-950 flex flex-col items-center">
+            <div 
+                ref={scrollContainerRef}
+                className="flex-grow overflow-y-auto custom-scrollbar bg-zinc-950 flex flex-col items-center"
+            >
                 {pages.map((page, idx) => (
                     <div key={idx} className={`${fullWidth ? 'w-full max-w-full sm:max-w-2xl md:max-w-3xl' : 'h-[90vh]'} flex justify-center`}>
                         <img
