@@ -65,16 +65,27 @@ export default async function handler(req, res) {
         console.log(`[ManhwaWeb Details] Navegando a: ${url}`);
 
         await page.goto(url, {
-            waitUntil: 'domcontentloaded',
+            waitUntil: 'networkidle0',  // Esperar a que la red esté inactiva (SPA cargada)
             timeout: 30000
         });
 
-        // Esperar a que la página cargue
-        console.log('[ManhwaWeb Details] Esperando carga de contenido...');
-        await page.waitForSelector('body', { timeout: 10000 });
+        // Esperar a que la página cargue - ManhwaWeb es un SPA
+        console.log('[ManhwaWeb Details] Esperando carga de contenido SPA...');
+        
+        // Esperar más tiempo para que React/Vue renderice el contenido
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Intentar esperar por selectores comunes que indican que el contenido cargó
+        try {
+            await page.waitForSelector('h1, .title, [class*="title"], img', { timeout: 5000 });
+        } catch (e) {
+            console.warn('[ManhwaWeb Details] Timeout esperando selectores, continuando...');
+        }
 
-        // Pequeña pausa para asegurar que JS cargue
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Debug: capturar HTML para ver qué está renderizado
+        const bodyHTML = await page.evaluate(() => document.body.innerHTML);
+        console.log('[ManhwaWeb Details] HTML Length:', bodyHTML.length);
+        console.log('[ManhwaWeb Details] HTML Preview:', bodyHTML.substring(0, 500));
 
         // Extraer datos de la página
         console.log('[ManhwaWeb Details] Extrayendo información...');
