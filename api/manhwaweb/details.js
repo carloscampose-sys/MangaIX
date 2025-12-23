@@ -65,27 +65,41 @@ export default async function handler(req, res) {
         console.log(`[ManhwaWeb Details] Navegando a: ${url}`);
 
         await page.goto(url, {
-            waitUntil: 'networkidle0',  // Esperar a que la red esté inactiva (SPA cargada)
+            waitUntil: 'domcontentloaded',  // Más rápido que networkidle0
             timeout: 30000
         });
 
         // Esperar a que la página cargue - ManhwaWeb es un SPA
         console.log('[ManhwaWeb Details] Esperando carga de contenido SPA...');
         
-        // Esperar más tiempo para que React/Vue renderice el contenido
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Esperar a que React/Vue renderice contenido
+        // Intentar esperar por múltiples indicadores de que el contenido cargó
+        let contentLoaded = false;
+        const maxAttempts = 6; // 6 intentos * 1 segundo = 6 segundos máximo
         
-        // Intentar esperar por selectores comunes que indican que el contenido cargó
-        try {
-            await page.waitForSelector('h1, .title, [class*="title"], img', { timeout: 5000 });
-        } catch (e) {
-            console.warn('[ManhwaWeb Details] Timeout esperando selectores, continuando...');
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const hasContent = await page.evaluate(() => {
+                // Verificar si hay contenido significativo renderizado
+                const bodyText = document.body.innerText || '';
+                const hasImages = document.querySelectorAll('img').length > 2;
+                const hasParagraphs = document.querySelectorAll('p').length > 2;
+                const bodyLength = bodyText.length;
+                
+                return bodyLength > 500 || hasImages || hasParagraphs;
+            });
+            
+            if (hasContent) {
+                console.log(`[ManhwaWeb Details] Contenido cargado después de ${i + 1} segundos`);
+                contentLoaded = true;
+                break;
+            }
         }
-
-        // Debug: capturar HTML para ver qué está renderizado
-        const bodyHTML = await page.evaluate(() => document.body.innerHTML);
-        console.log('[ManhwaWeb Details] HTML Length:', bodyHTML.length);
-        console.log('[ManhwaWeb Details] HTML Preview:', bodyHTML.substring(0, 500));
+        
+        if (!contentLoaded) {
+            console.warn('[ManhwaWeb Details] Contenido no cargó completamente, continuando de todas formas...');
+        }
 
         // Extraer datos de la página
         console.log('[ManhwaWeb Details] Extrayendo información...');
