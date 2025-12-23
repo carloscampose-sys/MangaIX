@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import loadingImage from '../design-references/loading.png';
 
 export const PageLoader = ({ isLoading }) => {
     const [progress, setProgress] = useState(0);
@@ -73,7 +72,7 @@ export const PageLoader = ({ isLoading }) => {
                             className="relative"
                         >
                             <img
-                                src={loadingImage}
+                                src="/loading.png"
                                 alt="Loading"
                                 className="w-32 h-32 object-contain"
                                 style={{
