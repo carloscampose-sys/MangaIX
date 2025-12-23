@@ -78,7 +78,7 @@ export default async function handler(req, res) {
         const maxAttempts = 10; // 10 intentos * 1.5 segundos = 15 segundos máximo
         
         for (let i = 0; i < maxAttempts; i++) {
-            await page.waitForTimeout(1500); // Aumentado de 1000 a 1500ms
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Aumentado de 1000 a 1500ms
             
             const hasContent = await page.evaluate(() => {
                 // Verificar si hay contenido significativo renderizado
