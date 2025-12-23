@@ -174,15 +174,48 @@ export default async function handler(req, res) {
                 '[class*="genre"] a',
                 '[class*="Genre"] a',
                 '.tags a',
-                '[class*="tag"] a'
+                '[class*="tag"] a',
+                '.genre', // Sin <a>
+                '.tag',
+                '[class*="demographic"]', // Seinen, Shounen, etc.
+                '[class*="type"]' // Manhwa, Manhua, etc.
             ];
             
             for (const selector of genreSelectors) {
                 const elements = document.querySelectorAll(selector);
                 if (elements.length > 0) {
-                    genres = Array.from(elements).map(el => cleanText(el.textContent));
-                    console.log(`[Géneros] Encontrados ${genres.length} géneros`);
-                    break;
+                    const foundGenres = Array.from(elements)
+                        .map(el => cleanText(el.textContent))
+                        .filter(g => g && g.length > 2 && g.length < 30);
+                    
+                    if (foundGenres.length > 0) {
+                        genres = [...new Set([...genres, ...foundGenres])]; // Evitar duplicados
+                        console.log(`[Géneros] Encontrados con selector "${selector}":`, foundGenres);
+                    }
+                }
+            }
+            
+            // Buscar también géneros en el texto (keywords comunes)
+            if (genres.length === 0) {
+                const bodyText = document.body.innerText || '';
+                const commonGenres = [
+                    'Seinen', 'Shounen', 'Josei', 'Shoujo',
+                    'Acción', 'Romance', 'Comedia', 'Drama', 'Fantasía',
+                    'Aventura', 'Misterio', 'Horror', 'Slice of Life',
+                    'Sobrenatural', 'Psicológico', 'Thriller',
+                    'Manhwa', 'Manhua', 'Manga', 'Webtoon'
+                ];
+                
+                for (const genre of commonGenres) {
+                    // Buscar patrón: el género aparece solo o precedido por espacio/puntuación
+                    const regex = new RegExp(`(?:^|\\s|,)${genre}(?:\\s|,|$)`, 'i');
+                    if (regex.test(bodyText) && !genres.includes(genre)) {
+                        genres.push(genre);
+                    }
+                }
+                
+                if (genres.length > 0) {
+                    console.log('[Géneros] Encontrados en texto:', genres);
                 }
             }
             
@@ -234,7 +267,9 @@ export default async function handler(req, res) {
                 '[class*="artist"]',
                 '[class*="Artist"]',
                 '.creator',
-                '[class*="creator"]'
+                '[class*="creator"]',
+                '[data-author]', // Atributo data
+                '[data-artist]'
             ];
             
             for (const selector of authorSelectors) {
@@ -250,11 +285,13 @@ export default async function handler(req, res) {
                                              !lower.includes('autor:') &&
                                              !lower.includes('autores:') &&
                                              !lower.includes('artist:') &&
-                                             !lower.includes('by:');
+                                             !lower.includes('by:') &&
+                                             !lower.includes('género') &&
+                                             !lower.includes('estado');
                         
                         if (isValidAuthor && !authors.includes(authorText)) {
                             authors.push(authorText);
-                            console.log('[Autor] Encontrado:', authorText);
+                            console.log('[Autor] Encontrado con selector:', authorText);
                         }
                     });
                     
@@ -262,15 +299,20 @@ export default async function handler(req, res) {
                 }
             }
             
-            // Buscar también en el texto si hay "Autor: Nombre" o "Autores: Nombre"
+            // Estrategia 2: Buscar en el texto con patrones más flexibles
             if (authors.length === 0) {
                 const bodyText = document.body.innerText || '';
                 
                 // Patrón más flexible para capturar autores
                 const patterns = [
-                    /Autor(?:es)?[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i,
-                    /Artist[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Genres?|Status|Alternative|$))/i,
-                    /(?:By|De)[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i
+                    // "Autores: Nombre" con lookahead para detectar fin
+                    /Autor(?:es)?[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|Capítulos?|$))/i,
+                    // "Artist: Nombre"
+                    /Artist[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Genres?|Status|Alternative|Chapters?|$))/i,
+                    // "By Nombre" o "De Nombre"
+                    /(?:By|De)[:\s]+([^\n\r]{2,50}?)(?=\s*(?:Géneros?|Estado|Nombres?|$))/i,
+                    // Autor sin ":" → "Autor Nombre"
+                    /Autor(?:es)?\s+([A-Z][a-zA-Z0-9\s]{2,40})(?=\s*(?:Géneros?|Estado|$))/i
                 ];
                 
                 for (const pattern of patterns) {
@@ -283,13 +325,40 @@ export default async function handler(req, res) {
                                        authorName.length < 100 &&
                                        !lower.includes('género') &&
                                        !lower.includes('estado') &&
-                                       !lower.includes('nombre');
+                                       !lower.includes('nombre') &&
+                                       !lower.includes('capítulo');
                         
                         if (isValid && !authors.includes(authorName)) {
                             authors.push(authorName);
-                            console.log('[Autor] Encontrado en texto:', authorName);
+                            console.log('[Autor] Encontrado en texto con patrón:', authorName);
                             break;
                         }
+                    }
+                }
+            }
+            
+            // Estrategia 3: Buscar spans o divs que contengan solo un nombre (probable autor)
+            if (authors.length === 0) {
+                const possibleAuthors = Array.from(document.querySelectorAll('span, div'))
+                    .map(el => cleanText(el.textContent))
+                    .filter(text => {
+                        // Nombre corto, sin números, sin keywords de metadata
+                        const words = text.split(/\s+/);
+                        return text.length > 2 && 
+                               text.length < 50 &&
+                               words.length <= 4 && // Máximo 4 palabras
+                               !/\d/.test(text) && // Sin números
+                               !/género|estado|capítulo|nombre/i.test(text);
+                    });
+                
+                // Buscar en el contexto si alguno aparece después de "Autor" o "Artist"
+                const bodyText = document.body.innerText || '';
+                for (const possibleAuthor of possibleAuthors) {
+                    const contextPattern = new RegExp(`Autor(?:es)?[:\\s]+${possibleAuthor}`, 'i');
+                    if (contextPattern.test(bodyText)) {
+                        authors.push(possibleAuthor);
+                        console.log('[Autor] Encontrado por contexto:', possibleAuthor);
+                        break;
                     }
                 }
             }
@@ -450,7 +519,26 @@ export default async function handler(req, res) {
             if (description) {
                 console.log('[Limpieza] Descripción original (primeros 500 chars):', description.substring(0, 500));
                 
-                // PASO 1: Cortar en keywords específicas (incluso si están en medio del texto)
+                // PASO 1: Eliminar prefijos comunes (MANHWA, MANHUA, MANGA, Seinen, título)
+                // Ejemplo: "MANHUASeinenYuan Zun" → ""
+                const prefixPatterns = [
+                    /^(MANHWA|MANHUA|MANGA|WEBTOON|COMIC)\s*/i,
+                    /^(Shounen|Seinen|Josei|Shoujo)\s*/i,
+                    /^(Acción|Romance|Comedia|Drama|Fantasía)\s*/i
+                ];
+                
+                for (const pattern of prefixPatterns) {
+                    description = description.replace(pattern, '');
+                }
+                
+                // Si empieza con el título de la obra, eliminarlo
+                if (title && description.toLowerCase().startsWith(title.toLowerCase())) {
+                    description = description.substring(title.length).trim();
+                }
+                
+                console.log('[Limpieza] Después de eliminar prefijos:', description.substring(0, 200));
+                
+                // PASO 2: Cortar en keywords específicas (incluso si están en medio del texto)
                 const cutoffKeywords = [
                     'Ver más',
                     'Géneros',
@@ -462,10 +550,8 @@ export default async function handler(req, res) {
                     'Cerrar mensaje', 
                     'Suscríbete', 
                     'Comentar como', 
-                    'Comments by',
-                    'Romance', // Género común que aparece después de sinopsis
-                    'Academia',
-                    'Comedia'
+                    'Comments by'
+                    // NO incluir géneros aquí porque pueden estar en la sinopsis
                 ];
                 
                 let shortestCutIndex = description.length;
