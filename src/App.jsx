@@ -7,6 +7,7 @@ import { Oracle } from './components/Oracle';
 import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { PageLoader } from './components/PageLoader';
+import { SearchLoader } from './components/SearchLoader';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
@@ -148,78 +149,84 @@ const MainApp = ({ userName }) => {
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Toast especial para ManhwaWeb (tarda más)
-    if (selectedSource === 'manhwaweb') {
-      showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
+      // Toast especial para ManhwaWeb (tarda más)
+      if (selectedSource === 'manhwaweb') {
+        showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
+      }
+
+      // Construir filtros según la fuente seleccionada
+      let filters = {};
+      
+      if (selectedSource === 'tumanga') {
+        filters = {
+          genres: selectedGenres,
+          sortBy: selectedTuMangaSortBy,
+          sortOrder: selectedTuMangaSortOrder,
+          page: pageToUse - 1  // TuManga usa paginación 0-based (0, 1, 2...)
+        };
+      } else if (selectedSource === 'manhwaweb') {
+        // Para ManhwaWeb, convertir IDs a values numéricos
+        const genreValues = selectedGenres.map(genreId => {
+          const genre = currentFilters.genres.find(g => g.id === genreId);
+          return genre ? genre.value : genreId;
+        });
+
+        console.log('[App] Géneros seleccionados (IDs):', selectedGenres);
+        console.log('[App] Géneros convertidos (values):', genreValues);
+
+        filters = {
+          genres: genreValues,  // Usar values numéricos para la API
+          type: selectedType,
+          status: selectedStatus,
+          erotic: selectedErotic,
+          demographic: selectedDemographic,
+          sortBy: selectedSortBy,
+          sortOrder: selectedSortOrder
+        };
+      }
+      
+      // Usar servicio unificado según la fuente seleccionada con página actual
+      console.log('[App] Ejecutando búsqueda con página:', pageToUse);
+      let results = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
+
+      // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
+      const resultCount = results.length;
+
+      // Si no hay resultados y hay filtros, intentar sin filtros
+      if (results.length === 0 && selectedGenres.length > 0) {
+        results = await unifiedSearch(searchQuery, {}, selectedSource);
+      }
+
+      // Enriquecer resultados con placeholder inicial
+      results = results.map(manga => ({
+        ...manga,
+        description: "Cargando sinopsis... 📖",
+        isLoadingDescription: true,
+        author: '',
+        status: 'ongoing',
+        lastChapter: '?',
+        year: '?'
+      }));
+
+      setSearchResults(results);
+      
+      // Determinar si hay más páginas basado en el conteo ORIGINAL
+      // ManhwaWeb devuelve exactamente 30 resultados por página
+      // Si obtuvimos 30, probablemente hay más páginas
+      setHasMorePages(resultCount >= 30);
+      
+      // Iniciar carga de sinopsis en segundo plano
+      loadDescriptionsInBackground(results);
+    } catch (error) {
+      console.error('[App] Error en búsqueda:', error);
+      showToast('❌ Error al buscar. Intenta de nuevo.');
+    } finally {
+      // Garantizar que el loader se oculta incluso si hay error
+      setLoading(false);
     }
-
-    // Construir filtros según la fuente seleccionada
-    let filters = {};
-    
-    if (selectedSource === 'tumanga') {
-      filters = {
-        genres: selectedGenres,
-        sortBy: selectedTuMangaSortBy,
-        sortOrder: selectedTuMangaSortOrder,
-        page: pageToUse - 1  // TuManga usa paginación 0-based (0, 1, 2...)
-      };
-    } else if (selectedSource === 'manhwaweb') {
-      // Para ManhwaWeb, convertir IDs a values numéricos
-      const genreValues = selectedGenres.map(genreId => {
-        const genre = currentFilters.genres.find(g => g.id === genreId);
-        return genre ? genre.value : genreId;
-      });
-
-      console.log('[App] Géneros seleccionados (IDs):', selectedGenres);
-      console.log('[App] Géneros convertidos (values):', genreValues);
-
-      filters = {
-        genres: genreValues,  // Usar values numéricos para la API
-        type: selectedType,
-        status: selectedStatus,
-        erotic: selectedErotic,
-        demographic: selectedDemographic,
-        sortBy: selectedSortBy,
-        sortOrder: selectedSortOrder
-      };
-    }
-    
-    // Usar servicio unificado según la fuente seleccionada con página actual
-    console.log('[App] Ejecutando búsqueda con página:', pageToUse);
-    let results = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
-
-    // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
-    const resultCount = results.length;
-
-    // Si no hay resultados y hay filtros, intentar sin filtros
-    if (results.length === 0 && selectedGenres.length > 0) {
-      results = await unifiedSearch(searchQuery, {}, selectedSource);
-    }
-
-    // Enriquecer resultados con placeholder inicial
-    results = results.map(manga => ({
-      ...manga,
-      description: "Cargando sinopsis... 📖",
-      isLoadingDescription: true,
-      author: '',
-      status: 'ongoing',
-      lastChapter: '?',
-      year: '?'
-    }));
-
-    setSearchResults(results);
-    
-    // Determinar si hay más páginas basado en el conteo ORIGINAL
-    // ManhwaWeb devuelve exactamente 30 resultados por página
-    // Si obtuvimos 30, probablemente hay más páginas
-    setHasMorePages(resultCount >= 30);
-    
-    setLoading(false);
-    
-    // Iniciar carga de sinopsis en segundo plano
-    loadDescriptionsInBackground(results);
   };
   
   // ============================================================
@@ -285,13 +292,27 @@ const MainApp = ({ userName }) => {
     ));
   };
   
+  // ============================================================
+  // BÚSQUEDA vs PAGINACIÓN - Diferencia de comportamiento
+  // ============================================================
+  // handleSearch: NO hace scroll, preserva posición actual
+  //   - Usa SearchLoader (loading state)
+  //   - Se ejecuta cuando el usuario busca o aplica filtros
+  //   - Mantiene la vista donde está el usuario
+  //
+  // goToNextPage/goToPreviousPage: SÍ hace scroll a resultados
+  //   - Usa PageLoader (isPaginationLoading state)
+  //   - Se ejecuta cuando el usuario cambia de página
+  //   - Hace scroll a la sección de resultados para mejor UX
+  // ============================================================
+  
   // Función para ir a la página siguiente
   const goToNextPage = async () => {
     const nextPage = currentPage + 1;
     setCurrentPage(nextPage);
     setIsPaginationLoading(true);
 
-    // Scroll a la sección de resultados (no al inicio)
+    // Scroll a la sección de resultados (solo en paginación)
     if (resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -310,7 +331,7 @@ const MainApp = ({ userName }) => {
       setCurrentPage(prevPage);
       setIsPaginationLoading(true);
 
-      // Scroll a la sección de resultados (no al inicio)
+      // Scroll a la sección de resultados (solo en paginación)
       if (resultsRef.current) {
         resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -1114,6 +1135,9 @@ const MainApp = ({ userName }) => {
           library={library}
         />
 
+        {/* Search Loader para búsquedas */}
+        <SearchLoader isLoading={loading} />
+        
         {/* Page Loader para paginación */}
         <PageLoader isLoading={isPaginationLoading} />
       </main>
