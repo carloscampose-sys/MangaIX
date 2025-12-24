@@ -16,8 +16,9 @@ import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
 import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getGreeting } from './utils/greetingUtils';
 
-const MainApp = ({ userName }) => {
+const MainApp = ({ userName, userGender }) => {
   const [page, setPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -469,7 +470,7 @@ const MainApp = ({ userName }) => {
                       {userName && userName === 'Ana' ? (
                         <>El Santuario de <span className="text-potaxie-gold text-outline-gold">Ana</span> 🥑</>
                       ) : userName ? (
-                        <>Bienvenida, <span className="text-potaxie-gold text-outline-gold">{userName}</span> 🥑</>
+                        <>{getGreeting(userGender)}, <span className="text-potaxie-gold text-outline-gold">{userName}</span> 🥑</>
                       ) : (
                         <>Encuentra tu próximo vicio</>
                       )}
@@ -1135,18 +1136,31 @@ const MainApp = ({ userName }) => {
 }
 
 import WelcomeScreen from './components/WelcomeScreen'; // Import the new WelcomeScreen component
+import GenderSelectionScreen from './components/GenderSelectionScreen'; // Import the new GenderSelectionScreen component
 
 const App = () => {
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(true);
+  const [showGenderScreen, setShowGenderScreen] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false); // New state to control LoadingScreen display
   const [userName, setUserName] = useState(null);
+  const [userGender, setUserGender] = useState(null);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem('userName');
+    const storedUserGender = localStorage.getItem('userGender');
+    
     if (storedUserName) {
       setUserName(storedUserName);
-      setShowWelcomeScreen(false); // Skip welcome screen
-      setShowLoadingScreen(true); // Go straight to loading animation
+      setShowWelcomeScreen(false);
+      
+      if (storedUserGender) {
+        // Si tiene nombre y género, ir directamente a la app
+        setUserGender(storedUserGender);
+        setShowLoadingScreen(true);
+      } else {
+        // Si tiene nombre pero no género, mostrar pantalla de género
+        setShowGenderScreen(true);
+      }
     } else {
       setShowWelcomeScreen(true); // Show welcome screen if no userName
     }
@@ -1163,9 +1177,16 @@ const App = () => {
   }, [showLoadingScreen]);
 
   const handleWelcomeEnter = () => {
-    setUserName(localStorage.getItem('userName')); // Get the newly set userName
+    const newUserName = localStorage.getItem('userName');
+    setUserName(newUserName);
     setShowWelcomeScreen(false);
-    setShowLoadingScreen(true); // Trigger loading screen after welcome
+    setShowGenderScreen(true); // Show gender selection screen after welcome
+  };
+
+  const handleGenderSelect = (gender) => {
+    setUserGender(gender);
+    setShowGenderScreen(false);
+    setShowLoadingScreen(true); // Trigger loading screen after gender selection
   };
 
   return (
@@ -1184,11 +1205,22 @@ const App = () => {
                 <WelcomeScreen onEnter={handleWelcomeEnter} />
               </motion.div>
             )}
-            {!showWelcomeScreen && showLoadingScreen && (
+            {showGenderScreen && (
+              <motion.div
+                key="gender"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <GenderSelectionScreen userName={userName} onGenderSelect={handleGenderSelect} />
+              </motion.div>
+            )}
+            {!showWelcomeScreen && !showGenderScreen && showLoadingScreen && (
               <LoadingScreen key="loading" />
             )}
-            {!showWelcomeScreen && !showLoadingScreen && (
-              <MainApp key="app" userName={userName} /> // Pass userName to MainApp
+            {!showWelcomeScreen && !showGenderScreen && !showLoadingScreen && (
+              <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
             )}
           </AnimatePresence>
         </LibraryProvider>
