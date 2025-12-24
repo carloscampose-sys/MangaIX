@@ -78,23 +78,37 @@ export default async function handler(req, res) {
         });
 
         // NUEVA ESTRATEGIA: Construir URL con todos los parámetros
-        // ManhwaWeb usa parámetros URL para filtros, no necesitamos clicks
+        // ManhwaWeb usa parámetros URL para filtros
+        // IMPORTANTE: El ORDEN de los parámetros importa en ManhwaWeb
+        // Orden correcto: buscar → tipo → demografia → estado → erotico → genders → order_item → order_dir
         let libraryUrl = 'https://manhwaweb.com/library';
         const urlParams = new URLSearchParams();
-        
-        // NOTA: ManhwaWeb cambió su sistema de búsqueda
-        // El parámetro 'buscar' ya NO funciona en la URL
-        // Necesitamos usar el campo de búsqueda directamente en el sitio
+
         const hasTextQuery = query && query.trim() !== '' && query.trim() !== 'undefined';
-        
+
         if (hasTextQuery) {
             console.log('[ManhwaWeb Search] Búsqueda con texto:', query.trim());
         } else {
             console.log('[ManhwaWeb Search] Búsqueda por filtros únicamente (sin texto)');
         }
-        
+
+        // 1. BUSCAR (siempre incluir, aunque esté vacío)
+        urlParams.append('buscar', hasTextQuery ? query.trim() : '');
+
+        // 2. TIPO (antes de géneros)
+        urlParams.append('tipo', type || '');
+
+        // 3. DEMOGRAFÍA (antes de estado)
+        urlParams.append('demografia', demographic || '');
+
+        // 4. ESTADO
+        urlParams.append('estado', status || '');
+
+        // 5. ERÓTICO
+        urlParams.append('erotico', erotic || '');
+
         // ============================================================
-        // CONVERSIÓN DE GÉNEROS: ID → VALOR NUMÉRICO (IDs REALES DE MANHWAWEB)
+        // 6. GÉNEROS (genders) - DESPUÉS de los filtros básicos
         // ============================================================
         // ManhwaWeb usa 'genders' repetido para múltiples géneros
         // URL real con 2 géneros: ?genders=18&genders=2
@@ -139,59 +153,20 @@ export default async function handler(req, res) {
             console.log('[ManhwaWeb Search] Géneros seleccionados:', genreIds);
             console.log('[ManhwaWeb Search] IDs numéricos:', genreIds.map(id => genreMap[id] || id));
         }
-        
-        // Agregar tipo (ManhwaWeb usa 'tipo' en español)
-        if (type) {
-            urlParams.append('tipo', type);
-            console.log('[ManhwaWeb Search] Tipo en URL:', type);
-        } else {
-            urlParams.append('tipo', '');
-        }
-        
-        // Agregar estado (ManhwaWeb usa 'estado' en español)
-        if (status) {
-            urlParams.append('estado', status);
-            console.log('[ManhwaWeb Search] Estado en URL:', status);
-        } else {
-            urlParams.append('estado', '');
-        }
-        
-        // Agregar erótico (ManhwaWeb usa 'erotico' en español)
-        if (erotic) {
-            urlParams.append('erotico', erotic);
-            console.log('[ManhwaWeb Search] Erótico en URL:', erotic);
-        } else {
-            urlParams.append('erotico', '');
-        }
-        
-        // Agregar demografía (ManhwaWeb usa 'demografia' en español)
-        if (demographic) {
-            urlParams.append('demografia', demographic);
-            console.log('[ManhwaWeb Search] Demografía en URL:', demographic);
-        } else {
-            urlParams.append('demografia', '');
-        }
-        
-        // Agregar ordenamiento (ManhwaWeb usa 'order_item' y 'order_dir')
-        if (sortBy) {
-            urlParams.append('order_item', sortBy);
-            urlParams.append('order_dir', sortOrder || 'desc');
-            console.log('[ManhwaWeb Search] Orden en URL:', sortBy, sortOrder);
-        } else {
-            urlParams.append('order_item', 'alfabetico');
-            urlParams.append('order_dir', 'desc');
-        }
-        
-        // Agregar paginación (page=1, page=2, etc.)
-        // Usamos pageParam (no page) porque page es el objeto Puppeteer
+
+        // 7. ORDENAMIENTO (order_item y order_dir) - DESPUÉS de géneros
+        urlParams.append('order_item', sortBy || 'alfabetico');
+        urlParams.append('order_dir', sortOrder || 'desc');
+        console.log('[ManhwaWeb Search] Orden en URL:', sortBy || 'alfabetico', sortOrder || 'desc');
+
+        // 8. PAGINACIÓN - AL FINAL (pero sin incluirlo si es página 1)
+        // La URL de ejemplo no tiene parámetro 'page', así que lo omitimos
         const pageNumber = pageParam ? parseInt(pageParam, 10) : 1;
         console.log('[ManhwaWeb Search] Página recibida:', pageParam, 'tipo:', typeof pageParam);
         console.log('[ManhwaWeb Search] Página parseada:', pageNumber);
-        
-        if (isNaN(pageNumber)) {
-            console.error('[ManhwaWeb Search] ERROR: pageNumber es NaN, usando 1 por defecto');
-            urlParams.append('page', 1);
-        } else {
+
+        // Solo agregar page si es > 1
+        if (pageNumber > 1) {
             urlParams.append('page', pageNumber);
         }
         
