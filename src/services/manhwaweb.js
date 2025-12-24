@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { MANHWAWEB_GENRES } from './manhwawebFilters';
 
 const BASE_URL = 'https://manhwaweb.com';
 
@@ -307,18 +308,45 @@ export const getManhwaWebPages = async (slug, chapter) => {
 
 /**
  * Obtiene una obra aleatoria (para el Oráculo)
+ * @param {array} genreIds - Array de IDs de géneros string (ej: ["drama", "tragedia"])
+ * @returns {Promise<object|null>} Obra aleatoria con detalles completos
  */
 export const getRandomManhwaWeb = async (genreIds = []) => {
     try {
-        // Buscar obras y seleccionar una aleatoria
-        const results = await searchManhwaWeb('');
-        
-        if (results.length === 0) return null;
-        
+        console.log('[ManhwaWeb] Obteniendo obra aleatoria con géneros:', genreIds);
+
+        // Convertir IDs string a values numéricos para la API
+        // genreIds puede ser ["drama", "tragedia"] y necesitamos ["1", "25"]
+        const genreValues = genreIds.map(id => {
+            const genre = MANHWAWEB_GENRES.find(g => g.id === id);
+            return genre ? genre.value : null;
+        }).filter(v => v !== null);
+
+        console.log('[ManhwaWeb] Genre values para búsqueda:', genreValues);
+
+        // Construir filtros
+        const filters = genreValues.length > 0
+            ? { genres: genreValues }  // Array de values string ["1", "25"]
+            : {};
+
+        // Buscar con filtros
+        const results = await searchManhwaWeb('', filters, 1);
+
+        if (results.length === 0) {
+            console.log('[ManhwaWeb] No se encontraron resultados con filtros, intentando sin filtros');
+            const allResults = await searchManhwaWeb('', {}, 1);
+            if (allResults.length === 0) return null;
+
+            const randomIndex = Math.floor(Math.random() * allResults.length);
+            const randomManhwa = allResults[randomIndex];
+            return await getManhwaWebDetails(randomManhwa.slug);
+        }
+
+        // Seleccionar uno aleatorio
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManhwa = results[randomIndex];
-        
-        // Obtener detalles completos
+
+        console.log(`[ManhwaWeb] Obra aleatoria seleccionada: ${randomManhwa.title}`);
         return await getManhwaWebDetails(randomManhwa.slug);
     } catch (error) {
         console.error('[ManhwaWeb] Error obteniendo obra aleatoria:', error);

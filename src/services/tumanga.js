@@ -686,34 +686,39 @@ const getTuMangaPagesDirectScraping = async (slug, chapter) => {
 
 /**
  * Obtiene mangas aleatorios para el Oráculo
+ * @param {array} genreIds - Array de IDs de géneros numéricos (ej: [1, 4, 7])
+ * @returns {Promise<object|null>} Manga aleatorio con detalles completos
  */
 export const getRandomManga = async (genreIds = []) => {
     try {
-        let searchTerm = '';
+        console.log('[TuManga] Obteniendo manga aleatorio con géneros:', genreIds);
 
-        if (genreIds.length > 0) {
-            const genre = TUMANGA_GENRES.find(g => genreIds.includes(g.id));
-            if (genre) {
-                searchTerm = genre.searchParam;
-            }
-        }
+        // Si hay géneros, buscar con filtros
+        const filters = genreIds.length > 0
+            ? { genres: genreIds }  // Array de IDs numéricos [1, 4, 7]
+            : {};
 
-        const results = await searchTuManga(searchTerm);
+        // Usar búsqueda con filtros (usa buildTuMangaSearchURL internamente)
+        const results = await searchTuManga('', filters);
 
         if (results.length === 0) {
-            const allResults = await searchTuManga('');
+            console.log('[TuManga] No se encontraron resultados con filtros, intentando sin filtros');
+            const allResults = await searchTuManga('', {});
             if (allResults.length === 0) return null;
+
             const randomIndex = Math.floor(Math.random() * allResults.length);
             const randomManga = allResults[randomIndex];
             return await getTuMangaDetails(randomManga.slug);
         }
 
+        // Seleccionar uno aleatorio de los resultados filtrados
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManga = results[randomIndex];
 
+        console.log(`[TuManga] Manga aleatorio seleccionado: ${randomManga.title}`);
         return await getTuMangaDetails(randomManga.slug);
     } catch (error) {
-        console.error('Error getting random manga:', error);
+        console.error('[TuManga] Error getting random manga:', error);
         return null;
     }
 };

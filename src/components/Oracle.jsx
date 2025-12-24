@@ -133,13 +133,28 @@ export const Oracle = () => {
         setRecommendation(null);
 
         // Obtener géneros para la búsqueda
-        const genreIds = selectedMood ? selectedMood.genres : [selectedGenre];
+        let genreIds;
+
+        if (selectedMood) {
+            // Mood seleccionado - usar sus géneros directamente
+            // Para TuManga: mood.genres = [1, 4] (numéricos)
+            // Para ManhwaWeb: mood.genres = ["drama", "tragedia"] (strings)
+            genreIds = selectedMood.genres;
+        } else {
+            // Género individual seleccionado
+            genreIds = [selectedGenre];
+            // Para TuManga: selectedGenre = 1 (numérico)
+            // Para ManhwaWeb: selectedGenre = "drama" (string)
+        }
+
+        console.log('[Oracle] Invocando con géneros:', genreIds, 'Fuente:', selectedSource);
 
         try {
             const result = await unifiedGetRandom(genreIds, selectedSource);
 
             if (result) {
                 setRecommendation(result);
+                console.log('[Oracle] Recomendación obtenida:', result.title);
                 // Confetti de celebración
                 confetti({
                     particleCount: 100,
@@ -148,12 +163,13 @@ export const Oracle = () => {
                     colors: theme === 'dark' ? ['#FFD700', '#00BFFF', '#7B68EE'] : ['#A7D08C', '#FFFFFF', '#4FD1C5']
                 });
             } else {
+                console.warn('[Oracle] No se encontró recomendación');
                 setError(selectedMood
                     ? "¡El Oráculo dice que esta combinación es muy exclusiva! Prueba con menos filtros 🥑"
                     : "¡Tiesa! El oráculo no encontró nada por ahora, intenta otro género, potaxina.");
             }
         } catch (e) {
-            console.error('Oracle error:', e);
+            console.error('[Oracle] Error durante invocación:', e);
             setError("Error de conexión con el cosmos.");
         } finally {
             setLoading(false);
