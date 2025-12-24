@@ -876,37 +876,32 @@ const MainApp = ({ userName }) => {
                   </AnimatePresence>
                 </div>
 
-                {loading && (
-                  <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <div className="w-20 h-20 relative">
-                      <div className="absolute inset-0 border-4 border-potaxie-green/20 rounded-full" />
-                      <div className="absolute inset-0 border-4 border-potaxie-green border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(167,208,140,0.5)]" />
-                      <div className="absolute inset-0 flex items-center justify-center text-3xl animate-bounce">🥑</div>
-                    </div>
-                    <p className="text-potaxie-700 dark:text-potaxie-400 font-black text-lg tracking-widest animate-pulse">RASTREANDO GUSTOS... 🔍</p>
-                  </div>
-                )}
-
-                <motion.div
-                  ref={resultsRef}
-                  layout
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
-                >
-                  <AnimatePresence>
-                    {searchResults.map(manga => (
-                      <motion.div
-                        layout
-                        key={manga.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <ManhwaCard manga={manga} />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
+                {/* Sección de resultados con loader posicionado */}
+                <div className="relative min-h-[400px]">
+                  {/* SearchLoader posicionado sobre los resultados */}
+                  <SearchLoader isLoading={loading} />
+                  
+                  <motion.div
+                    ref={resultsRef}
+                    layout
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
+                  >
+                    <AnimatePresence>
+                      {searchResults.map(manga => (
+                        <motion.div
+                          layout
+                          key={manga.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <ManhwaCard manga={manga} />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
+                </div>
 
                 {/* Botones de Paginación */}
                 {!loading && searchResults.length > 0 && (
@@ -1134,9 +1129,6 @@ const MainApp = ({ userName }) => {
           onClose={() => setIsLuckModalOpen(false)}
           library={library}
         />
-
-        {/* Search Loader para búsquedas */}
-        <SearchLoader isLoading={loading} />
         
         {/* Page Loader para paginación */}
         <PageLoader isLoading={isPaginationLoading} />
