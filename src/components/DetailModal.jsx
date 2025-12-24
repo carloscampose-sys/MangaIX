@@ -85,10 +85,16 @@ export const DetailModal = ({
                 }
             }
 
-            // Guardar capítulos en el objeto por fuente
+            // Guardar capítulos ordenados ascendentemente (Cap 1 primero)
             setChaptersBySource(prev => ({
                 ...prev,
-                [source]: chapters || []
+                [source]: chapters ? [...chapters].sort((a, b) => {
+                    // Convertir números de capítulo a float para comparar
+                    // Soporta capítulos como "1", "1.5", "2", etc.
+                    const numA = parseFloat(a.number) || 0;
+                    const numB = parseFloat(b.number) || 0;
+                    return numA - numB;  // Orden ascendente (1 → 2 → 3 → ...)
+                }) : []
             }));
             
             // Establecer la fuente seleccionada
