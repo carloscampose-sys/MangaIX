@@ -172,6 +172,9 @@ const MainApp = ({ userName }) => {
         return genre ? genre.value : genreId;
       });
 
+      console.log('[App] Géneros seleccionados (IDs):', selectedGenres);
+      console.log('[App] Géneros convertidos (values):', genreValues);
+
       filters = {
         genres: genreValues,  // Usar values numéricos para la API
         type: selectedType,
