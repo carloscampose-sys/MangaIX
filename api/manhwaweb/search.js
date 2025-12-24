@@ -238,10 +238,14 @@ export default async function handler(req, res) {
         }
         
         // Esperar a que se carguen las tarjetas iniciales
+        // Aumentar timeout y usar selectores alternativos
         await page.waitForFunction(() => {
-            const links = document.querySelectorAll('a[href*="/manhwa/"]');
-            return links.length > 0;
-        }, { timeout: 15000 }).catch(() => {
+            // Intentar múltiples selectores posibles
+            const links1 = document.querySelectorAll('a[href*="/manhwa/"]');
+            const links2 = document.querySelectorAll('a[href*="/obra/"]');
+            const links3 = document.querySelectorAll('.element a[href]');
+            return links1.length > 0 || links2.length > 0 || links3.length > 0;
+        }, { timeout: 20000 }).catch(() => {
             console.log('[ManhwaWeb Search] Timeout esperando resultados, intentando extraer de todos modos...');
         });
 
@@ -269,9 +273,12 @@ export default async function handler(req, res) {
             // Esperar 1 segundo a que se carguen nuevos elementos del lazy loading
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Contar elementos actuales
+            // Contar elementos actuales (usar selectores alternativos)
             currentCount = await page.evaluate(() => {
-                return document.querySelectorAll('a[href*="/manhwa/"]').length;
+                const links1 = document.querySelectorAll('a[href*="/manhwa/"]');
+                const links2 = document.querySelectorAll('a[href*="/obra/"]');
+                const links3 = document.querySelectorAll('.element a[href]');
+                return Math.max(links1.length, links2.length, links3.length);
             });
             
             scrollAttempts++;
@@ -286,22 +293,36 @@ export default async function handler(req, res) {
         // Pausa final para que se carguen las imágenes
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Log de debugging
+        // Log de debugging con selectores alternativos
         const debugInfo = await page.evaluate(() => {
             return {
                 totalLinks: document.querySelectorAll('a').length,
                 manhwaLinks: document.querySelectorAll('a[href*="/manhwa/"]').length,
+                obraLinks: document.querySelectorAll('a[href*="/obra/"]').length,
+                elementLinks: document.querySelectorAll('.element a[href]').length,
                 images: document.querySelectorAll('img').length,
-                bodyText: document.body.innerText.substring(0, 200)
+                bodyText: document.body.innerText.substring(0, 300)
             };
         });
-        
+
         console.log('[ManhwaWeb Search] Debug info:', debugInfo);
 
-        // Extraer resultados con debugging mejorado
+        // Extraer resultados con debugging mejorado - intentar múltiples selectores
         const results = await page.evaluate(() => {
-            // Intentar múltiples selectores
+            // Intentar múltiples selectores posibles
             let cards = Array.from(document.querySelectorAll('a[href*="/manhwa/"]')).filter(a => a.querySelector('img'));
+
+            // Si no encuentra con /manhwa/, intentar con /obra/
+            if (cards.length === 0) {
+                cards = Array.from(document.querySelectorAll('a[href*="/obra/"]')).filter(a => a.querySelector('img'));
+                console.log('[ManhwaWeb Search] Usando selector /obra/, encontrados:', cards.length);
+            }
+
+            // Si aún no encuentra, intentar con .element
+            if (cards.length === 0) {
+                cards = Array.from(document.querySelectorAll('.element a[href]')).filter(a => a.querySelector('img'));
+                console.log('[ManhwaWeb Search] Usando selector .element, encontrados:', cards.length);
+            }
             
             console.log(`[Puppeteer] Total de enlaces con /manhwa/: ${document.querySelectorAll('a[href*="/manhwa/"]').length}`);
             console.log(`[Puppeteer] Enlaces con imagen: ${cards.length}`);
