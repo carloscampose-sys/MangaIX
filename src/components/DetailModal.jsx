@@ -90,9 +90,10 @@ export const DetailModal = ({
                 ...prev,
                 [source]: chapters ? [...chapters].sort((a, b) => {
                     // Convertir números de capítulo a float para comparar
+                    // Usar 'chapter' que es la propiedad correcta en TuManga
                     // Soporta capítulos como "1", "1.5", "2", etc.
-                    const numA = parseFloat(a.number) || 0;
-                    const numB = parseFloat(b.number) || 0;
+                    const numA = parseFloat(a.chapter || a.number) || 0;
+                    const numB = parseFloat(b.chapter || b.number) || 0;
                     return numA - numB;  // Orden ascendente (1 → 2 → 3 → ...)
                 }) : []
             }));
