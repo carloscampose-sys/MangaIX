@@ -466,7 +466,7 @@ const MainApp = ({ userName, userGender }) => {
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8 sm:mb-10 md:mb-12">
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black mb-3 sm:mb-4 tracking-tight drop-shadow-sm">
-                    <span className="text-potaxie-green">
+                    <span className="text-[#FFCC80]">
                       {userName && userName === 'Ana' ? (
                         <>El Santuario de <span className="text-potaxie-gold text-outline-gold">Ana</span> 🥑</>
                       ) : userName ? (
