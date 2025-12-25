@@ -41,21 +41,20 @@ export const LoadingScreen = () => {
         >
             {/* Animated Stars Background */}
             <div className="absolute inset-0 pointer-events-none">
-                {[...Array(50)].map((_, i) => (
+                {[...Array(30)].map((_, i) => (
                     <motion.div
                         key={i}
                         animate={{
-                            y: [0, -30, 0],
-                            opacity: [0.2, 0.6, 0.2],
-                            scale: [0.8, 1.1, 0.8]
+                            y: [0, -20, 0],
+                            opacity: [0.3, 0.8, 0.3],
+                            scale: [0.8, 1.2, 0.8]
                         }}
                         transition={{
-                            duration: 5 + Math.random() * 3,
+                            duration: 3 + Math.random() * 2,
                             repeat: Infinity,
-                            delay: Math.random() * 3,
-                            ease: "easeInOut"
+                            delay: Math.random() * 2
                         }}
-                        className="absolute text-white/30 text-lg sm:text-xl"
+                        className="absolute text-white/40 text-xl"
                         style={{
                             top: `${Math.random() * 100}%`,
                             left: `${Math.random() * 100}%`
@@ -95,6 +94,29 @@ export const LoadingScreen = () => {
                         <span className="text-2xl sm:text-3xl animate-pulse-heart">💛</span>
                     </div>
                 </motion.div>
+
+                {/* Stars/Sparkles around */}
+                {[...Array(8)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        animate={{
+                            scale: [0.5, 1, 0.5],
+                            opacity: [0.3, 0.8, 0.3]
+                        }}
+                        transition={{
+                            duration: 2 + Math.random(),
+                            repeat: Infinity,
+                            delay: Math.random() * 2
+                        }}
+                        className="absolute text-potaxie-cream"
+                        style={{
+                            top: `${Math.random() * 100}%`,
+                            left: `${Math.random() * 100}%`
+                        }}
+                    >
+                        ✦
+                    </motion.div>
+                ))}
             </div>
 
             {/* Texts */}
@@ -116,6 +138,19 @@ export const LoadingScreen = () => {
                         className="h-full bg-white/60 progress-striped rounded-full"
                     />
                 </div>
+
+                {/* Accent Sparkle */}
+                <motion.div
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="absolute -right-1 sm:-right-2 -bottom-1 sm:-bottom-2 text-white text-lg sm:text-xl"
+                >
+                    ✦
+                </motion.div>
+            </div>
+
+            <div className="absolute bottom-6 sm:bottom-10 right-6 sm:right-10 text-white/40 text-2xl sm:text-4xl z-10">
+                ✦
             </div>
         </motion.div>
     );
