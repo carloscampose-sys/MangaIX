@@ -331,3 +331,64 @@ textarea {
 .focus\:ring-gold-500:focus {
   --tw-ring-color: #FFD700; /* Gold color */
 }
+
+/* ========== CHRISTMAS THEME ========== */
+body.christmas-mode {
+  @apply bg-gradient-to-br from-red-50 via-white to-green-50;
+}
+
+.dark body.christmas-mode {
+  @apply bg-gradient-to-br from-red-950 via-gray-900 to-green-950;
+}
+
+/* Christmas mode overrides */
+.christmas-mode .bg-potaxie-cream {
+  @apply bg-gradient-to-br from-red-50 via-white to-green-50;
+}
+
+.christmas-mode .dark .bg-gray-900 {
+  @apply bg-gradient-to-br from-red-950 via-gray-900 to-green-950;
+}
+
+.christmas-mode .bg-potaxie-green {
+  @apply bg-red-600;
+}
+
+.christmas-mode .hover\:bg-green-600:hover {
+  @apply bg-red-700;
+}
+
+.christmas-mode .text-potaxie-green {
+  @apply text-red-600;
+}
+
+.christmas-mode .border-potaxie-green {
+  @apply border-red-600;
+}
+
+.christmas-mode .from-potaxie-green {
+  @apply from-red-600;
+}
+
+.christmas-mode .to-potaxie-green-pastel {
+  @apply to-green-600;
+}
+
+.christmas-mode .ring-potaxie-green {
+  @apply ring-red-600;
+}
+
+/* Christmas decorations */
+.christmas-mode .glass-modal {
+  @apply border-red-200 dark:border-red-800;
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+}
+
+.christmas-mode .manhwa-card {
+  @apply border-red-200 dark:border-red-800;
+}
+
+.christmas-mode .manhwa-card:hover {
+  box-shadow: 0 0 25px rgba(220, 38, 38, 0.4);
+}
+

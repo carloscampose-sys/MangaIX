@@ -17,8 +17,13 @@ import { getFiltersForSource, getEmptyFiltersForSource } from './services/filter
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGreeting } from './utils/greetingUtils';
+import { ChristmasThemeProvider } from './context/ChristmasThemeContext';
+import { SnowEffect } from './components/SnowEffect';
+import { ChristmasToggle } from './components/ChristmasToggle';
+import { useChristmasTheme } from './context/ChristmasThemeContext';
 
 const MainApp = ({ userName, userGender }) => {
+  const { isChristmasMode } = useChristmasTheme();
   const [page, setPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -395,6 +400,12 @@ const MainApp = ({ userName, userGender }) => {
 
   return (
     <div className="min-h-screen pb-24 md:pb-32 relative">
+      {/* Christmas Snow Effect */}
+      {isChristmasMode && <SnowEffect />}
+      
+      {/* Christmas Toggle Button */}
+      <ChristmasToggle />
+      
       <AnimatePresence>
         {/* Global Toasts handled by ToastProvider */}
       </AnimatePresence>
@@ -1191,40 +1202,42 @@ const App = () => {
 
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <LibraryProvider>
-          <AnimatePresence mode="wait">
-            {showWelcomeScreen && (
-              <motion.div
-                key="welcome"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <WelcomeScreen onEnter={handleWelcomeEnter} />
-              </motion.div>
-            )}
-            {showGenderScreen && (
-              <motion.div
-                key="gender"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <GenderSelectionScreen userName={userName} onGenderSelect={handleGenderSelect} />
-              </motion.div>
-            )}
-            {!showWelcomeScreen && !showGenderScreen && showLoadingScreen && (
-              <LoadingScreen key="loading" />
-            )}
-            {!showWelcomeScreen && !showGenderScreen && !showLoadingScreen && (
-              <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
-            )}
-          </AnimatePresence>
-        </LibraryProvider>
-      </ToastProvider>
+      <ChristmasThemeProvider>
+        <ToastProvider>
+          <LibraryProvider>
+            <AnimatePresence mode="wait">
+              {showWelcomeScreen && (
+                <motion.div
+                  key="welcome"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <WelcomeScreen onEnter={handleWelcomeEnter} />
+                </motion.div>
+              )}
+              {showGenderScreen && (
+                <motion.div
+                  key="gender"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <GenderSelectionScreen userName={userName} onGenderSelect={handleGenderSelect} />
+                </motion.div>
+              )}
+              {!showWelcomeScreen && !showGenderScreen && showLoadingScreen && (
+                <LoadingScreen key="loading" />
+              )}
+              {!showWelcomeScreen && !showGenderScreen && !showLoadingScreen && (
+                <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
+              )}
+            </AnimatePresence>
+          </LibraryProvider>
+        </ToastProvider>
+      </ChristmasThemeProvider>
     </ThemeProvider>
   );
 };
