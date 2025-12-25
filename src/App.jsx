@@ -520,7 +520,7 @@ const MainApp = ({ userName, userGender }) => {
                             transition-all duration-300 transform hover:scale-105 active:scale-95
                             ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                             ${selectedSource === source.id
-                              ? `${source.color} text-white shadow-lg ring-2 ring-offset-2 ring-${source.color.replace('bg-', '')}`
+                              ? `bg-[#4A524C] text-white shadow-lg ring-2 ring-offset-2 ring-[#4A524C]`
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }
                           `}

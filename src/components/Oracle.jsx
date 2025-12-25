@@ -210,7 +210,7 @@ export const Oracle = () => {
                             flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm
                             transition-all duration-300 transform hover:scale-105 active:scale-95
                             ${selectedSource === source.id
-                                ? `${source.color} text-white shadow-lg ring-2 ring-offset-2 dark:ring-offset-gray-900`
+                                ? `bg-[#4A524C] text-white shadow-lg ring-2 ring-offset-2 dark:ring-offset-gray-900`
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }
                         `}
