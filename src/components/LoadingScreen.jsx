@@ -39,8 +39,34 @@ export const LoadingScreen = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[1000] bg-[#BDD191] flex flex-col items-center justify-center p-4 overflow-hidden"
         >
+            {/* Animated Stars Background */}
+            <div className="absolute inset-0 pointer-events-none">
+                {[...Array(30)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        animate={{
+                            y: [0, -20, 0],
+                            opacity: [0.3, 0.8, 0.3],
+                            scale: [0.8, 1.2, 0.8]
+                        }}
+                        transition={{
+                            duration: 3 + Math.random() * 2,
+                            repeat: Infinity,
+                            delay: Math.random() * 2
+                        }}
+                        className="absolute text-white/40 text-xl"
+                        style={{
+                            top: `${Math.random() * 100}%`,
+                            left: `${Math.random() * 100}%`
+                        }}
+                    >
+                        ✦
+                    </motion.div>
+                ))}
+            </div>
+
             {/* Central Ritual Area */}
-            <div className="relative w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64 flex items-center justify-center mb-8 sm:mb-10 md:mb-12">
+            <div className="relative w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64 flex items-center justify-center mb-8 sm:mb-10 md:mb-12 z-10">
                 {/* Orbiting Emojis */}
                 {ORBIT_EMOJIS.map((item, idx) => (
                     <div
@@ -94,7 +120,7 @@ export const LoadingScreen = () => {
             </div>
 
             {/* Texts */}
-            <div className="text-center space-y-1.5 sm:space-y-2 mb-8 sm:mb-10">
+            <div className="text-center space-y-1.5 sm:space-y-2 mb-8 sm:mb-10 relative z-10">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md">
                     Santuario Potaxie
                 </h1>
@@ -104,7 +130,7 @@ export const LoadingScreen = () => {
             </div>
 
             {/* Progress Bar Container */}
-            <div className="w-full max-w-[200px] sm:max-w-xs relative p-0.5 sm:p-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 shadow-inner">
+            <div className="w-full max-w-[200px] sm:max-w-xs relative p-0.5 sm:p-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 shadow-inner z-10">
                 <div className="w-full h-3 sm:h-4 bg-transparent rounded-full overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
@@ -123,7 +149,7 @@ export const LoadingScreen = () => {
                 </motion.div>
             </div>
 
-            <div className="absolute bottom-6 sm:bottom-10 right-6 sm:right-10 text-white/40 text-2xl sm:text-4xl">
+            <div className="absolute bottom-6 sm:bottom-10 right-6 sm:right-10 text-white/40 text-2xl sm:text-4xl z-10">
                 ✦
             </div>
         </motion.div>
