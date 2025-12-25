@@ -30,7 +30,7 @@ export const LoadingScreen = () => {
         <motion.div
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-[#BDD191] flex flex-col items-center justify-center p-4 overflow-hidden safe-area-top safe-area-bottom"
+            className="fixed inset-0 z-[1000] bg-[#BDD191] flex flex-col items-center justify-center p-4 overflow-hidden"
         >
             {/* Central Ritual Area */}
             <div className="relative w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64 flex items-center justify-center mb-8 sm:mb-10 md:mb-12">

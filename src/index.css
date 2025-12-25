@@ -29,9 +29,6 @@ body {
   margin: 0;
   overflow-x: hidden;
   position: relative;
-  /* Safe Area Support for iOS and modern mobile devices */
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
 }
 
 .dark body {
