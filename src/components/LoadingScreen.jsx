@@ -14,6 +14,9 @@ export const LoadingScreen = () => {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
+        // Ocultar scrollbar
+        document.body.style.overflow = 'hidden';
+        
         const interval = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 100) {
@@ -23,7 +26,11 @@ export const LoadingScreen = () => {
                 return prev + 1;
             });
         }, 18);
-        return () => clearInterval(interval);
+        
+        return () => {
+            clearInterval(interval);
+            document.body.style.overflow = '';
+        };
     }, []);
 
     return (

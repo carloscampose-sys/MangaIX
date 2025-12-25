@@ -19,10 +19,8 @@
 html {
   min-height: 100vh;
   scroll-behavior: auto;
-  scrollbar-gutter: stable;
   width: 100%;
   overflow-x: hidden;
-  overflow-y: scroll;
 }
 
 body {

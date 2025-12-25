@@ -40,6 +40,14 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
     onGenderSelect(selectedGender);
   };
 
+  // Ocultar scrollbar cuando el componente está montado
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 flex items-center justify-center
                     bg-gradient-to-br from-potaxie-mint to-potaxie-cream-white
