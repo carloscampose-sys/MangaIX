@@ -468,9 +468,9 @@ const MainApp = ({ userName, userGender }) => {
                   <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black mb-3 sm:mb-4 tracking-tight drop-shadow-sm">
                     <span className="text-[#FFCC80]">
                       {userName && userName === 'Ana' ? (
-                        <>El Santuario de <span className="text-potaxie-gold text-outline-gold">Ana</span> 🥑</>
+                        <>El Santuario de <span className="text-[#C9EBB3]">Ana</span> 🥑</>
                       ) : userName ? (
-                        <>{getGreeting(userGender)}, <span className="text-potaxie-gold text-outline-gold">{userName}</span> 🥑</>
+                        <>{getGreeting(userGender)}, <span className="text-[#C9EBB3]">{userName}</span> 🥑</>
                       ) : (
                         <>Encuentra tu próximo vicio</>
                       )}
