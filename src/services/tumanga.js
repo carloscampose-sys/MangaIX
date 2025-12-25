@@ -407,15 +407,81 @@ export const getTuMangaDetails = async (slug) => {
             cover = `${BASE_URL}${cover}`;
         }
 
-        // Extraer sinopsis
+        // Extraer sinopsis con selectores específicos y validación robusta
         let description = '';
-        const allParagraphs = doc.querySelectorAll('p');
-        for (const p of allParagraphs) {
-            const text = p.textContent?.trim() || '';
-            if (text.length > 50 && !text.includes('Capítulo') && !text.includes('Inicio')) {
-                description = text;
-                break;
+        
+        // Lista de selectores CSS priorizados para encontrar la sinopsis
+        const descriptionSelectors = [
+            '.description',
+            '.sinopsis',
+            '.synopsis',
+            '.summary',
+            '.manga-description',
+            '.info .text',
+            '.manga-info p',
+            '.content .description',
+            'div[itemprop="description"]',
+            '.about-text',
+            '.manga-summary',
+            '.storyline',
+            'p.description',
+            'p.synopsis'
+        ];
+
+        // Intentar con selectores específicos primero
+        for (const selector of descriptionSelectors) {
+            const element = doc.querySelector(selector);
+            if (element) {
+                const text = element.textContent?.trim() || '';
+                if (isValidDescription(text)) {
+                    description = text;
+                    console.log(`[TuManga] Sinopsis encontrada con selector: ${selector}`);
+                    break;
+                }
             }
+        }
+
+        // Fallback: buscar en párrafos pero con validación más estricta
+        if (!description) {
+            const allParagraphs = doc.querySelectorAll('p');
+            for (const p of allParagraphs) {
+                const text = p.textContent?.trim() || '';
+                if (isValidDescription(text)) {
+                    description = text;
+                    console.log('[TuManga] Sinopsis encontrada en párrafo genérico');
+                    break;
+                }
+            }
+        }
+
+        // Función auxiliar para validar si un texto es una sinopsis válida
+        function isValidDescription(text) {
+            if (!text || text.length < 50) return false;
+            if (text.length > 2000) return false; // Demasiado largo, probablemente no es una sinopsis
+            
+            // Rechazar si contiene frases del meta tag del sitio
+            const invalidPhrases = [
+                'Lector TMO',
+                'Tu Manga',
+                'tumanga.org',
+                'mangas boys love online',
+                'doujinshi online',
+                'Boys Love Online',
+                'mangas 15+ online',
+                'manhwas en general'
+            ];
+            
+            for (const phrase of invalidPhrases) {
+                if (text.includes(phrase)) {
+                    return false;
+                }
+            }
+            
+            // Rechazar si parece ser información de navegación
+            if (text.includes('Capítulo') && text.includes('Inicio')) return false;
+            if (text.startsWith('Inicio') || text.startsWith('Capítulo')) return false;
+            
+            return true;
         }
 
         // Extraer géneros/categorías
