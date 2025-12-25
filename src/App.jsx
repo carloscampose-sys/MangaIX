@@ -89,10 +89,18 @@ const MainApp = ({ userName, userGender }) => {
   };
 
   const handleDragEnd = (event, info) => {
+    // No permitir swipe si el body tiene overflow hidden (pantallas de bienvenida/carga)
     if (document.body.style.overflow === 'hidden') return;
-    const threshold = 50;
-    const velocityThreshold = 500;
-    if (Math.abs(info.offset.x) > threshold || Math.abs(info.velocity.x) > velocityThreshold) {
+    
+    // Umbrales más estrictos para evitar swipes accidentales
+    const threshold = 100;  // Aumentado de 50 a 100px
+    const velocityThreshold = 800;  // Aumentado de 500 a 800
+    
+    // Solo permitir swipe si el movimiento es predominantemente horizontal
+    // Esto evita que scrolls verticales activen el swipe
+    const isHorizontalSwipe = Math.abs(info.offset.x) > Math.abs(info.offset.y) * 2;
+    
+    if (isHorizontalSwipe && (Math.abs(info.offset.x) > threshold || Math.abs(info.velocity.x) > velocityThreshold)) {
       const currentIndex = PAGES_ORDER.indexOf(page);
       if (info.offset.x > 0 && currentIndex > 0) {
         navigateToPage(PAGES_ORDER[currentIndex - 1]);
