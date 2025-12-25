@@ -1,12 +1,14 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useLibrary } from '../context/LibraryContext';
+import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { Moon, Sun, Eye, EyeOff, Book, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Navbar = ({ setPage }) => {
     const { theme, toggleTheme, incognito, toggleIncognito } = useTheme();
     const { level, devouredChapters } = useLibrary();
+    const { isChristmasMode, toggleChristmasMode } = useChristmasTheme();
 
     return (
         <nav className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-700 p-2 sm:p-3 md:p-4 shadow-sm safe-area-top">
@@ -87,6 +89,14 @@ export const Navbar = ({ setPage }) => {
                         title="Cambiar Tema"
                     >
                         {theme === 'dark' ? <Moon size={18} className="sm:w-5 sm:h-5" /> : <Sun size={18} className="sm:w-5 sm:h-5" />}
+                    </button>
+
+                    <button
+                        onClick={toggleChristmasMode}
+                        className={`p-1.5 sm:p-2 rounded-full transition-colors ${isChristmasMode ? 'bg-gradient-to-r from-red-600 to-green-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        title={isChristmasMode ? 'Desactivar Modo Navidad' : 'Activar Modo Navidad'}
+                    >
+                        <span className="text-base sm:text-lg">{isChristmasMode ? '🎄' : '❄️'}</span>
                     </button>
                 </div>
             </div>
