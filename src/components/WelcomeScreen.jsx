@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Confetti from 'react-confetti';
-import { motion } from 'framer-motion';
 
 const WelcomeScreen = ({ onEnter }) => {
   const [userName, setUserName] = useState('');
@@ -35,39 +34,12 @@ const WelcomeScreen = ({ onEnter }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center
                     bg-gradient-to-br from-potaxie-mint to-potaxie-cream-white
-                    p-4 z-50 transition-opacity duration-1000" // Fade-out handled by parent
+                    p-4 z-50 transition-opacity duration-1000"
          style={{ animation: 'fadeIn 1s ease-out forwards' }}>
       {showConfetti && <Confetti recycle={false} numberOfPieces={200} gravity={0.3} colors={['#FFD700', '#FFC0CB', '#B0F2BC', '#FCF8E8']} />}
 
-      {/* Animated Stars Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(50)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0.2, 0.6, 0.2],
-              scale: [0.8, 1.1, 0.8]
-            }}
-            transition={{
-              duration: 5 + Math.random() * 3,
-              repeat: Infinity,
-              delay: Math.random() * 3,
-              ease: "easeInOut"
-            }}
-            className="absolute text-white/30 text-lg sm:text-xl"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`
-            }}
-          >
-            ✦
-          </motion.div>
-        ))}
-      </div>
-
       <div className="glass-modal p-8 rounded-lg shadow-xl max-w-md w-full text-center
-                      transform transition-all duration-500 scale-95 opacity-0 relative z-10"
+                      transform transition-all duration-500 scale-95 opacity-0"
            style={{ animation: 'scaleIn 0.5s ease-out forwards 0.5s' }}>
         <h2 className="text-3xl font-bold text-potaxie-text-light mb-6">
           Bienvenida al Santuario Potaxie
