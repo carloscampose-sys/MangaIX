@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 export const SnowEffect = () => {
   return (
-    <div className="fixed inset-0 pointer-events-none z-[999] overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
       {[...Array(80)].map((_, i) => {
         const size = Math.random() * 6 + 3;
         const duration = Math.random() * 4 + 6;
