@@ -378,8 +378,45 @@ body.christmas-mode {
 
 /* Christmas decorations */
 .christmas-mode nav {
-  background-color: rgba(17, 24, 39, 0.7) !important;
+  background-color: rgba(17, 24, 39, 0.9) !important;
   border-bottom-color: #fbbf24 !important;
+}
+
+.christmas-mode nav h1 {
+  background: linear-gradient(to right, #fbbf24, #f59e0b) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.christmas-mode nav p,
+.christmas-mode nav span {
+  color: #d1d5db !important;
+}
+
+.christmas-mode nav button {
+  color: #f3f4f6 !important;
+}
+
+.christmas-mode nav button:hover {
+  background-color: rgba(31, 41, 55, 0.8) !important;
+}
+
+.christmas-mode nav .text-purple-600,
+.christmas-mode nav .text-purple-400 {
+  color: #fbbf24 !important;
+}
+
+.christmas-mode nav .text-yellow-500 {
+  color: #fbbf24 !important;
+}
+
+.christmas-mode nav .text-red-500 {
+  color: #ef4444 !important;
+}
+
+.christmas-mode nav .bg-potaxie-green {
+  background-color: #fbbf24 !important;
 }
 
 .christmas-mode .glass-modal {
