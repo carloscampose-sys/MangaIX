@@ -377,6 +377,11 @@ body.christmas-mode {
 }
 
 /* Christmas decorations */
+.christmas-mode nav {
+  background-color: rgba(17, 24, 39, 0.7) !important;
+  border-bottom-color: #fbbf24 !important;
+}
+
 .christmas-mode .glass-modal {
   border-color: #fbbf24;
   box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
