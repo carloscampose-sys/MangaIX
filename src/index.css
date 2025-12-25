@@ -334,16 +334,16 @@ textarea {
 
 /* ========== CHRISTMAS THEME ========== */
 body.christmas-mode {
-  background: linear-gradient(to bottom right, #1e3a8a, #1e40af, #3b82f6);
+  background-color: #111827;
 }
 
 .dark body.christmas-mode {
-  background: linear-gradient(to bottom right, #0c1e4a, #1e293b, #0f172a);
+  background-color: #0f172a;
 }
 
 /* Christmas mode overrides */
 .christmas-mode .bg-potaxie-cream {
-  background: linear-gradient(to bottom right, #1e3a8a, #1e40af, #3b82f6);
+  background-color: #111827;
 }
 
 .christmas-mode .bg-potaxie-green {
@@ -379,24 +379,19 @@ body.christmas-mode {
 /* Christmas decorations */
 .christmas-mode .glass-modal {
   border-color: #fbbf24;
-  background: rgba(30, 58, 138, 0.8);
-  backdrop-filter: blur(12px);
   box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
 }
 
 .dark .christmas-mode .glass-modal {
   border-color: #fbbf24;
-  background: rgba(15, 23, 42, 0.9);
 }
 
 .christmas-mode .manhwa-card {
   border-color: #fbbf24;
-  background: rgba(30, 58, 138, 0.6);
 }
 
 .dark .christmas-mode .manhwa-card {
   border-color: #fbbf24;
-  background: rgba(15, 23, 42, 0.8);
 }
 
 .christmas-mode .manhwa-card:hover {
