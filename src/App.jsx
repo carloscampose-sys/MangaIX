@@ -476,7 +476,7 @@ const MainApp = ({ userName, userGender }) => {
                       )}
                     </span>
                   </h2>
-                  <p className="text-purple-600 dark:text-purple-400 text-sm sm:text-base md:text-lg font-bold px-2">Busca mangas, manhwas, manhuas y webtoons</p>
+                  <p className="text-[#E6A700] text-sm sm:text-base md:text-lg font-bold px-2">Busca mangas, manhwas, manhuas y webtoons</p>
                 </div>
 
                 <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12 px-1">
