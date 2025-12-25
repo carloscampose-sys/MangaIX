@@ -334,61 +334,68 @@ textarea {
 
 /* ========== CHRISTMAS THEME ========== */
 body.christmas-mode {
-  @apply bg-gradient-to-br from-red-50 via-white to-green-50;
+  background: linear-gradient(to bottom right, #fef2f2, #ffffff, #f0fdf4);
 }
 
 .dark body.christmas-mode {
-  @apply bg-gradient-to-br from-red-950 via-gray-900 to-green-950;
+  background: linear-gradient(to bottom right, #450a0a, #111827, #052e16);
 }
 
 /* Christmas mode overrides */
 .christmas-mode .bg-potaxie-cream {
-  @apply bg-gradient-to-br from-red-50 via-white to-green-50;
-}
-
-.christmas-mode .dark .bg-gray-900 {
-  @apply bg-gradient-to-br from-red-950 via-gray-900 to-green-950;
+  background: linear-gradient(to bottom right, #fef2f2, #ffffff, #f0fdf4);
 }
 
 .christmas-mode .bg-potaxie-green {
-  @apply bg-red-600;
+  background-color: #dc2626;
 }
 
 .christmas-mode .hover\:bg-green-600:hover {
-  @apply bg-red-700;
+  background-color: #b91c1c;
 }
 
 .christmas-mode .text-potaxie-green {
-  @apply text-red-600;
+  color: #dc2626;
 }
 
 .christmas-mode .border-potaxie-green {
-  @apply border-red-600;
+  border-color: #dc2626;
 }
 
 .christmas-mode .from-potaxie-green {
-  @apply from-red-600;
+  --tw-gradient-from: #dc2626;
+  --tw-gradient-to: rgb(220 38 38 / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
 .christmas-mode .to-potaxie-green-pastel {
-  @apply to-green-600;
+  --tw-gradient-to: #16a34a;
 }
 
 .christmas-mode .ring-potaxie-green {
-  @apply ring-red-600;
+  --tw-ring-color: #dc2626;
 }
 
 /* Christmas decorations */
 .christmas-mode .glass-modal {
-  @apply border-red-200 dark:border-red-800;
+  border-color: #fecaca;
   box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
 }
 
+.dark .christmas-mode .glass-modal {
+  border-color: #991b1b;
+}
+
 .christmas-mode .manhwa-card {
-  @apply border-red-200 dark:border-red-800;
+  border-color: #fecaca;
+}
+
+.dark .christmas-mode .manhwa-card {
+  border-color: #991b1b;
 }
 
 .christmas-mode .manhwa-card:hover {
   box-shadow: 0 0 25px rgba(220, 38, 38, 0.4);
 }
+
 
