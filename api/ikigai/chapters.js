@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const baseUrl = `https://viralikigai.ozoviral.xyz/series/${slug}`;
+    const baseUrl = `https://viralikigai.foodib.net/series/${slug}`;
 
     console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
 
@@ -91,10 +91,10 @@ export default async function handler(req, res) {
             const bodyText = document.body ? document.body.innerText : '';
 
             return !title.includes('500') &&
-                   !title.includes('Just a moment') &&
-                   !title.includes('Error') &&
-                   !bodyText.includes('Checking your browser') &&
-                   bodyText.length > 100;
+              !title.includes('Just a moment') &&
+              !title.includes('Error') &&
+              !bodyText.includes('Checking your browser') &&
+              bodyText.length > 100;
           }, { timeout: 20000 });
 
           console.log(`[Ikigai Chapters] ✓ Challenge completado página ${currentPage}`);
@@ -114,60 +114,83 @@ export default async function handler(req, res) {
         // Espera adicional para Qwik
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Buscar enlaces de capítulos
-        // Estos típicamente contienen /leer/ o /read/ en la URL
-        // También pueden estar en otras rutas
-        try {
-          await page.waitForSelector('a[href*="/leer/"], a[href*="/read/"], a[class*="chapter"], a[class*="capitulo"]', { timeout: 4000 });
-          console.log(`[Ikigai Chapters] Enlaces de capítulos encontrados en página ${currentPage}`);
-        } catch (e) {
-          console.warn(`[Ikigai Chapters] No se encontraron capítulos en página ${currentPage}`);
-          hasMorePages = false;
-          break;
-        }
-
-        // Extraer capítulos de esta página
+        // Extraer capítulos de esta página con estrategia mejorada
         const chaptersOnPage = await page.evaluate(() => {
-          // Buscar todos los enlaces que apuntan a /leer/ o /read/
-          // También buscar por clases que indiquen capítulos
-          const chapterLinks = document.querySelectorAll('a[href*="/leer/"], a[href*="/read/"], a[class*="chapter"], a[class*="capitulo"]');
+          console.log('[Ikigai Chapters Eval] Buscando capítulos...');
 
-          return Array.from(chapterLinks).map(link => {
+          // Buscar TODOS los enlaces de la página
+          const allLinks = Array.from(document.querySelectorAll('a'));
+          console.log('[Ikigai Chapters Eval] Total enlaces en página:', allLinks.length);
+
+          // Filtrar enlaces que parecen ser capítulos
+          const chapterLinks = allLinks.filter(link => {
+            const href = link.getAttribute('href') || '';
+            const text = link.textContent || '';
+
+            // ACTUALIZADO: Filtrar enlaces que parecen ser capítulos
+            // Ikigai usa /capitulo/{ID}/ para los capítulos
+            return (
+              href.includes('/capitulo/') ||  // NUEVO: patrón principal de Ikigai
+              href.includes('/leer/') ||
+              href.includes('/read/') ||
+              href.includes('/cap') ||
+              href.includes('/chapter') ||
+              text.match(/cap[íi]tulo\s*\d+/i) ||
+              text.match(/chapter\s*\d+/i) ||
+              text.match(/cap\s*\d+/i) ||
+              text.match(/^#?\s*\d+(\.\d+)?$/)
+            );
+          });
+
+          console.log('[Ikigai Chapters Eval] Enlaces filtrados:', chapterLinks.length);
+
+          // Procesar enlaces encontrados
+          return chapterLinks.map((link, index) => {
             const href = link.getAttribute('href');
             if (!href) return null;
 
-            // Extraer número de capítulo de la URL
-            // Formatos posibles:
-            // /leer/serie-123-1/ (capítulo 1)
-            // /leer/serie-123-capitulo-1/
-            // /read/serie-name-1/
             let chapter = '';
 
-            // Primero intentar con el patrón más específico (número al final)
-            const urlMatch = href.match(/-(\d+\.?\d*)\/?\s*$/);
-            if (urlMatch) {
-              chapter = urlMatch[1];
-            } else {
-              // Intentar buscar "capitulo-X" o "chapter-X" o "cap-X"
-              const chapterMatch = href.match(/(?:capitulo|chapter|cap)-(\d+\.?\d*)/i);
-              if (chapterMatch) {
-                chapter = chapterMatch[1];
+            // Estrategia 1: Extraer del texto del enlace (más confiable)
+            const text = link.textContent || '';
+            const textPatterns = [
+              /cap[íi]tulo\s*(\d+\.?\d*)/i,
+              /chapter\s*(\d+\.?\d*)/i,
+              /cap\s*\.*\s*(\d+\.?\d*)/i,
+              /#\s*(\d+\.?\d*)/,
+              /^\s*(\d+\.?\d*)\s*$/  // Solo número
+            ];
+
+            for (const pattern of textPatterns) {
+              const match = text.match(pattern);
+              if (match && match[1]) {
+                chapter = match[1];
+                break;
               }
             }
 
-            // Si no se pudo extraer del URL, intentar del texto del enlace
+            // Estrategia 2: Si el enlace es de tipo /capitulo/{ID}/
+            // usar el índice del enlace como número de capítulo
+            if (!chapter && href.includes('/capitulo/')) {
+              // Intentar extraer del texto primero
+              const textMatch = text.match(/(\d+\.?\d*)/);
+              if (textMatch && textMatch[1]) {
+                chapter = textMatch[1];
+              }
+            }
+
+            // Estrategia 3: Extraer del URL (como fallback)
             if (!chapter) {
-              const text = link.textContent || '';
-              const textPatterns = [
-                /cap[íi]tulo\s*(\d+\.?\d*)/i,
-                /chapter\s*(\d+\.?\d*)/i,
-                /cap\s*(\d+\.?\d*)/i,
-                /#\s*(\d+\.?\d*)/,
-                /(\d+\.?\d*)/
+              const urlPatterns = [
+                /-(\d+\.?\d*)\/?$/,  // Número al final: serie-123/
+                /-(\d+\.?\d*)-/,  // Número en medio: serie-123-algo
+                /cap(?:itulo)?-(\d+\.?\d*)/i,  // capitulo-123 o cap-123
+                /chapter-(\d+\.?\d*)/i,  // chapter-123
+                /\/(\d+\.?\d*)\/?$/  // /123/ al final
               ];
 
-              for (const pattern of textPatterns) {
-                const match = text.match(pattern);
+              for (const pattern of urlPatterns) {
+                const match = href.match(pattern);
                 if (match && match[1]) {
                   chapter = match[1];
                   break;
@@ -175,14 +198,23 @@ export default async function handler(req, res) {
               }
             }
 
-            if (!chapter) return null;
+            // Si no se pudo extraer número, descartar
+            if (!chapter) {
+              return null;
+            }
+
+            // Validar que el número sea razonable (entre 0 y 9999)
+            const chapterNum = parseFloat(chapter);
+            if (isNaN(chapterNum) || chapterNum < 0 || chapterNum > 9999) {
+              return null;
+            }
 
             const title = link.textContent?.trim() || `Capítulo ${chapter}`;
 
             return {
               chapter,
-              title: title,
-              url: href.startsWith('http') ? href : `https://viralikigai.ozoviral.xyz${href}`
+              title: title.substring(0, 200), // Limitar longitud
+              url: href.startsWith('http') ? href : `https://viralikigai.foodib.net${href}`
             };
           }).filter(item => item !== null && item.chapter);
         });

@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const url = `https://viralikigai.ozoviral.xyz/series/${slug}`;
+    const url = `https://viralikigai.foodib.net/series/${slug}`;
 
     console.log('[Ikigai Details] URL:', url);
 
@@ -82,10 +82,10 @@ export default async function handler(req, res) {
 
         // Verificar que NO sea página de error o challenge
         return !title.includes('500') &&
-               !title.includes('Just a moment') &&
-               !title.includes('Error') &&
-               !bodyText.includes('Checking your browser') &&
-               bodyText.length > 100;
+          !title.includes('Just a moment') &&
+          !title.includes('Error') &&
+          !bodyText.includes('Checking your browser') &&
+          bodyText.length > 100;
       }, { timeout: 20000 });
 
       console.log('[Ikigai Details] ✓ Cloudflare challenge completado');
@@ -157,97 +157,220 @@ export default async function handler(req, res) {
     const htmlLength = await page.evaluate(() => document.documentElement.outerHTML.length);
     console.log('[Ikigai Details] Tamaño HTML:', htmlLength);
 
-    // Extraer detalles completos
+    // Extraer detalles completos con selectores más flexibles
     const details = await page.evaluate(() => {
       console.log('[Ikigai Details Eval] Buscando elementos...');
 
-      // Buscar título - generalmente un h1 o h2 prominente
-      const titleElement = document.querySelector('h1') ||
-                          document.querySelector('h2') ||
-                          document.querySelector('[class*="title"]');
-      const title = titleElement?.textContent?.trim() || '';
-      console.log('[Ikigai Details Eval] Título encontrado:', title);
-
-      // Buscar portada - primera imagen grande que no sea avatar
-      const images = document.querySelectorAll('img');
-      let cover = '';
-      for (const img of images) {
-        const src = img.src || img.srcset?.split(' ')[0];
-        // Evitar avatares y logos pequeños
-        if (src && !src.includes('avatar') && !src.includes('logo') && img.naturalHeight > 100) {
-          cover = src;
-          console.log('[Ikigai Details Eval] Portada encontrada:', src);
-          break;
-        }
-      }
-
-      // Buscar sinopsis - buscar por varios patrones
-      let synopsis = '';
-      const possibleSynopsisElements = [
-        document.querySelector('p[class*="synopsis"]'),
-        document.querySelector('p[class*="description"]'),
-        document.querySelector('p[class*="sinopsis"]'),
-        document.querySelector('div[class*="synopsis"]'),
-        document.querySelector('div[class*="description"]'),
-        document.querySelector('div[class*="sinopsis"]'),
-        document.querySelector('div[id*="synopsis"]'),
-        document.querySelector('div[id*="description"]'),
-        // Buscar párrafos largos (más de 100 caracteres)
-        ...Array.from(document.querySelectorAll('p')).filter(p => p.textContent.length > 100)
+      // Buscar título - múltiples estrategias
+      let title = '';
+      const titleSelectors = [
+        'h1',
+        'h2',
+        '[class*="title"]',
+        '[class*="titulo"]',
+        '[class*="name"]',
+        '[class*="nombre"]'
       ];
 
-      for (const el of possibleSynopsisElements) {
-        if (el && el.textContent.trim().length > 50) {
-          synopsis = el.textContent.trim();
-          // Limpiar texto duplicado si existe
-          synopsis = synopsis.replace(/ver más/gi, '').trim();
-          console.log('[Ikigai Details Eval] Sinopsis encontrada, longitud:', synopsis.length);
+      for (const selector of titleSelectors) {
+        const el = document.querySelector(selector);
+        if (el && el.textContent.trim().length > 0 && el.textContent.trim().length < 200) {
+          title = el.textContent.trim();
+          console.log('[Ikigai Details Eval] Título encontrado con selector:', selector);
           break;
         }
       }
 
-      // Si no se encontró sinopsis, buscar en todo el contenido
-      if (!synopsis || synopsis.length < 30) {
-        console.log('[Ikigai Details Eval] Sinopsis corta, buscando en divs...');
-        const contentDivs = Array.from(document.querySelectorAll('div')).filter(div => {
-          const text = div.textContent || '';
-          return text.length > 150 && text.length < 1000;
-        });
-
-        console.log('[Ikigai Details Eval] Divs candidatos:', contentDivs.length);
-
-        if (contentDivs.length > 0) {
-          synopsis = contentDivs[0].textContent.trim();
-          console.log('[Ikigai Details Eval] Sinopsis alternativa, longitud:', synopsis.length);
+      // Si no se encontró, usar el primer h1 o h2 que tenga contenido
+      if (!title) {
+        const headings = document.querySelectorAll('h1, h2');
+        for (const h of headings) {
+          const text = h.textContent.trim();
+          if (text.length > 0 && text.length < 200) {
+            title = text;
+            console.log('[Ikigai Details Eval] Título encontrado en heading:', text.substring(0, 50));
+            break;
+          }
         }
       }
 
-      // Buscar autor - puede estar en metadatos o texto
-      const authorElement = document.querySelector('[class*="author"]') ||
-                           document.querySelector('[class*="autor"]') ||
-                           Array.from(document.querySelectorAll('*')).find(el =>
-                             el.textContent.includes('Autor:') || el.textContent.includes('Author:')
-                           );
-      const author = authorElement?.textContent?.replace(/Autor:|Author:/gi, '').trim() || 'Desconocido';
+      // Buscar portada - estrategia mejorada
+      let cover = '';
+      const images = Array.from(document.querySelectorAll('img'));
+
+      // Primero buscar imágenes con palabras clave en src o alt
+      for (const img of images) {
+        const src = img.src || img.srcset?.split(' ')[0] || '';
+        const alt = img.alt || '';
+
+        if (src && (
+          src.includes('cover') ||
+          src.includes('portada') ||
+          src.includes('poster') ||
+          alt.toLowerCase().includes('cover') ||
+          alt.toLowerCase().includes('portada')
+        )) {
+          cover = src;
+          console.log('[Ikigai Details Eval] Portada encontrada por keyword:', src.substring(0, 80));
+          break;
+        }
+      }
+
+      // Si no se encontró, buscar la imagen más grande
+      if (!cover) {
+        let largestImg = null;
+        let maxSize = 0;
+
+        for (const img of images) {
+          const src = img.src || img.srcset?.split(' ')[0];
+          if (!src) continue;
+
+          // Evitar avatares, logos, botones
+          if (src.includes('avatar') || src.includes('logo') || src.includes('btn') ||
+            src.includes('icon') || img.width < 100 || img.height < 100) {
+            continue;
+          }
+
+          const size = img.naturalWidth * img.naturalHeight;
+          if (size > maxSize) {
+            maxSize = size;
+            largestImg = src;
+          }
+        }
+
+        if (largestImg) {
+          cover = largestImg;
+          console.log('[Ikigai Details Eval] Portada encontrada (imagen más grande)');
+        }
+      }
+
+      // Buscar sinopsis - estrategia exhaustiva
+      let synopsis = '';
+
+      // Primero buscar con selectores específicos
+      const synopsisSelectors = [
+        'p.line-clamp-3',  // Del debug vimos este selector
+        '[class*="synopsis"]',
+        '[class*="description"]',
+        '[class*="sinopsis"]',
+        '[class*="descripcion"]',
+        '[id*="synopsis"]',
+        '[id*="description"]',
+        '[id*="sinopsis"]'
+      ];
+
+      for (const selector of synopsisSelectors) {
+        const elements = document.querySelectorAll(selector);
+        for (const el of elements) {
+          const text = el.textContent.trim();
+          if (text.length > 50 && text.length < 2000) {
+            synopsis = text;
+            console.log('[Ikigai Details Eval] Sinopsis encontrada con selector:', selector, 'longitud:', text.length);
+            break;
+          }
+        }
+        if (synopsis) break;
+      }
+
+      // Si no se encontró, buscar párrafos largos
+      if (!synopsis || synopsis.length < 30) {
+        console.log('[Ikigai Details Eval] Buscando párrafos largos...');
+        const paragraphs = Array.from(document.querySelectorAll('p'));
+
+        for (const p of paragraphs) {
+          const text = p.textContent.trim();
+          // Buscar párrafos entre 100 y 2000 caracteres
+          if (text.length >= 100 && text.length <= 2000) {
+            // Evitar párrafos que parecen ser navegación o metadata
+            if (!text.includes('Iniciar sesión') &&
+              !text.includes('Con el tiempo se añadirán') &&
+              !text.match(/^\d+\s*(de cada|mil)/)) {
+              synopsis = text;
+              console.log('[Ikigai Details Eval] Sinopsis encontrada en párrafo, longitud:', text.length);
+              break;
+            }
+          }
+        }
+      }
+
+      // Limpiar sinopsis
+      if (synopsis) {
+        synopsis = synopsis
+          .replace(/ver más/gi, '')
+          .replace(/leer más/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      // Buscar autor
+      let author = 'Desconocido';
+      const authorPatterns = [
+        /Autor[:\s]+([^\n]+)/i,
+        /Author[:\s]+([^\n]+)/i,
+        /Artista[:\s]+([^\n]+)/i,
+        /Artist[:\s]+([^\n]+)/i
+      ];
+
+      const bodyText = document.body.textContent;
+      for (const pattern of authorPatterns) {
+        const match = bodyText.match(pattern);
+        if (match && match[1]) {
+          author = match[1].trim().substring(0, 100);
+          console.log('[Ikigai Details Eval] Autor encontrado:', author);
+          break;
+        }
+      }
 
       // Buscar estado
-      const statusElement = document.querySelector('[class*="status"]') ||
-                           document.querySelector('[class*="estado"]');
-      const status = statusElement?.textContent?.trim() || '';
+      let status = '';
+      const statusSelectors = [
+        '[class*="status"]',
+        '[class*="estado"]',
+        '[class*="state"]'
+      ];
 
-      // Buscar géneros - generalmente son enlaces o badges
-      const genreElements = document.querySelectorAll('a[href*="genero"], a[href*="genre"], [class*="tag"], [class*="genre"]');
-      const genres = Array.from(genreElements)
-        .map(el => el.textContent.trim())
-        .filter(g => g && g.length > 0 && g.length < 50); // Filtrar textos muy largos
+      for (const selector of statusSelectors) {
+        const el = document.querySelector(selector);
+        if (el) {
+          status = el.textContent.trim();
+          if (status.length > 0 && status.length < 50) {
+            console.log('[Ikigai Details Eval] Estado encontrado:', status);
+            break;
+          }
+        }
+      }
+
+      // Buscar géneros
+      const genreSelectors = [
+        'a[href*="genero"]',
+        'a[href*="genre"]',
+        '[class*="tag"]',
+        '[class*="genre"]',
+        '[class*="genero"]',
+        '[class*="badge"]'
+      ];
+
+      let genres = [];
+      for (const selector of genreSelectors) {
+        const elements = document.querySelectorAll(selector);
+        const found = Array.from(elements)
+          .map(el => el.textContent.trim())
+          .filter(g => g && g.length > 0 && g.length < 50 && !g.match(/^\d+$/));
+
+        if (found.length > 0) {
+          genres = found;
+          console.log('[Ikigai Details Eval] Géneros encontrados:', genres.length);
+          break;
+        }
+      }
 
       return {
-        title,
-        cover,
+        title: title || 'Título no disponible',
+        cover: cover || '',
         synopsis: synopsis || 'Sin sinopsis disponible',
         author,
         status,
-        genres: genres.slice(0, 10) // Máximo 10 géneros
+        genres: genres.slice(0, 10)
       };
     });
 

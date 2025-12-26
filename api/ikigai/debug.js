@@ -91,10 +91,10 @@ export default async function handler(req, res) {
         const bodyText = document.body ? document.body.innerText : '';
 
         return !title.includes('500') &&
-               !title.includes('Just a moment') &&
-               !title.includes('Error') &&
-               !bodyText.includes('Checking your browser') &&
-               bodyText.length > 100;
+          !title.includes('Just a moment') &&
+          !title.includes('Error') &&
+          !bodyText.includes('Checking your browser') &&
+          bodyText.length > 100;
       }, { timeout: 20000 });
 
       console.log('[Ikigai Debug] ✓ Challenge completado');
@@ -160,6 +160,7 @@ export default async function handler(req, res) {
         const chapterLinks = Array.from(document.querySelectorAll('a')).slice(0, 10).map(a => ({
           href: a.href,
           text: a.textContent.trim().substring(0, 50),
+          hasCapitulo: a.href.includes('/capitulo/'),  // NUEVO: detectar /capitulo/
           hasLeer: a.href.includes('/leer/'),
           hasRead: a.href.includes('/read/'),
           classes: a.className
@@ -169,6 +170,7 @@ export default async function handler(req, res) {
           ...baseInfo,
           chapterLinks,
           totalLinks: document.querySelectorAll('a').length,
+          capituloLinks: document.querySelectorAll('a[href*="/capitulo/"]').length,  // NUEVO
           leerLinks: document.querySelectorAll('a[href*="/leer/"]').length,
           readLinks: document.querySelectorAll('a[href*="/read/"]').length
         };
