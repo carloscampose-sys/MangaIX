@@ -1,5 +1,9 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
+
+// Configurar plugin stealth para evitar detección de bots
+puppeteer.use(StealthPlugin());
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
