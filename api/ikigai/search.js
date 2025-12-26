@@ -97,18 +97,22 @@ export default async function handler(req, res) {
       }
     });
 
-    // Navegar a la URL
+    // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
-    await puppeteerPage.goto(searchUrl, {
-      waitUntil: ['load', 'domcontentloaded', 'networkidle2'],
-      timeout: 20000
-    });
+    try {
+      await puppeteerPage.goto(searchUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+    } catch (e) {
+      console.log('[Ikigai Search] Timeout en navegación, continuando...');
+    }
 
     console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');
 
     // Esperar a que el contenido JavaScript se renderice
-    // Qwik toma tiempo en hidratar
-    await new Promise(resolve => setTimeout(resolve, 6000)); // 6 segundos para Qwik
+    // Qwik toma tiempo en hidratar - esperamos más tiempo
+    await new Promise(resolve => setTimeout(resolve, 8000)); // 8 segundos para Qwik
 
     // Verificar si hay contenido en la página
     const pageContent = await puppeteerPage.content();

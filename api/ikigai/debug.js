@@ -71,15 +71,19 @@ export default async function handler(req, res) {
       errors.push(error.toString());
     });
 
-    // Navegar
+    // Navegar con estrategia más flexible
     console.log('[Ikigai Debug] Navegando...');
-    await page.goto(testUrl, {
-      waitUntil: 'networkidle0',
-      timeout: 20000
-    });
+    try {
+      await page.goto(testUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+    } catch (e) {
+      console.log('[Ikigai Debug] Timeout en goto, intentando continuar...');
+    }
 
-    console.log('[Ikigai Debug] Página cargada, esperando...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('[Ikigai Debug] Página cargada, esperando renderizado...');
+    await new Promise(resolve => setTimeout(resolve, 8000)); // Más tiempo para Qwik
 
     // Obtener información de la página según el tipo
     const pageInfo = await page.evaluate((debugType) => {

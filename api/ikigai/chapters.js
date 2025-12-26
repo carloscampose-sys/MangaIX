@@ -72,13 +72,18 @@ export default async function handler(req, res) {
       console.log(`[Ikigai Chapters] Página ${currentPage}: ${url}`);
 
       try {
-        await page.goto(url, {
-          waitUntil: 'networkidle2',
-          timeout: 8000
-        });
+        // Navegar con estrategia flexible
+        try {
+          await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
+        } catch (navError) {
+          console.log(`[Ikigai Chapters] Timeout en navegación página ${currentPage}, continuando...`);
+        }
 
-        // Esperar a que cargue el contenido (Qwik framework)
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Esperar a que cargue el contenido (Qwik framework necesita más tiempo)
+        await new Promise(resolve => setTimeout(resolve, 4000));
 
         // Buscar enlaces de capítulos
         // Estos típicamente contienen /leer/ o /read/ en la URL

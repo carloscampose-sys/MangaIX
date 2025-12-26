@@ -59,10 +59,18 @@ export default async function handler(req, res) {
       }
     });
 
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
+    // Navegar con estrategia flexible para evitar timeouts
+    try {
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+    } catch (e) {
+      console.log('[Ikigai Details] Timeout en navegación, continuando...');
+    }
 
-    // Esperar a que cargue el contenido (Qwik framework)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Esperar a que cargue el contenido (Qwik framework necesita más tiempo)
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
     // Buscar todos los botones y buscar por texto
@@ -110,13 +118,23 @@ export default async function handler(req, res) {
       console.warn('[Ikigai Details] No se encontró botón "Ver más" o error al expandir:', e.message);
     }
 
+    // Logging adicional para debugging
+    console.log('[Ikigai Details] Iniciando extracción de datos...');
+
+    // Verificar contenido de la página
+    const htmlLength = await page.evaluate(() => document.documentElement.outerHTML.length);
+    console.log('[Ikigai Details] Tamaño HTML:', htmlLength);
+
     // Extraer detalles completos
     const details = await page.evaluate(() => {
+      console.log('[Ikigai Details Eval] Buscando elementos...');
+
       // Buscar título - generalmente un h1 o h2 prominente
       const titleElement = document.querySelector('h1') ||
                           document.querySelector('h2') ||
                           document.querySelector('[class*="title"]');
       const title = titleElement?.textContent?.trim() || '';
+      console.log('[Ikigai Details Eval] Título encontrado:', title);
 
       // Buscar portada - primera imagen grande que no sea avatar
       const images = document.querySelectorAll('img');
@@ -126,6 +144,7 @@ export default async function handler(req, res) {
         // Evitar avatares y logos pequeños
         if (src && !src.includes('avatar') && !src.includes('logo') && img.naturalHeight > 100) {
           cover = src;
+          console.log('[Ikigai Details Eval] Portada encontrada:', src);
           break;
         }
       }
@@ -150,19 +169,24 @@ export default async function handler(req, res) {
           synopsis = el.textContent.trim();
           // Limpiar texto duplicado si existe
           synopsis = synopsis.replace(/ver más/gi, '').trim();
+          console.log('[Ikigai Details Eval] Sinopsis encontrada, longitud:', synopsis.length);
           break;
         }
       }
 
       // Si no se encontró sinopsis, buscar en todo el contenido
       if (!synopsis || synopsis.length < 30) {
+        console.log('[Ikigai Details Eval] Sinopsis corta, buscando en divs...');
         const contentDivs = Array.from(document.querySelectorAll('div')).filter(div => {
           const text = div.textContent || '';
           return text.length > 150 && text.length < 1000;
         });
 
+        console.log('[Ikigai Details Eval] Divs candidatos:', contentDivs.length);
+
         if (contentDivs.length > 0) {
           synopsis = contentDivs[0].textContent.trim();
+          console.log('[Ikigai Details Eval] Sinopsis alternativa, longitud:', synopsis.length);
         }
       }
 
