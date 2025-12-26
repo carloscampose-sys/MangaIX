@@ -73,6 +73,8 @@ export default async function handler(req, res) {
 
       try {
         // Navegar con estrategia flexible
+        console.log(`[Ikigai Chapters] Navegando a página ${currentPage}...`);
+
         try {
           await page.goto(url, {
             waitUntil: 'domcontentloaded',
@@ -82,8 +84,35 @@ export default async function handler(req, res) {
           console.log(`[Ikigai Chapters] Timeout en navegación página ${currentPage}, continuando...`);
         }
 
-        // Esperar a que cargue el contenido (Qwik framework necesita más tiempo)
-        await new Promise(resolve => setTimeout(resolve, 4000));
+        // CRÍTICO: Esperar a que Cloudflare complete su challenge
+        try {
+          await page.waitForFunction(() => {
+            const title = document.title;
+            const bodyText = document.body ? document.body.innerText : '';
+
+            return !title.includes('500') &&
+                   !title.includes('Just a moment') &&
+                   !title.includes('Error') &&
+                   !bodyText.includes('Checking your browser') &&
+                   bodyText.length > 100;
+          }, { timeout: 20000 });
+
+          console.log(`[Ikigai Chapters] ✓ Challenge completado página ${currentPage}`);
+        } catch (e) {
+          console.warn(`[Ikigai Chapters] Timeout challenge página ${currentPage}, reintentando...`);
+
+          try {
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } catch (reloadError) {
+            console.error(`[Ikigai Chapters] Error reload página ${currentPage}`);
+            hasMorePages = false;
+            break;
+          }
+        }
+
+        // Espera adicional para Qwik
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Buscar enlaces de capítulos
         // Estos típicamente contienen /leer/ o /read/ en la URL

@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     });
 
     // Navegar con estrategia más flexible
-    console.log('[Ikigai Debug] Navegando...');
+    console.log('[Ikigai Debug] Navegando a:', testUrl);
     try {
       await page.goto(testUrl, {
         waitUntil: 'domcontentloaded',
@@ -82,8 +82,35 @@ export default async function handler(req, res) {
       console.log('[Ikigai Debug] Timeout en goto, intentando continuar...');
     }
 
-    console.log('[Ikigai Debug] Página cargada, esperando renderizado...');
-    await new Promise(resolve => setTimeout(resolve, 8000)); // Más tiempo para Qwik
+    console.log('[Ikigai Debug] Esperando challenge de Cloudflare...');
+
+    try {
+      // Esperar a que la página sea válida
+      await page.waitForFunction(() => {
+        const title = document.title;
+        const bodyText = document.body ? document.body.innerText : '';
+
+        return !title.includes('500') &&
+               !title.includes('Just a moment') &&
+               !title.includes('Error') &&
+               !bodyText.includes('Checking your browser') &&
+               bodyText.length > 100;
+      }, { timeout: 20000 });
+
+      console.log('[Ikigai Debug] ✓ Challenge completado');
+    } catch (e) {
+      console.warn('[Ikigai Debug] Timeout esperando challenge, reintentando...');
+
+      try {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } catch (reloadError) {
+        console.error('[Ikigai Debug] Error en reload');
+      }
+    }
+
+    // Espera adicional
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Obtener información de la página según el tipo
     const pageInfo = await page.evaluate((debugType) => {

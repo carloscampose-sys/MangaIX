@@ -60,6 +60,8 @@ export default async function handler(req, res) {
     });
 
     // Navegar con estrategia flexible para evitar timeouts
+    console.log('[Ikigai Details] Navegando a:', url);
+
     try {
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
@@ -69,8 +71,38 @@ export default async function handler(req, res) {
       console.log('[Ikigai Details] Timeout en navegación, continuando...');
     }
 
-    // Esperar a que cargue el contenido (Qwik framework necesita más tiempo)
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // CRÍTICO: Esperar a que Cloudflare complete su challenge JavaScript
+    console.log('[Ikigai Details] Esperando challenge de Cloudflare...');
+
+    try {
+      // Esperar a que la página sea válida (no error 500)
+      await page.waitForFunction(() => {
+        const title = document.title;
+        const bodyText = document.body ? document.body.innerText : '';
+
+        // Verificar que NO sea página de error o challenge
+        return !title.includes('500') &&
+               !title.includes('Just a moment') &&
+               !title.includes('Error') &&
+               !bodyText.includes('Checking your browser') &&
+               bodyText.length > 100;
+      }, { timeout: 20000 });
+
+      console.log('[Ikigai Details] ✓ Cloudflare challenge completado');
+    } catch (e) {
+      console.warn('[Ikigai Details] Timeout esperando challenge, reintentando...');
+
+      // Intentar recargar
+      try {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } catch (reloadError) {
+        console.error('[Ikigai Details] Error en reload:', reloadError.message);
+      }
+    }
+
+    // Espera adicional para renderizado completo
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
     // Buscar todos los botones y buscar por texto
