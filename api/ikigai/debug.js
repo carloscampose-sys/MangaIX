@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body;
+  const { url, type = 'search' } = req.body; // type puede ser: search, details, chapters
   const testUrl = url || 'https://viralikigai.eurofiyati.online/series/';
 
   let browser = null;
@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   try {
     console.log('[Ikigai Debug] Iniciando diagnóstico...');
     console.log('[Ikigai Debug] URL a probar:', testUrl);
+    console.log('[Ikigai Debug] Tipo:', type);
 
     browser = await puppeteer.launch({
       args: [
@@ -80,9 +81,9 @@ export default async function handler(req, res) {
     console.log('[Ikigai Debug] Página cargada, esperando...');
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // Obtener información de la página
-    const pageInfo = await page.evaluate(() => {
-      return {
+    // Obtener información de la página según el tipo
+    const pageInfo = await page.evaluate((debugType) => {
+      const baseInfo = {
         title: document.title,
         url: window.location.href,
         htmlLength: document.documentElement.outerHTML.length,
@@ -96,7 +97,54 @@ export default async function handler(req, res) {
           text: a.textContent.trim().substring(0, 50)
         }))
       };
-    });
+
+      // Información adicional según tipo
+      if (debugType === 'details') {
+        // Para páginas de detalles
+        const h1 = document.querySelector('h1');
+        const h2 = document.querySelector('h2');
+        const paragraphs = Array.from(document.querySelectorAll('p')).slice(0, 5).map(p => ({
+          text: p.textContent.trim().substring(0, 100),
+          classes: p.className,
+          length: p.textContent.length
+        }));
+
+        const buttons = Array.from(document.querySelectorAll('button')).map(btn => ({
+          text: btn.textContent.trim(),
+          classes: btn.className
+        }));
+
+        return {
+          ...baseInfo,
+          h1Text: h1?.textContent || 'NO ENCONTRADO',
+          h2Text: h2?.textContent || 'NO ENCONTRADO',
+          paragraphs,
+          buttons,
+          divCount: document.querySelectorAll('div').length
+        };
+      }
+
+      if (debugType === 'chapters') {
+        // Para páginas de capítulos
+        const chapterLinks = Array.from(document.querySelectorAll('a')).slice(0, 10).map(a => ({
+          href: a.href,
+          text: a.textContent.trim().substring(0, 50),
+          hasLeer: a.href.includes('/leer/'),
+          hasRead: a.href.includes('/read/'),
+          classes: a.className
+        }));
+
+        return {
+          ...baseInfo,
+          chapterLinks,
+          totalLinks: document.querySelectorAll('a').length,
+          leerLinks: document.querySelectorAll('a[href*="/leer/"]').length,
+          readLinks: document.querySelectorAll('a[href*="/read/"]').length
+        };
+      }
+
+      return baseInfo;
+    }, type);
 
     // Tomar screenshot
     const screenshot = await page.screenshot({

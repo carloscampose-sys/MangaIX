@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 export function IkigaiDebugger() {
   const [url, setUrl] = useState('https://viralikigai.eurofiyati.online/series/?generos[]=906409527934582787');
+  const [type, setType] = useState('search'); // search, details, chapters
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -15,7 +16,7 @@ export function IkigaiDebugger() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url, type })
       });
 
       const data = await response.json();
@@ -38,6 +39,19 @@ export function IkigaiDebugger() {
 
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+          Tipo de página:
+        </label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full px-3 py-2 border rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 mb-2"
+        >
+          <option value="search">🔍 Búsqueda (lista obras)</option>
+          <option value="details">📖 Detalles (sinopsis)</option>
+          <option value="chapters">📚 Capítulos (lista)</option>
+        </select>
+
+        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
           URL a probar:
         </label>
         <input
@@ -47,6 +61,11 @@ export function IkigaiDebugger() {
           className="w-full px-3 py-2 border rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           placeholder="URL"
         />
+        <div className="text-xs mt-1 text-gray-500">
+          {type === 'search' && '💡 Ej: /series/?generos[]=...'}
+          {type === 'details' && '💡 Ej: /series/nombre-obra'}
+          {type === 'chapters' && '💡 Ej: /series/nombre-obra'}
+        </div>
       </div>
 
       <button
@@ -83,6 +102,46 @@ export function IkigaiDebugger() {
                     {result.pageInfo.allLinks.map((link, i) => (
                       <div key={i} className="truncate">
                         {i + 1}. {link.href}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.pageInfo?.buttons && (
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900 rounded text-xs">
+                  <div className="font-bold mb-2 text-gray-900 dark:text-white">🔘 Botones encontrados:</div>
+                  <div className="space-y-1 text-gray-700 dark:text-gray-300">
+                    {result.pageInfo.buttons.map((btn, i) => (
+                      <div key={i}>"{btn.text}" - {btn.classes || 'sin clase'}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.pageInfo?.paragraphs && (
+                <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900 rounded text-xs">
+                  <div className="font-bold mb-2 text-gray-900 dark:text-white">📝 Párrafos encontrados:</div>
+                  <div className="space-y-1 text-gray-700 dark:text-gray-300">
+                    {result.pageInfo.paragraphs.map((p, i) => (
+                      <div key={i}>
+                        <div className="font-bold">P{i+1} ({p.length} chars): {p.classes || 'sin clase'}</div>
+                        <div className="text-xs">{p.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.pageInfo?.chapterLinks && (
+                <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900 rounded text-xs">
+                  <div className="font-bold mb-2 text-gray-900 dark:text-white">📚 Enlaces capítulos:</div>
+                  <div className="space-y-1 text-gray-700 dark:text-gray-300">
+                    <div>Total /leer/: {result.pageInfo.leerLinks}</div>
+                    <div>Total /read/: {result.pageInfo.readLinks}</div>
+                    {result.pageInfo.chapterLinks.map((link, i) => (
+                      <div key={i} className="text-xs">
+                        {link.hasLeer && '📖'} {link.hasRead && '📕'} {link.text}
                       </div>
                     ))}
                   </div>
