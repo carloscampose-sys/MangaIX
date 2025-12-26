@@ -1,7 +1,7 @@
 # Plan de Implementación: Integración de Ikigai Mangas
 
 **Proyecto:** MangaIX
-**Nueva Fuente:** Ikigai Mangas (https://viralikigai.eurofiyati.online/series/)
+**Nueva Fuente:** Ikigai Mangas (https://viralikigai.ozoviral.xyz/series/)
 **Fecha:** 2025-12-25
 **Objetivo:** Agregar Ikigai Mangas como tercera fuente de scraping junto a TuManga y ManhwaWeb
 
@@ -106,12 +106,12 @@
 
 #### URL Base
 ```
-https://viralikigai.eurofiyati.online/series/
+https://viralikigai.ozoviral.xyz/series/
 ```
 
 #### Ejemplo de Obra
 **"La basura de la familia del conde"**
-- URL base: `https://viralikigai.eurofiyati.online/series/la-basura-de-la-familia-del-conde/`
+- URL base: `https://viralikigai.ozoviral.xyz/series/la-basura-de-la-familia-del-conde/`
 - Total de capítulos: 172
 - Distribuidos en 8 páginas de paginación interna
 
@@ -286,7 +286,7 @@ Página 19: ?pagina=19
   slug: "la-basura-de-la-familia-del-conde",
   chapter: "172",
   title: "Capítulo 172",
-  url: "https://viralikigai.eurofiyati.online/...",
+  url: "https://viralikigai.ozoviral.xyz/...",
   source: "ikigai"
 }
 ```
@@ -356,7 +356,7 @@ async function getRandomIkigai(genreIds = [])
 import { detectEnvironment } from '../utils/environment';
 
 // Configuración
-const IKIGAI_BASE_URL = 'https://viralikigai.eurofiyati.online';
+const IKIGAI_BASE_URL = 'https://viralikigai.ozoviral.xyz';
 
 // Función principal de búsqueda
 export async function searchIkigai(query = '', filters = {}, page = 1) {
@@ -645,7 +645,7 @@ export default async function handler(req, res) {
 
 // Función helper para construir URL
 function buildSearchUrl(query, filters, page) {
-  const baseUrl = 'https://viralikigai.eurofiyati.online/series/';
+  const baseUrl = 'https://viralikigai.ozoviral.xyz/series/';
   const params = new URLSearchParams();
 
   // Tipos
@@ -704,7 +704,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const url = `https://viralikigai.eurofiyati.online/series/${slug}`;
+    const url = `https://viralikigai.ozoviral.xyz/series/${slug}`;
 
     browser = await puppeteer.launch({
       args: chromium.args,
@@ -807,7 +807,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const baseUrl = `https://viralikigai.eurofiyati.online/series/${slug}`;
+    const baseUrl = `https://viralikigai.ozoviral.xyz/series/${slug}`;
 
     browser = await puppeteer.launch({
       args: chromium.args,
@@ -950,7 +950,7 @@ export default async function handler(req, res) {
 
   try {
     // Construir URL del capítulo (ajustar según estructura real)
-    const chapterUrl = `https://viralikigai.eurofiyati.online/leer/${slug}-${chapter}`;
+    const chapterUrl = `https://viralikigai.ozoviral.xyz/leer/${slug}-${chapter}`;
 
     browser = await puppeteer.launch({
       args: chromium.args,
@@ -1468,7 +1468,7 @@ const synopsis = await page.$eval('.sinopsis-container', el => el.textContent.tr
 
 ```javascript
 function buildSearchUrl(query, filters, page) {
-  const baseUrl = 'https://viralikigai.eurofiyati.online/series/';
+  const baseUrl = 'https://viralikigai.ozoviral.xyz/series/';
   const params = new URLSearchParams();
 
   // Tipos (array)
@@ -1502,7 +1502,7 @@ function buildSearchUrl(query, filters, page) {
 
 **Ejemplo de URL resultante:**
 ```
-https://viralikigai.eurofiyati.online/series/?
+https://viralikigai.ozoviral.xyz/series/?
   tipos[]=comic&
   estados[]=906409532796731395&
   generos[]=906397904327999491&generos[]=906397904169861123&

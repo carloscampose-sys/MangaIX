@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export function IkigaiDebugger() {
-  const [url, setUrl] = useState('https://viralikigai.eurofiyati.online/series/?generos[]=906409527934582787');
+  const [url, setUrl] = useState('https://viralikigai.ozoviral.xyz/series/');
   const [type, setType] = useState('search'); // search, details, chapters
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);

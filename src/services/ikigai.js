@@ -1,7 +1,7 @@
 // ========================================
 // CONFIGURACIÓN
 // ========================================
-const IKIGAI_BASE_URL = 'https://viralikigai.eurofiyati.online';
+const IKIGAI_BASE_URL = 'https://viralikigai.ozoviral.xyz';
 
 /**
  * Detecta el entorno de ejecución

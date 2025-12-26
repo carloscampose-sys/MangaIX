@@ -17,11 +17,11 @@ export default async function handler(req, res) {
   try {
     // Construir URL del capítulo - intentar múltiples formatos posibles
     const possibleUrls = [
-      `https://viralikigai.eurofiyati.online/leer/${slug}-${chapter}`,
-      `https://viralikigai.eurofiyati.online/leer/${slug}/${chapter}`,
-      `https://viralikigai.eurofiyati.online/read/${slug}-${chapter}`,
-      `https://viralikigai.eurofiyati.online/read/${slug}/${chapter}`,
-      `https://viralikigai.eurofiyati.online/series/${slug}/${chapter}`
+      `https://viralikigai.ozoviral.xyz/leer/${slug}-${chapter}`,
+      `https://viralikigai.ozoviral.xyz/leer/${slug}/${chapter}`,
+      `https://viralikigai.ozoviral.xyz/read/${slug}-${chapter}`,
+      `https://viralikigai.ozoviral.xyz/read/${slug}/${chapter}`,
+      `https://viralikigai.ozoviral.xyz/series/${slug}/${chapter}`
     ];
 
     console.log('[Ikigai Pages] Intentando cargar capítulo...');

@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const baseUrl = `https://viralikigai.eurofiyati.online/series/${slug}`;
+    const baseUrl = `https://viralikigai.ozoviral.xyz/series/${slug}`;
 
     console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
 
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
             return {
               chapter,
               title: title,
-              url: href.startsWith('http') ? href : `https://viralikigai.eurofiyati.online${href}`
+              url: href.startsWith('http') ? href : `https://viralikigai.ozoviral.xyz${href}`
             };
           }).filter(item => item !== null && item.chapter);
         });

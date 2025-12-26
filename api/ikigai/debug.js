@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   const { url, type = 'search' } = req.body; // type puede ser: search, details, chapters
-  const testUrl = url || 'https://viralikigai.eurofiyati.online/series/';
+  const testUrl = url || 'https://viralikigai.ozoviral.xyz/series/';
 
   let browser = null;
 

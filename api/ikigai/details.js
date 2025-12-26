@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const url = `https://viralikigai.eurofiyati.online/series/${slug}`;
+    const url = `https://viralikigai.ozoviral.xyz/series/${slug}`;
 
     console.log('[Ikigai Details] URL:', url);
 
