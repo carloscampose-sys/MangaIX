@@ -41,6 +41,14 @@ export default async function handler(req, res) {
 
     const puppeteerPage = await browser.newPage();
 
+    // Capturar logs del navegador para debugging
+    puppeteerPage.on('console', msg => {
+      const text = msg.text();
+      if (text.includes('[Ikigai Eval]')) {
+        console.log(text);
+      }
+    });
+
     // Configurar User Agent real (Chrome reciente)
     await puppeteerPage.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
@@ -263,18 +271,17 @@ export default async function handler(req, res) {
           return null;
         }
 
-        // Validar que tengamos al menos título o portada
-        if (!title && !cover) {
-          console.log(`[Ikigai Eval ${index}] ✗ DESCARTADO: sin título ni portada (slug: ${slug})`);
-          return null;
-        }
+        // Si no tenemos título, usar el slug formateado
+        const finalTitle = title || slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
 
-        console.log(`[Ikigai Eval ${index}] ✓ VÁLIDO: ${slug}`);
+        console.log(`[Ikigai Eval ${index}] ✓ VÁLIDO: ${slug} (título: ${finalTitle})`);
 
         return {
           id: `ikigai-${slug}-${Date.now()}-${index}`,
           slug,
-          title: title || slug.split('-').join(' '),
+          title: finalTitle,
           cover,
           source: 'ikigai'
         };
