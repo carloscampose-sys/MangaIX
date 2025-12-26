@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Query:', query);
     console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
     console.log('[Ikigai Search] URL completa:', searchUrl);
+    console.log('[Ikigai Search] Base URL debe ser foodib.net');
     console.log('[Ikigai Search] ============================================');
 
     // Iniciar Puppeteer con configuración anti-detección
@@ -230,7 +231,8 @@ export default async function handler(req, res) {
 
       console.log('[Ikigai Eval] Enlaces válidos después de filtrar:', validLinks.length);
 
-      return validLinks.map((link, index) => {
+      // Extraer datos de cada enlace
+      const extractedData = validLinks.map((link, index) => {
         const href = link.getAttribute('href');
 
         // Extraer título (buscar h3, h2, h1 dentro del enlace)
@@ -257,6 +259,7 @@ export default async function handler(req, res) {
 
         // Solo retornar si tenemos slug (obligatorio) y al menos título o portada
         if (!slug) {
+          console.log(`[Ikigai Eval ${index}] ✗ DESCARTADO: sin slug`);
           return null;
         }
 
@@ -267,7 +270,27 @@ export default async function handler(req, res) {
           cover,
           source: 'ikigai'
         };
-      }).filter(item => item !== null);
+      });
+
+      // Filtrar resultados nulos y eliminar duplicados por slug
+      const filtered = extractedData.filter(item => item !== null);
+      console.log('[Ikigai Eval] Después de filtrar nulos:', filtered.length);
+
+      // Eliminar duplicados por slug
+      const uniqueBySlug = [];
+      const seenSlugs = new Set();
+
+      for (const item of filtered) {
+        if (!seenSlugs.has(item.slug)) {
+          seenSlugs.add(item.slug);
+          uniqueBySlug.push(item);
+        } else {
+          console.log(`[Ikigai Eval] ✗ DUPLICADO removido: ${item.slug}`);
+        }
+      }
+
+      console.log('[Ikigai Eval] Total resultados únicos finales:', uniqueBySlug.length);
+      return uniqueBySlug;
     });
 
     // Verificar si hay página siguiente para paginación
@@ -324,14 +347,21 @@ export default async function handler(req, res) {
         }
       }
 
-      // Debug: Listar todos los botones de paginación encontrados
-      const paginationElements = document.querySelectorAll('[class*="pagination"] button, [class*="pagination"] a');
-      const paginationDebug = Array.from(paginationElements).map(el => ({
+      // Debug: Listar TODOS los botones y enlaces de la página
+      const allButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
+        const text = el.textContent.toLowerCase();
+        return text.includes('siguiente') || text.includes('next') || text.includes('página') || text.includes('page') || /^\d+$/.test(text.trim());
+      });
+
+      const paginationDebug = allButtons.map(el => ({
         tag: el.tagName,
         text: el.textContent.trim(),
         classes: el.className,
-        disabled: el.disabled || el.classList.contains('disabled')
+        disabled: el.disabled || el.classList.contains('disabled'),
+        href: el.href || null
       }));
+
+      console.log('[Ikigai Eval] Botones/enlaces que parecen paginación:', paginationDebug.length);
 
       return {
         hasMore: found,
