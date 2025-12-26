@@ -534,6 +534,10 @@ function buildSearchUrl(query, filters, page) {
   // Query de búsqueda (si existe)
   if (query && query.trim()) {
     params.append('buscar', query.trim());
+    
+    // NUEVO: Agregar parámetro de coincidencia exacta
+    // Cuando el usuario busca por título, queremos resultados exactos
+    params.append('exacta', '1');
   }
 
   const queryString = params.toString();
