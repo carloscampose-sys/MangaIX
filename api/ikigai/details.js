@@ -42,150 +42,91 @@ export default async function handler(req, res) {
 
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
 
+    // Esperar a que cargue el contenido (Qwik framework)
+    await page.waitForTimeout(2000);
+
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
-    const possibleVerMasSelectors = [
-      'button:has-text("Ver más")',
-      'button:has-text("ver más")',
-      'button:has-text("Ver Más")',
-      '.ver-mas-btn',
-      'a:has-text("Ver más")',
-      '.expand-synopsis',
-      'button.expand-btn',
-      '.show-more',
-      'button.show-more'
-    ];
-
-    let verMasButton = null;
-    for (const selector of possibleVerMasSelectors) {
-      try {
-        // Usar método diferente según el selector
-        if (selector.includes(':has-text')) {
-          // Usar XPath para buscar por texto
-          const buttons = await page.$$('button');
-          for (const button of buttons) {
-            const text = await page.evaluate(el => el.textContent, button);
-            if (text && text.toLowerCase().includes('ver más')) {
-              verMasButton = button;
-              console.log(`[Ikigai Details] Botón "Ver más" encontrado por texto`);
-              break;
-            }
-          }
-          if (verMasButton) break;
-        } else {
-          verMasButton = await page.$(selector);
-          if (verMasButton) {
-            console.log(`[Ikigai Details] Botón "Ver más" encontrado: ${selector}`);
-            break;
-          }
+    // Buscar todos los botones y buscar por texto
+    try {
+      const buttons = await page.$$('button');
+      for (const button of buttons) {
+        const text = await page.evaluate(el => el.textContent, button);
+        if (text && text.toLowerCase().includes('ver más')) {
+          console.log('[Ikigai Details] Botón "Ver más" encontrado');
+          await button.click();
+          await page.waitForTimeout(500);
+          console.log('[Ikigai Details] Sinopsis expandida');
+          break;
         }
-      } catch (e) {
-        continue;
       }
-    }
-
-    if (verMasButton) {
-      try {
-        await verMasButton.click();
-        await page.waitForTimeout(500);
-        console.log('[Ikigai Details] Sinopsis expandida');
-      } catch (e) {
-        console.warn('[Ikigai Details] Error al expandir sinopsis:', e.message);
-      }
+    } catch (e) {
+      console.warn('[Ikigai Details] No se encontró botón "Ver más" o error al expandir:', e.message);
     }
 
     // Extraer detalles completos
     const details = await page.evaluate(() => {
-      // Múltiples selectores posibles para cada campo
-      const titleSelectors = [
-        'h1',
-        '.serie-title',
-        '.manga-title',
-        '.title',
-        'header h1',
-        'header h2'
-      ];
-
-      const coverSelectors = [
-        '.serie-cover img',
-        '.manga-cover img',
-        '.cover img',
-        'aside img',
-        '.thumbnail img',
-        'img[alt*="portada"]'
-      ];
-
-      const synopsisSelectors = [
-        '.synopsis',
-        '.sinopsis',
-        '.description',
-        '.descripcion',
-        '.summary',
-        '[class*="synopsis"]',
-        '[class*="description"]'
-      ];
-
-      const authorSelectors = [
-        '.author',
-        '.autor',
-        '[class*="author"]',
-        '.creator'
-      ];
-
-      const statusSelectors = [
-        '.status',
-        '.estado',
-        '[class*="status"]',
-        '.publication-status'
-      ];
-
-      const genreSelectors = [
-        '.genre',
-        '.genero',
-        '.genres a',
-        '.generos a',
-        '[class*="genre"] a',
-        '.tag',
-        '.tags a'
-      ];
-
-      // Función helper para buscar elemento con múltiples selectores
-      const findElement = (selectors) => {
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element) return element;
-        }
-        return null;
-      };
-
-      const findElements = (selectors) => {
-        for (const selector of selectors) {
-          const elements = document.querySelectorAll(selector);
-          if (elements.length > 0) return Array.from(elements);
-        }
-        return [];
-      };
-
-      const titleElement = findElement(titleSelectors);
-      const coverElement = findElement(coverSelectors);
-      const synopsisElement = findElement(synopsisSelectors);
-      const authorElement = findElement(authorSelectors);
-      const statusElement = findElement(statusSelectors);
-      const genreElements = findElements(genreSelectors);
-
+      // Buscar título - generalmente un h1 o h2 prominente
+      const titleElement = document.querySelector('h1') ||
+                          document.querySelector('h2') ||
+                          document.querySelector('[class*="title"]');
       const title = titleElement?.textContent?.trim() || '';
-      const cover = coverElement?.src || coverElement?.dataset?.src || '';
-      const synopsis = synopsisElement?.textContent?.trim() || '';
-      const author = authorElement?.textContent?.trim() || 'Desconocido';
+
+      // Buscar portada - primera imagen grande que no sea avatar
+      const images = document.querySelectorAll('img');
+      let cover = '';
+      for (const img of images) {
+        const src = img.src || img.srcset?.split(' ')[0];
+        // Evitar avatares y logos pequeños
+        if (src && !src.includes('avatar') && !src.includes('logo') && img.naturalHeight > 100) {
+          cover = src;
+          break;
+        }
+      }
+
+      // Buscar sinopsis - buscar por varios patrones
+      let synopsis = '';
+      const possibleSynopsisElements = [
+        document.querySelector('p[class*="synopsis"]'),
+        document.querySelector('p[class*="description"]'),
+        document.querySelector('div[class*="synopsis"]'),
+        document.querySelector('div[class*="description"]'),
+        // Buscar el primer párrafo largo (más de 100 caracteres)
+        ...Array.from(document.querySelectorAll('p')).filter(p => p.textContent.length > 100)
+      ];
+
+      for (const el of possibleSynopsisElements) {
+        if (el && el.textContent.trim().length > 50) {
+          synopsis = el.textContent.trim();
+          break;
+        }
+      }
+
+      // Buscar autor - puede estar en metadatos o texto
+      const authorElement = document.querySelector('[class*="author"]') ||
+                           document.querySelector('[class*="autor"]') ||
+                           Array.from(document.querySelectorAll('*')).find(el =>
+                             el.textContent.includes('Autor:') || el.textContent.includes('Author:')
+                           );
+      const author = authorElement?.textContent?.replace(/Autor:|Author:/gi, '').trim() || 'Desconocido';
+
+      // Buscar estado
+      const statusElement = document.querySelector('[class*="status"]') ||
+                           document.querySelector('[class*="estado"]');
       const status = statusElement?.textContent?.trim() || '';
-      const genres = genreElements.map(el => el.textContent.trim()).filter(g => g);
+
+      // Buscar géneros - generalmente son enlaces o badges
+      const genreElements = document.querySelectorAll('a[href*="genero"], a[href*="genre"], [class*="tag"], [class*="genre"]');
+      const genres = Array.from(genreElements)
+        .map(el => el.textContent.trim())
+        .filter(g => g && g.length > 0 && g.length < 50); // Filtrar textos muy largos
 
       return {
         title,
         cover,
-        synopsis,
+        synopsis: synopsis || 'Sin sinopsis disponible',
         author,
         status,
-        genres
+        genres: genres.slice(0, 10) // Máximo 10 géneros
       };
     });
 

@@ -77,100 +77,63 @@ export default async function handler(req, res) {
       });
     }
 
-    // Esperar a que carguen imágenes REALES (no loaders)
-    // Intentar múltiples selectores
-    const possibleImageContainers = [
-      '#lector img',
-      '#reader img',
-      '.lector img',
-      '.reader img',
-      '.pagina img',
-      '.page img',
-      '.chapter-content img',
-      '.capitulo-content img',
-      'main img',
-      'article img'
-    ];
+    // Esperar a que cargue el contenido (Qwik framework)
+    await page.waitForTimeout(3000);
 
-    let imageSelector = null;
-    for (const selector of possibleImageContainers) {
-      try {
-        await page.waitForSelector(selector, { timeout: 5000 });
-
-        // Verificar que al menos una imagen esté realmente cargada
-        const hasRealImages = await page.evaluate((sel) => {
-          const images = document.querySelectorAll(sel);
-          return Array.from(images).some(img =>
-            img.complete &&
-            img.naturalHeight > 0 &&
-            !img.src.includes('loader') &&
-            !img.src.includes('placeholder')
-          );
-        }, selector);
-
-        if (hasRealImages) {
-          imageSelector = selector;
-          console.log(`[Ikigai Pages] Selector de imágenes encontrado: ${selector}`);
-          break;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-
-    if (!imageSelector) {
-      // Fallback: esperar un poco más y buscar cualquier imagen
-      await page.waitForTimeout(2000);
-
-      // Buscar todas las imágenes en la página
-      imageSelector = 'img';
-      console.log('[Ikigai Pages] Usando selector genérico de imágenes');
-    }
-
-    // Esperar a que las imágenes terminen de cargar
-    await page.waitForFunction((selector) => {
-      const images = document.querySelectorAll(selector);
-      if (images.length === 0) return false;
-
-      const loadedImages = Array.from(images).filter(img =>
-        img.complete &&
-        img.naturalHeight > 0 &&
+    // Buscar imágenes del capítulo
+    // Generalmente son imágenes grandes en el contenido principal
+    await page.waitForFunction(() => {
+      const images = document.querySelectorAll('img');
+      // Contar imágenes grandes (probablemente páginas del manga)
+      const largeImages = Array.from(images).filter(img =>
+        img.naturalHeight > 200 &&
+        !img.src.includes('avatar') &&
+        !img.src.includes('logo') &&
         !img.src.includes('loader') &&
-        !img.src.includes('placeholder') &&
-        img.src.startsWith('http')
+        !img.src.includes('placeholder')
       );
+      return largeImages.length > 0;
+    }, { timeout: 8000 });
 
-      return loadedImages.length > 0;
-    }, { timeout: 8000 }, imageSelector);
+    console.log('[Ikigai Pages] Imágenes detectadas, extrayendo URLs...');
 
     // Extraer URLs de imágenes
-    const imageUrls = await page.evaluate((selector) => {
-      const images = document.querySelectorAll(selector);
+    const imageUrls = await page.evaluate(() => {
+      const images = document.querySelectorAll('img');
 
       const urls = Array.from(images)
         .map(img => {
-          // Intentar múltiples fuentes de URL
-          let src = img.src || img.dataset.src || img.dataset.original || '';
+          // Obtener URL de la imagen
+          let src = img.src || img.srcset?.split(' ')[0] || img.dataset.src || img.dataset.original || '';
 
           // Si la URL es relativa, convertirla a absoluta
           if (src && !src.startsWith('http')) {
-            src = new URL(src, window.location.origin).href;
+            try {
+              src = new URL(src, window.location.origin).href;
+            } catch (e) {
+              return null;
+            }
           }
 
-          return src;
+          // Verificar que sea una imagen grande (página del manga)
+          // y no un avatar, logo, o placeholder
+          if (src &&
+              src.startsWith('http') &&
+              img.naturalHeight > 200 &&
+              !src.includes('avatar') &&
+              !src.includes('logo') &&
+              !src.includes('loader') &&
+              !src.includes('placeholder')) {
+            return src;
+          }
+
+          return null;
         })
-        .filter(src =>
-          src &&
-          src.startsWith('http') &&
-          !src.includes('loader') &&
-          !src.includes('placeholder') &&
-          !src.includes('avatar') &&
-          !src.includes('logo')
-        );
+        .filter(src => src !== null);
 
       // Eliminar duplicados
       return [...new Set(urls)];
-    }, imageSelector);
+    });
 
     await browser.close();
 

@@ -52,31 +52,16 @@ export default async function handler(req, res) {
       timeout: 10000
     });
 
-    // Esperar a que carguen los resultados
-    // Intentar múltiples selectores posibles
-    const possibleSelectors = [
-      '.element',
-      '.manga-item',
-      '.serie-item',
-      'article',
-      '.grid > div',
-      '.series-grid > div'
-    ];
+    // Esperar a que cargue el contenido
+    // La página usa Qwik framework, esperar a que se renderice
+    await puppeteerPage.waitForTimeout(2000);
 
-    let selectorUsed = null;
-    for (const selector of possibleSelectors) {
-      try {
-        await puppeteerPage.waitForSelector(selector, { timeout: 5000 });
-        selectorUsed = selector;
-        console.log(`[Ikigai Search] Selector encontrado: ${selector}`);
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    if (!selectorUsed) {
-      console.warn('[Ikigai Search] No se encontraron resultados con selectores conocidos');
+    // Intentar esperar por el grid o por los enlaces de series
+    try {
+      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 5000 });
+      console.log('[Ikigai Search] Enlaces de series encontrados');
+    } catch (e) {
+      console.warn('[Ikigai Search] No se encontraron enlaces de series');
       await browser.close();
       return res.status(200).json({
         results: [],
@@ -86,20 +71,27 @@ export default async function handler(req, res) {
     }
 
     // Extraer resultados
-    const results = await puppeteerPage.evaluate((selector) => {
-      const items = document.querySelectorAll(selector);
+    const results = await puppeteerPage.evaluate(() => {
+      // Buscar todos los enlaces que apuntan a /series/
+      const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
 
-      return Array.from(items).map(item => {
-        // Intentar múltiples formas de extraer datos
-        const link = item.querySelector('a');
-        const titleElement = item.querySelector('h3, h2, .title, .serie-title, .manga-title');
-        const imgElement = item.querySelector('img');
+      // Filtrar solo los enlaces principales (no los de navegación)
+      const validLinks = Array.from(seriesLinks).filter(link => {
+        const href = link.getAttribute('href');
+        // Solo enlaces que son /series/nombre-id/ (no /series/ solo)
+        return href && href.match(/\/series\/[^\/]+-\d+\//);
+      });
 
-        const href = link?.href || '';
-        const title = titleElement?.textContent?.trim() ||
-                     item.querySelector('a')?.title ||
-                     '';
-        const cover = imgElement?.src || imgElement?.dataset?.src || '';
+      return validLinks.map(link => {
+        const href = link.getAttribute('href');
+
+        // Extraer título (buscar h3 dentro del enlace)
+        const titleElement = link.querySelector('h3, h2, [class*="title"]');
+        const title = titleElement?.textContent?.trim() || link.getAttribute('title') || '';
+
+        // Extraer imagen
+        const imgElement = link.querySelector('img');
+        const cover = imgElement?.src || imgElement?.srcset?.split(' ')[0] || '';
 
         // Extraer slug de la URL
         let slug = '';
@@ -120,7 +112,7 @@ export default async function handler(req, res) {
           source: 'ikigai'
         };
       }).filter(item => item !== null);
-    }, selectorUsed);
+    });
 
     await browser.close();
 

@@ -58,83 +58,68 @@ export default async function handler(req, res) {
           timeout: 8000
         });
 
-        // Esperar a que carguen capítulos
-        // Intentar múltiples selectores posibles
-        const possibleChapterSelectors = [
-          '.chapter',
-          '.capitulo',
-          '.episode',
-          'li.chapter',
-          'li.capitulo',
-          '.chapter-item',
-          '.capitulo-item',
-          'a[href*="/leer/"]',
-          'a[href*="/read/"]',
-          '.chapters-list li',
-          '.capitulos-list li'
-        ];
+        // Esperar a que cargue el contenido (Qwik framework)
+        await page.waitForTimeout(2000);
 
-        let chapterSelector = null;
-        for (const selector of possibleChapterSelectors) {
-          try {
-            await page.waitForSelector(selector, { timeout: 4000 });
-            chapterSelector = selector;
-            console.log(`[Ikigai Chapters] Selector de capítulos encontrado: ${selector}`);
-            break;
-          } catch (e) {
-            continue;
-          }
-        }
-
-        if (!chapterSelector) {
+        // Buscar enlaces de capítulos
+        // Estos típicamente contienen /leer/ o /read/ en la URL
+        try {
+          await page.waitForSelector('a[href*="/leer/"], a[href*="/read/"]', { timeout: 4000 });
+          console.log(`[Ikigai Chapters] Enlaces de capítulos encontrados en página ${currentPage}`);
+        } catch (e) {
           console.warn(`[Ikigai Chapters] No se encontraron capítulos en página ${currentPage}`);
           hasMorePages = false;
           break;
         }
 
         // Extraer capítulos de esta página
-        const chaptersOnPage = await page.evaluate((selector) => {
-          const items = document.querySelectorAll(selector);
+        const chaptersOnPage = await page.evaluate(() => {
+          // Buscar todos los enlaces que apuntan a /leer/ o /read/
+          const chapterLinks = document.querySelectorAll('a[href*="/leer/"], a[href*="/read/"]');
 
-          return Array.from(items).map(item => {
-            // Intentar extraer el link
-            let link = null;
-            if (item.tagName === 'A') {
-              link = item;
+          return Array.from(chapterLinks).map(link => {
+            const href = link.getAttribute('href');
+            if (!href) return null;
+
+            // Extraer número de capítulo de la URL
+            // Formatos posibles:
+            // /leer/serie-123-1/ (capítulo 1)
+            // /leer/serie-123-capitulo-1/
+            // /read/serie-name-1/
+            let chapter = '';
+
+            // Primero intentar con el patrón más específico
+            const urlMatch = href.match(/-(\d+\.?\d*)\/?\s*$/);
+            if (urlMatch) {
+              chapter = urlMatch[1];
             } else {
-              link = item.querySelector('a');
+              // Intentar buscar "capitulo-X" o "chapter-X"
+              const chapterMatch = href.match(/(?:capitulo|chapter)-(\d+\.?\d*)/i);
+              if (chapterMatch) {
+                chapter = chapterMatch[1];
+              }
             }
 
-            if (!link?.href) return null;
-
-            // Intentar extraer el número de capítulo de múltiples formas
-            const linkText = link.textContent || '';
-            const linkHref = link.href || '';
-
-            // Buscar número en el texto
-            const textMatch = linkText.match(/cap[íi]tulo\s*(\d+\.?\d*)|chapter\s*(\d+\.?\d*)|#\s*(\d+\.?\d*)|(\d+\.?\d*)/i);
-
-            // Buscar número en la URL
-            const urlMatch = linkHref.match(/\/leer\/[^\/]+-(\d+\.?\d*)|\/read\/[^\/]+-(\d+\.?\d*)|chapter-(\d+\.?\d*)|capitulo-(\d+\.?\d*)/i);
-
-            let chapter = '';
-            if (textMatch) {
-              chapter = textMatch[1] || textMatch[2] || textMatch[3] || textMatch[4];
-            } else if (urlMatch) {
-              chapter = urlMatch[1] || urlMatch[2] || urlMatch[3] || urlMatch[4];
+            // Si no se pudo extraer del URL, intentar del texto
+            if (!chapter) {
+              const text = link.textContent || '';
+              const textMatch = text.match(/cap[íi]tulo\s*(\d+\.?\d*)|chapter\s*(\d+\.?\d*)|#\s*(\d+\.?\d*)|(\d+\.?\d*)/i);
+              if (textMatch) {
+                chapter = textMatch[1] || textMatch[2] || textMatch[3] || textMatch[4];
+              }
             }
 
             if (!chapter) return null;
 
-            const title = linkText.trim() || `Capítulo ${chapter}`;
+            const title = link.textContent?.trim() || `Capítulo ${chapter}`;
 
             return {
               chapter,
               title: title,
-              url: link.href
+              url: href.startsWith('http') ? href : `https://viralikigai.eurofiyati.online${href}`
             };
           }).filter(item => item !== null && item.chapter);
-        }, chapterSelector);
+        });
 
         console.log(`[Ikigai Chapters] Página ${currentPage}: ${chaptersOnPage.length} capítulos encontrados`);
 
