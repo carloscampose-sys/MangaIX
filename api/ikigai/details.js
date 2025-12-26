@@ -249,27 +249,36 @@ export default async function handler(req, res) {
 
       // Primero buscar con selectores específicos
       const synopsisSelectors = [
-        'p.line-clamp-3',  // Del debug vimos este selector
+        'p:not(.line-clamp-3)',  // Buscar párrafos NO truncados primero
         '[class*="synopsis"]',
         '[class*="description"]',
         '[class*="sinopsis"]',
         '[class*="descripcion"]',
         '[id*="synopsis"]',
         '[id*="description"]',
-        '[id*="sinopsis"]'
+        '[id*="sinopsis"]',
+        'p.line-clamp-3',  // Como último recurso, el truncado
       ];
 
       for (const selector of synopsisSelectors) {
         const elements = document.querySelectorAll(selector);
         for (const el of elements) {
           const text = el.textContent.trim();
-          if (text.length > 50 && text.length < 2000) {
-            synopsis = text;
-            console.log('[Ikigai Details Eval] Sinopsis encontrada con selector:', selector, 'longitud:', text.length);
-            break;
+          // Buscar texto entre 50 y 5000 caracteres
+          if (text.length > 50 && text.length < 5000) {
+            // Evitar textos que claramente no son sinopsis
+            if (!text.includes('Iniciar sesión') &&
+              !text.includes('Registrarse') &&
+              !text.includes('Con el tiempo se añadirán') &&
+              !text.match(/^\d+\s*(de cada|mil)/) &&
+              !text.includes('Política de privacidad')) {
+              synopsis = text;
+              console.log('[Ikigai Details Eval] Sinopsis encontrada con selector:', selector, 'longitud:', text.length);
+              break;
+            }
           }
         }
-        if (synopsis) break;
+        if (synopsis && synopsis.length > 100) break; // Solo salir si encontramos una sinopsis decente
       }
 
       // Si no se encontró, buscar párrafos largos
@@ -277,13 +286,18 @@ export default async function handler(req, res) {
         console.log('[Ikigai Details Eval] Buscando párrafos largos...');
         const paragraphs = Array.from(document.querySelectorAll('p'));
 
+        // Ordenar por longitud (más largos primero)
+        paragraphs.sort((a, b) => b.textContent.length - a.textContent.length);
+
         for (const p of paragraphs) {
           const text = p.textContent.trim();
-          // Buscar párrafos entre 100 y 2000 caracteres
-          if (text.length >= 100 && text.length <= 2000) {
+          // Buscar párrafos entre 100 y 5000 caracteres
+          if (text.length >= 100 && text.length <= 5000) {
             // Evitar párrafos que parecen ser navegación o metadata
             if (!text.includes('Iniciar sesión') &&
+              !text.includes('Registrarse') &&
               !text.includes('Con el tiempo se añadirán') &&
+              !text.includes('Política de privacidad') &&
               !text.match(/^\d+\s*(de cada|mil)/)) {
               synopsis = text;
               console.log('[Ikigai Details Eval] Sinopsis encontrada en párrafo, longitud:', text.length);
