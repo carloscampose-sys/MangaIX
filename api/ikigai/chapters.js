@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         });
 
         // Esperar a que cargue el contenido (Qwik framework)
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Buscar enlaces de capítulos
         // Estos típicamente contienen /leer/ o /read/ en la URL
@@ -162,7 +162,7 @@ export default async function handler(req, res) {
         if (hasNextButton && chaptersOnPage.length > 0) {
           currentPage++;
           // Pequeña pausa entre páginas
-          await page.waitForTimeout(500);
+          await new Promise(resolve => setTimeout(resolve, 500));
         } else {
           hasMorePages = false;
         }

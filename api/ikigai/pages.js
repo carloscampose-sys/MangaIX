@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     }
 
     // Esperar a que cargue el contenido (Qwik framework)
-    await page.waitForTimeout(3000);
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Buscar imágenes del capítulo
     // Generalmente son imágenes grandes en el contenido principal

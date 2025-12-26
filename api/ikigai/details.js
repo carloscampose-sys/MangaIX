@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
 
     // Esperar a que cargue el contenido (Qwik framework)
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
     // Buscar todos los botones y buscar por texto
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
         if (text && text.toLowerCase().includes('ver más')) {
           console.log('[Ikigai Details] Botón "Ver más" encontrado');
           await button.click();
-          await page.waitForTimeout(500);
+          await new Promise(resolve => setTimeout(resolve, 500));
           console.log('[Ikigai Details] Sinopsis expandida');
           break;
         }

@@ -54,7 +54,7 @@ export default async function handler(req, res) {
 
     // Esperar a que cargue el contenido
     // La página usa Qwik framework, esperar a que se renderice
-    await puppeteerPage.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Intentar esperar por el grid o por los enlaces de series
     try {
