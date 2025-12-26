@@ -29,23 +29,28 @@ function getService(source) {
 
 /**
  * Busca obras en una fuente específica
+ * @returns {Promise<{results: Array, hasMore: boolean}>} - Resultados y flag de paginación
  */
 export async function unifiedSearch(query, filters, source, page = 1) {
     try {
         const service = getService(source);
 
         if (source === 'tumanga') {
-            return await service.searchTuManga(query, filters);
+            const results = await service.searchTuManga(query, filters);
+            return { results, hasMore: false }; // TuManga no usa paginación
         } else if (source === 'manhwaweb') {
-            return await service.searchManhwaWeb(query, filters, page);
+            const results = await service.searchManhwaWeb(query, filters, page);
+            // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
+            return { results, hasMore: results.length >= 30 };
         } else if (source === 'ikigai') {
+            // Ikigai devuelve { results, hasMore }
             return await service.searchIkigai(query, filters, page);
         }
 
-        return [];
+        return { results: [], hasMore: false };
     } catch (error) {
         console.error(`[Unified] Error en búsqueda (${source}):`, error);
-        return [];
+        return { results: [], hasMore: false };
     }
 }
 
@@ -159,15 +164,15 @@ export async function searchAllSources(query, filters) {
         const results = [];
 
         if (tumangaResults.status === 'fulfilled') {
-            results.push(...tumangaResults.value);
+            results.push(...(tumangaResults.value.results || []));
         }
 
         if (manhwawebResults.status === 'fulfilled') {
-            results.push(...manhwawebResults.value);
+            results.push(...(manhwawebResults.value.results || []));
         }
 
         if (ikigaiResults.status === 'fulfilled') {
-            results.push(...ikigaiResults.value);
+            results.push(...(ikigaiResults.value.results || []));
         }
 
         return results;

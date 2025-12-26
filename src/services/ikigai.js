@@ -34,7 +34,7 @@ export async function searchIkigai(query = '', filters = {}, page = 1) {
 
   if (isLocal) {
     console.warn('[Ikigai] No disponible en localhost - requiere Puppeteer en Vercel');
-    return [];
+    return { results: [], hasMore: false };
   }
 
   try {
@@ -53,11 +53,15 @@ export async function searchIkigai(query = '', filters = {}, page = 1) {
     const data = await response.json();
 
     console.log(`[Ikigai] ${data.results?.length || 0} resultados encontrados`);
+    console.log(`[Ikigai] hasMore:`, data.hasMore);
 
-    return data.results || [];
+    return {
+      results: data.results || [],
+      hasMore: data.hasMore || false
+    };
   } catch (error) {
     console.error('[Ikigai] Error en búsqueda:', error);
-    return [];
+    return { results: [], hasMore: false };
   }
 }
 
@@ -214,7 +218,8 @@ export async function getRandomIkigai(genreIds = []) {
       genres: genreIds
     };
 
-    const results = await searchIkigai('', filters, 1);
+    const searchResponse = await searchIkigai('', filters, 1);
+    const results = searchResponse.results || [];
 
     if (!results || results.length === 0) {
       console.warn('[Ikigai] No se encontraron resultados para géneros especificados');

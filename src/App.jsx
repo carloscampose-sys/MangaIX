@@ -226,14 +226,19 @@ const MainApp = ({ userName, userGender }) => {
       
       // Usar servicio unificado según la fuente seleccionada con página actual
       console.log('[App] Ejecutando búsqueda con página:', pageToUse);
-      let results = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
+      const searchResponse = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
+      
+      // Extraer results y hasMore de la respuesta
+      let results = searchResponse.results || [];
+      const hasMore = searchResponse.hasMore || false;
 
       // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
       const resultCount = results.length;
 
       // Si no hay resultados y hay filtros, intentar sin filtros
       if (results.length === 0 && selectedGenres.length > 0) {
-        results = await unifiedSearch(searchQuery, {}, selectedSource);
+        const fallbackResponse = await unifiedSearch(searchQuery, {}, selectedSource);
+        results = fallbackResponse.results || [];
       }
 
       // Enriquecer resultados con placeholder inicial
@@ -249,10 +254,9 @@ const MainApp = ({ userName, userGender }) => {
 
       setSearchResults(results);
       
-      // Determinar si hay más páginas basado en el conteo ORIGINAL
-      // ManhwaWeb devuelve exactamente 30 resultados por página
-      // Si obtuvimos 30, probablemente hay más páginas
-      setHasMorePages(resultCount >= 30);
+      // Usar hasMore de la respuesta de la API
+      console.log('[App] hasMore desde API:', hasMore);
+      setHasMorePages(hasMore);
       
       // Iniciar carga de sinopsis en segundo plano
       loadDescriptionsInBackground(results);
