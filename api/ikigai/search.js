@@ -14,8 +14,12 @@ export default async function handler(req, res) {
     // Construir URL con filtros
     const searchUrl = buildSearchUrl(query, filters, page);
 
-    console.log('[Ikigai Search] URL:', searchUrl);
+    console.log('[Ikigai Search] ============================================');
+    console.log('[Ikigai Search] Página solicitada:', page);
+    console.log('[Ikigai Search] Query:', query);
     console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
+    console.log('[Ikigai Search] URL completa:', searchUrl);
+    console.log('[Ikigai Search] ============================================');
 
     // Iniciar Puppeteer con configuración anti-detección
     browser = await puppeteer.launch({
@@ -267,8 +271,10 @@ export default async function handler(req, res) {
     });
 
     // Verificar si hay página siguiente para paginación
-    const hasMore = await puppeteerPage.evaluate(() => {
-      // Buscar botón de siguiente página
+    const paginationInfo = await puppeteerPage.evaluate(() => {
+      // Buscar botón de siguiente página con múltiples estrategias
+
+      // Estrategia 1: Buscar por selectores específicos
       const nextSelectors = [
         'button.next-page:not(.disabled)',
         'a.next-page:not(.disabled)',
@@ -277,29 +283,76 @@ export default async function handler(req, res) {
         '.pagination .next:not(.disabled)',
         '.pagination a[rel="next"]',
         'a[aria-label="Next"]:not(.disabled)',
-        'button[aria-label="Next"]:not(.disabled)'
+        'button[aria-label="Next"]:not(.disabled)',
+        'button[aria-label="siguiente"]:not(.disabled)',
+        '[class*="pagination"] button:not(.disabled):last-child',
+        '[class*="pagination"] a:not(.disabled):last-child'
       ];
+
+      let found = false;
+      let foundBy = null;
 
       for (const selector of nextSelectors) {
         const btn = document.querySelector(selector);
         if (btn && !btn.disabled && !btn.classList.contains('disabled')) {
-          return true;
+          found = true;
+          foundBy = selector;
+          break;
         }
       }
 
-      return false;
+      // Estrategia 2: Buscar cualquier botón o enlace que contenga texto de "siguiente"
+      if (!found) {
+        const allButtons = Array.from(document.querySelectorAll('button, a'));
+        const nextButton = allButtons.find(btn => {
+          const text = btn.textContent.toLowerCase();
+          const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
+          return (
+            (text.includes('siguiente') ||
+             text.includes('next') ||
+             text.includes('>') ||
+             text.includes('→') ||
+             ariaLabel.includes('siguiente') ||
+             ariaLabel.includes('next')) &&
+            !btn.disabled &&
+            !btn.classList.contains('disabled')
+          );
+        });
+        if (nextButton) {
+          found = true;
+          foundBy = 'text search';
+        }
+      }
+
+      // Debug: Listar todos los botones de paginación encontrados
+      const paginationElements = document.querySelectorAll('[class*="pagination"] button, [class*="pagination"] a');
+      const paginationDebug = Array.from(paginationElements).map(el => ({
+        tag: el.tagName,
+        text: el.textContent.trim(),
+        classes: el.className,
+        disabled: el.disabled || el.classList.contains('disabled')
+      }));
+
+      return {
+        hasMore: found,
+        foundBy,
+        paginationDebug
+      };
     });
 
     await browser.close();
 
     console.log(`[Ikigai Search] ${results.length} resultados encontrados (después de ${scrollAttempts} scrolls)`);
-    console.log(`[Ikigai Search] ¿Hay más páginas?: ${hasMore}`);
+    console.log(`[Ikigai Search] ¿Hay más páginas?: ${paginationInfo.hasMore}`);
+    console.log(`[Ikigai Search] Botón encontrado por: ${paginationInfo.foundBy}`);
+    console.log(`[Ikigai Search] Elementos de paginación:`, JSON.stringify(paginationInfo.paginationDebug));
 
     return res.status(200).json({
       results,
       page,
-      hasMore,
-      scrollAttempts
+      hasMore: paginationInfo.hasMore,
+      scrollAttempts,
+      paginationDebug: paginationInfo.paginationDebug
     });
 
   } catch (error) {
