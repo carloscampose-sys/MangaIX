@@ -96,7 +96,7 @@ export async function unifiedGetChapters(slug, source) {
 /**
  * Obtiene páginas de un capítulo en una fuente específica
  */
-export async function unifiedGetPages(slug, chapter, source) {
+export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) {
     try {
         const service = getService(source);
 
@@ -105,7 +105,7 @@ export async function unifiedGetPages(slug, chapter, source) {
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
         } else if (source === 'ikigai') {
-            return await service.getIkigaiPages(slug, chapter);
+            return await service.getIkigaiPages(slug, chapter, chapterUrl);
         }
 
         return [];

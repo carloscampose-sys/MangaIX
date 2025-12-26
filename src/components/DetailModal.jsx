@@ -29,7 +29,8 @@ export const DetailModal = ({
     // Capítulos por fuente
     const [chaptersBySource, setChaptersBySource] = useState({
         tumanga: [],
-        manhwaweb: []
+        manhwaweb: [],
+        ikigai: []
     });
     const [selectedChapterSource, setSelectedChapterSource] = useState(manga?.source || 'tumanga');
     const [isLoadingChapters, setIsLoadingChapters] = useState(false);
@@ -50,7 +51,7 @@ export const DetailModal = ({
             document.body.style.overflow = 'unset';
             if (!isOpen) {
                 setMangaDetails(null);
-                setChaptersBySource({ tumanga: [], manhwaweb: [] });
+                setChaptersBySource({ tumanga: [], manhwaweb: [], ikigai: [] });
                 setSelectedChapter(null);
                 setReaderPages(null);
             }
@@ -97,7 +98,7 @@ export const DetailModal = ({
                     return numA - numB;  // Orden ascendente (1 → 2 → 3 → ...)
                 }) : []
             }));
-            
+
             // Establecer la fuente seleccionada
             setSelectedChapterSource(source);
         } catch (error) {
@@ -133,13 +134,13 @@ export const DetailModal = ({
         setIsOpeningReader(true);
 
         try {
-            const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource);
+            const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource, chapter.url);
             if (pages && pages.length > 0) {
                 setReaderPages(pages);
             } else {
                 const sourceInfo = getSourceById(source || selectedChapterSource);
                 showToast(`No se pudieron cargar las páginas. Intenta en ${sourceInfo.name} directamente 😭💅`);
-                
+
                 // Abrir el capítulo en una nueva pestaña como fallback
                 if (chapter.url) {
                     window.open(chapter.url, '_blank');
@@ -154,15 +155,15 @@ export const DetailModal = ({
 
     const goToNextChapter = async () => {
         const chapters = chaptersBySource[selectedChapterSource] || [];
-        
+
         if (currentChapterIndex >= 0 && currentChapterIndex < chapters.length - 1) {
             const nextChapter = chapters[currentChapterIndex + 1];
             setCurrentChapterIndex(currentChapterIndex + 1);
             setSelectedChapter(nextChapter.chapter);
             setIsOpeningReader(true);
-            
+
             try {
-                const pages = await unifiedGetPages(manga.slug, nextChapter.chapter, selectedChapterSource);
+                const pages = await unifiedGetPages(manga.slug, nextChapter.chapter, selectedChapterSource, nextChapter.url);
                 if (pages && pages.length > 0) {
                     setReaderPages(pages);
                     showToast(`¡Siguiente capítulo cargado! Cap ${nextChapter.chapter} 🥑`);
@@ -173,22 +174,22 @@ export const DetailModal = ({
                 console.error('Error loading next chapter:', error);
                 showToast("Error cargando el siguiente capítulo 💅");
             }
-            
+
             setIsOpeningReader(false);
         }
     };
 
     const goToPreviousChapter = async () => {
         const chapters = chaptersBySource[selectedChapterSource] || [];
-        
+
         if (currentChapterIndex > 0) {
             const prevChapter = chapters[currentChapterIndex - 1];
             setCurrentChapterIndex(currentChapterIndex - 1);
             setSelectedChapter(prevChapter.chapter);
             setIsOpeningReader(true);
-            
+
             try {
-                const pages = await unifiedGetPages(manga.slug, prevChapter.chapter, selectedChapterSource);
+                const pages = await unifiedGetPages(manga.slug, prevChapter.chapter, selectedChapterSource, prevChapter.url);
                 if (pages && pages.length > 0) {
                     setReaderPages(pages);
                     showToast(`¡Capítulo anterior cargado! Cap ${prevChapter.chapter} 🥑`);
@@ -199,7 +200,7 @@ export const DetailModal = ({
                 console.error('Error loading previous chapter:', error);
                 showToast("Error cargando el capítulo anterior 💅");
             }
-            
+
             setIsOpeningReader(false);
         }
     };
@@ -207,7 +208,7 @@ export const DetailModal = ({
     // Usar detalles cargados o datos del manga original
     const displayData = mangaDetails || manga;
     const description = displayData?.description || "Esta obra es tan icónica que no necesita palabras... ¡Devoraste! 🥑";
-    
+
     // Calcular el número real de capítulos desde los capítulos cargados
     const currentChapters = chaptersBySource[selectedChapterSource] || [];
     const chaptersCount = currentChapters.length > 0 ? currentChapters.length : (displayData?.lastChapter || manga?.lastChapter || "?");
@@ -280,7 +281,7 @@ export const DetailModal = ({
                                         Info de la Obra ✨
                                     </h3>
                                     <div className="bg-gray-50/50 dark:bg-gray-800/30 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-gray-100/50 dark:border-gray-800 space-y-3">
-                                        
+
                                         {/* Géneros */}
                                         {mangaDetails.genres?.length > 0 && (
                                             <div>
@@ -289,7 +290,7 @@ export const DetailModal = ({
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                                     {mangaDetails.genres.map((genre, idx) => (
-                                                        <span 
+                                                        <span
                                                             key={idx}
                                                             className="px-2 sm:px-3 py-1 bg-potaxie-green/10 dark:bg-potaxie-green/20 text-potaxie-700 dark:text-potaxie-300 rounded-lg text-[10px] sm:text-xs font-bold"
                                                         >
@@ -392,7 +393,7 @@ export const DetailModal = ({
                                     <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
                                         <Sparkles size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green" /> Lectura Directa ✨
                                     </h3>
-                                    
+
                                     {/* Tabs de fuentes (si hay capítulos en la fuente actual) */}
                                     {chaptersBySource[selectedChapterSource]?.length > 0 && (
                                         <div className="mb-3">
@@ -405,7 +406,7 @@ export const DetailModal = ({
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     <div className="flex flex-wrap gap-1.5 sm:gap-2 max-h-36 sm:max-h-48 overflow-y-auto custom-scrollbar p-1.5 sm:p-2">
                                         {isLoadingChapters ? (
                                             <span className="text-[10px] sm:text-xs text-gray-400 italic animate-pulse">Cargando capítulos...</span>
@@ -449,7 +450,7 @@ export const DetailModal = ({
                     const chapters = chaptersBySource[selectedChapterSource] || [];
                     const hasNextChapter = currentChapterIndex >= 0 && currentChapterIndex < chapters.length - 1;
                     const hasPreviousChapter = currentChapterIndex > 0;
-                    
+
                     return (
                         <Reader
                             pages={readerPages}

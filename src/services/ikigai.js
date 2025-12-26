@@ -8,8 +8,8 @@ const IKIGAI_BASE_URL = 'https://viralikigai.ozoviral.xyz';
  */
 const detectEnvironment = () => {
   const isLocal = typeof window !== 'undefined' &&
-                 (window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1');
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1');
 
   const apiUrl = typeof window !== 'undefined'
     ? window.location.origin
@@ -151,9 +151,10 @@ export async function getIkigaiChapters(slug) {
  * Obtiene las páginas/imágenes de un capítulo
  * @param {string} slug - Slug de la obra
  * @param {string} chapter - Número del capítulo
+ * @param {string} chapterUrl - URL completa del capítulo (opcional)
  * @returns {Promise<Array>} - Array de URLs de imágenes
  */
-export async function getIkigaiPages(slug, chapter) {
+export async function getIkigaiPages(slug, chapter, chapterUrl = null) {
   const { isLocal, apiUrl } = detectEnvironment();
 
   if (isLocal) {
@@ -163,11 +164,14 @@ export async function getIkigaiPages(slug, chapter) {
 
   try {
     console.log('[Ikigai] Obteniendo páginas de:', slug, 'capítulo', chapter);
+    if (chapterUrl) {
+      console.log('[Ikigai] Usando URL del capítulo:', chapterUrl);
+    }
 
     const response = await fetch(`${apiUrl}/api/ikigai/pages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug, chapter })
+      body: JSON.stringify({ slug, chapter, chapterUrl })
     });
 
     if (!response.ok) {

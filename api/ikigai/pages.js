@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { slug, chapter } = req.body;
+  const { slug, chapter, chapterUrl } = req.body;
 
   if (!slug || !chapter) {
     return res.status(400).json({ error: 'Slug and chapter are required' });
@@ -15,16 +15,23 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    // Construir URL del capítulo - intentar múltiples formatos posibles
-    const possibleUrls = [
-      `https://viralikigai.ozoviral.xyz/leer/${slug}-${chapter}`,
-      `https://viralikigai.ozoviral.xyz/leer/${slug}/${chapter}`,
-      `https://viralikigai.ozoviral.xyz/read/${slug}-${chapter}`,
-      `https://viralikigai.ozoviral.xyz/read/${slug}/${chapter}`,
-      `https://viralikigai.ozoviral.xyz/series/${slug}/${chapter}`
-    ];
+    // Si se proporciona chapterUrl (URL completa del capítulo), usarla directamente
+    // De lo contrario, intentar construir URLs con patrones comunes
+    const possibleUrls = chapterUrl
+      ? [chapterUrl]  // Usar URL directa si está disponible
+      : [
+        `https://viralikigai.foodib.net/capitulo/${slug}-${chapter}`,
+        `https://viralikigai.foodib.net/leer/${slug}-${chapter}`,
+        `https://viralikigai.foodib.net/leer/${slug}/${chapter}`,
+        `https://viralikigai.foodib.net/read/${slug}-${chapter}`,
+        `https://viralikigai.foodib.net/read/${slug}/${chapter}`,
+        `https://viralikigai.foodib.net/series/${slug}/${chapter}`
+      ];
 
     console.log('[Ikigai Pages] Intentando cargar capítulo...');
+    if (chapterUrl) {
+      console.log('[Ikigai Pages] Usando URL directa del capítulo:', chapterUrl);
+    }
 
     browser = await puppeteer.launch({
       args: [
@@ -68,22 +75,22 @@ export default async function handler(req, res) {
 
     // Intentar cargar con cada URL hasta encontrar una que funcione
     let urlLoaded = null;
-    for (const chapterUrl of possibleUrls) {
+    for (const testUrl of possibleUrls) {
       try {
-        console.log(`[Ikigai Pages] Intentando URL: ${chapterUrl}`);
+        console.log(`[Ikigai Pages] Intentando URL: ${testUrl}`);
 
-        const response = await page.goto(chapterUrl, {
-          waitUntil: 'networkidle2',
-          timeout: 10000
+        const response = await page.goto(testUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15000
         });
 
         if (response && response.ok()) {
-          urlLoaded = chapterUrl;
-          console.log(`[Ikigai Pages] URL cargada exitosamente: ${chapterUrl}`);
+          urlLoaded = testUrl;
+          console.log(`[Ikigai Pages] URL cargada exitosamente: ${testUrl}`);
           break;
         }
       } catch (e) {
-        console.log(`[Ikigai Pages] URL falló: ${chapterUrl}`);
+        console.log(`[Ikigai Pages] URL falló: ${testUrl} - ${e.message}`);
         continue;
       }
     }
@@ -92,8 +99,27 @@ export default async function handler(req, res) {
       await browser.close();
       return res.status(404).json({
         error: 'No se pudo cargar el capítulo',
-        details: 'Ninguna URL funcionó'
+        details: 'Ninguna URL funcionó',
+        triedUrls: possibleUrls
       });
+    }
+
+    // Esperar challenge de Cloudflare
+    try {
+      await page.waitForFunction(() => {
+        const title = document.title;
+        const bodyText = document.body ? document.body.innerText : '';
+
+        return !title.includes('500') &&
+          !title.includes('Just a moment') &&
+          !title.includes('Error') &&
+          !bodyText.includes('Checking your browser') &&
+          bodyText.length > 100;
+      }, { timeout: 20000 });
+
+      console.log('[Ikigai Pages] ✓ Challenge completado');
+    } catch (e) {
+      console.warn('[Ikigai Pages] Timeout esperando challenge, continuando...');
     }
 
     // Esperar a que cargue el contenido (Qwik framework)
@@ -137,12 +163,12 @@ export default async function handler(req, res) {
           // Verificar que sea una imagen grande (página del manga)
           // y no un avatar, logo, o placeholder
           if (src &&
-              src.startsWith('http') &&
-              img.naturalHeight > 200 &&
-              !src.includes('avatar') &&
-              !src.includes('logo') &&
-              !src.includes('loader') &&
-              !src.includes('placeholder')) {
+            src.startsWith('http') &&
+            img.naturalHeight > 200 &&
+            !src.includes('avatar') &&
+            !src.includes('logo') &&
+            !src.includes('loader') &&
+            !src.includes('placeholder')) {
             return src;
           }
 
