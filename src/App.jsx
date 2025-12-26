@@ -146,8 +146,15 @@ const MainApp = ({ userName, userGender }) => {
   const handleSearch = async (e, pageOverride = null) => {
     if (e) e.preventDefault();
     
-    // Usar pageOverride si se proporciona, sino usar currentPage
-    const pageToUse = pageOverride !== null ? pageOverride : currentPage;
+    // Si es una búsqueda nueva (no paginación), resetear a página 1
+    // pageOverride es null cuando el usuario hace clic en "Buscar" o presiona Enter
+    // pageOverride tiene valor cuando se usa goToNextPage/goToPreviousPage
+    if (pageOverride === null) {
+      setCurrentPage(1);
+    }
+    
+    // Usar pageOverride si se proporciona, sino usar página 1 para búsquedas nuevas
+    const pageToUse = pageOverride !== null ? pageOverride : 1;
 
     // Construir término de búsqueda
     let searchTerm = searchQuery;

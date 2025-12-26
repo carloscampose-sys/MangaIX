@@ -229,6 +229,11 @@ export default async function handler(req, res) {
         const excludePatterns = ['/clasificacion', '/lists/', '/grupos/'];
         if (excludePatterns.some(pattern => href.includes(pattern))) return false;
 
+        // NUEVO: Excluir enlaces que contienen query strings de búsqueda o paginación
+        // Estos son enlaces de paginación, no de series
+        if (href.includes('?buscar=') || href.includes('&buscar=')) return false;
+        if (href.includes('?pagina=') && !href.includes('/series/')) return false;
+
         // Debe tener contenido (imagen o título)
         const hasImage = link.querySelector('img') !== null;
         const hasTitle = link.querySelector('h3, h2, h1') !== null;
@@ -260,10 +265,12 @@ export default async function handler(req, res) {
         // Extraer slug de la URL
         let slug = '';
         if (href.includes('/series/')) {
-          slug = href.split('/series/')[1]?.replace(/\/$/, '');
+          const slugPart = href.split('/series/')[1];
+          // Remover trailing slash y query strings
+          slug = slugPart?.split('?')[0]?.replace(/\/$/, '') || '';
         }
 
-        console.log(`[Ikigai Eval ${index}] slug: ${slug}, title: ${title}, cover: ${cover ? 'yes' : 'no'}`);
+        console.log(`[Ikigai Eval ${index}] href: ${href}, slug: ${slug}, title: ${title}, cover: ${cover ? 'yes' : 'no'}`);
 
         // Solo retornar si tenemos slug (obligatorio)
         if (!slug) {
