@@ -8,6 +8,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { PageLoader } from './components/PageLoader';
 import { SearchLoader } from './components/SearchLoader';
+import { IkigaiDebugger } from './components/IkigaiDebugger';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
@@ -429,9 +430,12 @@ const MainApp = ({ userName, userGender }) => {
 
   return (
     <div className="min-h-screen pb-24 md:pb-32 relative">
+      {/* Ikigai Debugger - TEMPORAL */}
+      {selectedSource === 'ikigai' && <IkigaiDebugger />}
+
       {/* Christmas Snow Effect */}
       {isChristmasMode && <SnowEffect />}
-      
+
       <AnimatePresence>
         {/* Global Toasts handled by ToastProvider */}
       </AnimatePresence>
