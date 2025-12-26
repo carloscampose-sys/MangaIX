@@ -1,9 +1,5 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-
-// Configurar plugin stealth para evitar detección de bots
-puppeteer.use(StealthPlugin());
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,7 +17,7 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] URL:', searchUrl);
     console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
 
-    // Iniciar Puppeteer con configuración anti-bot
+    // Iniciar Puppeteer con configuración anti-detección
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
@@ -30,17 +26,19 @@ export default async function handler(req, res) {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--window-size=1920x1080'
+        '--window-size=1920x1080',
+        '--disable-blink-features=AutomationControlled'
       ],
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true
     });
 
     const puppeteerPage = await browser.newPage();
 
-    // Configurar User Agent real
+    // Configurar User Agent real (Chrome reciente)
     await puppeteerPage.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     );
 
     // Configurar viewport
@@ -49,8 +47,35 @@ export default async function handler(req, res) {
       height: 1080
     });
 
-    // Habilitar JavaScript explícitamente
-    await puppeteerPage.setJavaScriptEnabled(true);
+    // Inyectar código anti-detección ANTES de navegar
+    await puppeteerPage.evaluateOnNewDocument(() => {
+      // Eliminar webdriver property
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+      });
+
+      // Sobrescribir chrome runtime
+      window.navigator.chrome = {
+        runtime: {},
+      };
+
+      // Sobrescribir plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // Sobrescribir languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+
+      // Permisos
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) =>
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: Notification.permission })
+          : originalQuery(parameters);
+    });
 
     // Bloquear ads y recursos innecesarios
     await puppeteerPage.setRequestInterception(true);
