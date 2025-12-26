@@ -154,19 +154,38 @@ export default async function handler(req, res) {
     });
     console.log(`[Ikigai Search] Enlaces de series encontrados: ${seriesLinkCount}`);
 
-    // Si no hay series, intentar scroll para trigger lazy loading
-    if (seriesLinkCount === 0) {
-      console.log('[Ikigai Search] Intentando scroll para activar lazy loading...');
+    // Hacer scroll para cargar MÁS resultados (lazy loading)
+    // Similar a manhwaweb, Ikigai carga más contenido mientras haces scroll
+    console.log('[Ikigai Search] Haciendo scroll para cargar más resultados...');
+    let previousCount = seriesLinkCount;
+    let currentCount = seriesLinkCount;
+    let scrollAttempts = 0;
+    const maxScrollAttempts = 8; // Limitar a 8 intentos
+
+    do {
+      previousCount = currentCount;
+
+      // Scroll hacia abajo hasta el final de la página
       await puppeteerPage.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
       });
-      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      seriesLinkCount = await puppeteerPage.evaluate(() => {
+      // Esperar 1 segundo a que se carguen nuevos elementos
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Contar elementos actuales
+      currentCount = await puppeteerPage.evaluate(() => {
         return document.querySelectorAll('a[href*="/series/"]').length;
       });
-      console.log(`[Ikigai Search] Enlaces después de scroll: ${seriesLinkCount}`);
-    }
+
+      scrollAttempts++;
+      console.log(`[Ikigai Search] Scroll ${scrollAttempts}/${maxScrollAttempts}: ${currentCount} resultados`);
+
+      // Salir si no hay más elementos nuevos o alcanzamos el límite de scrolls
+    } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
+
+    console.log(`[Ikigai Search] Scroll completado. Total: ${currentCount} resultados`);
+    seriesLinkCount = currentCount;
 
     if (seriesLinkCount === 0) {
       console.warn('[Ikigai Search] No se encontraron series después de todas las estrategias');
@@ -273,13 +292,14 @@ export default async function handler(req, res) {
 
     await browser.close();
 
-    console.log(`[Ikigai Search] ${results.length} resultados encontrados`);
+    console.log(`[Ikigai Search] ${results.length} resultados encontrados (después de ${scrollAttempts} scrolls)`);
     console.log(`[Ikigai Search] ¿Hay más páginas?: ${hasMore}`);
 
     return res.status(200).json({
       results,
       page,
-      hasMore
+      hasMore,
+      scrollAttempts
     });
 
   } catch (error) {
