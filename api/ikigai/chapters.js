@@ -108,11 +108,32 @@ export default async function handler(req, res) {
     console.log('[Ikigai Chapters] Intentando cargar todos los capítulos con scroll...');
 
     // Hacer scroll para cargar todos los capítulos (scroll infinito)
-    let previousHeight = 0;
+    // CAMBIO: Contar capítulos en lugar de altura de página
+    // porque Ikigai puede usar contenedores con scroll interno
+    let previousCount = 0;
     let scrollAttempts = 0;
     const maxScrollAttempts = 30; // Máximo 30 scrolls
+    const noChangeLimit = 3; // Salir después de 3 scrolls sin cambios
 
-    while (scrollAttempts < maxScrollAttempts) {
+    // Función helper para contar capítulos actualmente visibles
+    const countChapters = () => page.evaluate(() => {
+      const allLinks = document.querySelectorAll('a');
+      let count = 0;
+      allLinks.forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes('/capitulo/') ||
+            href.includes('/leer/') ||
+            href.includes('/read/') ||
+            href.includes('/cap')) {
+          count++;
+        }
+      });
+      return count;
+    });
+
+    let noChangeCount = 0;
+
+    while (scrollAttempts < maxScrollAttempts && noChangeCount < noChangeLimit) {
       // Hacer scroll hasta el final
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
@@ -123,32 +144,23 @@ export default async function handler(req, res) {
 
       // Verificar si hay un botón "Cargar más" y hacer clic
       const loadMoreClicked = await page.evaluate(() => {
-        const loadMoreSelectors = [
-          'button:contains("Cargar")',
-          'button:contains("Ver más")',
-          'button:contains("Load")',
-          '.load-more',
-          '[class*="load"]',
-          '[class*="more"]'
-        ];
+        try {
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const loadBtn = buttons.find(btn =>
+            btn.textContent.toLowerCase().includes('cargar') ||
+            btn.textContent.toLowerCase().includes('más') ||
+            btn.textContent.toLowerCase().includes('ver') ||
+            btn.textContent.toLowerCase().includes('load') ||
+            btn.textContent.toLowerCase().includes('more')
+          );
 
-        for (const selector of loadMoreSelectors) {
-          try {
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const loadBtn = buttons.find(btn =>
-              btn.textContent.toLowerCase().includes('cargar') ||
-              btn.textContent.toLowerCase().includes('más') ||
-              btn.textContent.toLowerCase().includes('load') ||
-              btn.textContent.toLowerCase().includes('more')
-            );
-
-            if (loadBtn && !loadBtn.disabled) {
-              loadBtn.click();
-              return true;
-            }
-          } catch (e) {
-            // Continuar con el siguiente selector
+          if (loadBtn && !loadBtn.disabled) {
+            loadBtn.click();
+            console.log('[Ikigai Chapters Eval] Botón encontrado y clickeado:', loadBtn.textContent);
+            return true;
           }
+        } catch (e) {
+          console.error('[Ikigai Chapters Eval] Error buscando botón:', e.message);
         }
         return false;
       });
@@ -158,21 +170,28 @@ export default async function handler(req, res) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      // Verificar si la altura cambió (se cargó más contenido)
-      const currentHeight = await page.evaluate(() => document.body.scrollHeight);
+      // Contar capítulos actuales
+      const currentCount = await countChapters();
 
-      if (currentHeight === previousHeight) {
-        // No hay más contenido para cargar
-        console.log('[Ikigai Chapters] No se detectó más contenido nuevo');
-        break;
+      if (currentCount === previousCount) {
+        noChangeCount++;
+        console.log(`[Ikigai Chapters] Sin cambios (${noChangeCount}/${noChangeLimit}): ${currentCount} capítulos`);
+      } else {
+        noChangeCount = 0; // Resetear contador si hubo cambios
+        console.log(`[Ikigai Chapters] Scroll ${scrollAttempts + 1}: ${currentCount} capítulos (+ ${currentCount - previousCount})`);
       }
 
-      previousHeight = currentHeight;
+      previousCount = currentCount;
       scrollAttempts++;
-      console.log(`[Ikigai Chapters] Scroll ${scrollAttempts}: altura ${currentHeight}px`);
+
+      // Salir si llevamos varios scrolls sin cambios
+      if (noChangeCount >= noChangeLimit) {
+        console.log('[Ikigai Chapters] No se detectó más contenido nuevo después de varios intentos');
+        break;
+      }
     }
 
-    console.log(`[Ikigai Chapters] Scroll completado después de ${scrollAttempts} intentos`);
+    console.log(`[Ikigai Chapters] Scroll completado después de ${scrollAttempts} intentos, ${previousCount} capítulos encontrados`);
 
     // Extraer todos los capítulos de la página
     const allChapters = await page.evaluate(() => {
