@@ -17,14 +17,36 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] URL:', searchUrl);
     console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
 
-    // Iniciar Puppeteer
+    // Iniciar Puppeteer con configuración anti-bot
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080'
+      ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless
     });
 
     const puppeteerPage = await browser.newPage();
+
+    // Configurar User Agent real
+    await puppeteerPage.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    );
+
+    // Configurar viewport
+    await puppeteerPage.setViewport({
+      width: 1920,
+      height: 1080
+    });
+
+    // Habilitar JavaScript explícitamente
+    await puppeteerPage.setJavaScriptEnabled(true);
 
     // Bloquear ads y recursos innecesarios
     await puppeteerPage.setRequestInterception(true);
@@ -49,39 +71,72 @@ export default async function handler(req, res) {
     // Navegar a la URL
     console.log('[Ikigai Search] Navegando a URL...');
     await puppeteerPage.goto(searchUrl, {
-      waitUntil: 'networkidle0', // Cambio a networkidle0 para esperar TODO
-      timeout: 15000
+      waitUntil: ['load', 'domcontentloaded', 'networkidle2'],
+      timeout: 20000
     });
 
-    console.log('[Ikigai Search] Página cargada, esperando renderizado...');
+    console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');
 
-    // Esperar a que cargue el contenido
-    // La página usa Qwik framework, esperar a que se renderice
-    await new Promise(resolve => setTimeout(resolve, 4000)); // Aumentar a 4 segundos
+    // Esperar a que el contenido JavaScript se renderice
+    // Qwik toma tiempo en hidratar
+    await new Promise(resolve => setTimeout(resolve, 6000)); // 6 segundos para Qwik
 
     // Verificar si hay contenido en la página
     const pageContent = await puppeteerPage.content();
     console.log('[Ikigai Search] Tamaño de HTML:', pageContent.length);
 
-    // Intentar esperar por el grid o por los enlaces de series
+    // Contar enlaces totales primero
+    const linkCount = await puppeteerPage.evaluate(() => {
+      return document.querySelectorAll('a').length;
+    });
+    console.log(`[Ikigai Search] Total de enlaces en página: ${linkCount}`);
+
+    // Intentar múltiples estrategias para encontrar series
+    let seriesFound = false;
+    let seriesLinkCount = 0;
+
+    // Estrategia 1: Esperar por enlaces /series/
     try {
-      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 8000 });
-      console.log('[Ikigai Search] Enlaces de series encontrados');
+      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 5000 });
+      seriesFound = true;
+      console.log('[Ikigai Search] ✓ Estrategia 1: Enlaces encontrados');
     } catch (e) {
-      console.warn('[Ikigai Search] No se encontraron enlaces de series después de esperar');
+      console.log('[Ikigai Search] ✗ Estrategia 1 falló');
+    }
 
-      // Contar cuántos enlaces hay en la página para debug
-      const linkCount = await puppeteerPage.evaluate(() => {
-        return document.querySelectorAll('a').length;
+    // Estrategia 2: Esperar a que haya imágenes (las series tienen portadas)
+    if (!seriesFound) {
+      try {
+        await puppeteerPage.waitForSelector('img', { timeout: 5000 });
+        seriesFound = true;
+        console.log('[Ikigai Search] ✓ Estrategia 2: Imágenes encontradas');
+      } catch (e) {
+        console.log('[Ikigai Search] ✗ Estrategia 2 falló');
+      }
+    }
+
+    // Contar enlaces que contienen /series/
+    seriesLinkCount = await puppeteerPage.evaluate(() => {
+      return document.querySelectorAll('a[href*="/series/"]').length;
+    });
+    console.log(`[Ikigai Search] Enlaces de series encontrados: ${seriesLinkCount}`);
+
+    // Si no hay series, intentar scroll para trigger lazy loading
+    if (seriesLinkCount === 0) {
+      console.log('[Ikigai Search] Intentando scroll para activar lazy loading...');
+      await puppeteerPage.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
       });
-      console.log(`[Ikigai Search] Total de enlaces en página: ${linkCount}`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Contar enlaces que contienen /series/
-      const seriesLinkCount = await puppeteerPage.evaluate(() => {
+      seriesLinkCount = await puppeteerPage.evaluate(() => {
         return document.querySelectorAll('a[href*="/series/"]').length;
       });
-      console.log(`[Ikigai Search] Enlaces de series encontrados: ${seriesLinkCount}`);
+      console.log(`[Ikigai Search] Enlaces después de scroll: ${seriesLinkCount}`);
+    }
 
+    if (seriesLinkCount === 0) {
+      console.warn('[Ikigai Search] No se encontraron series después de todas las estrategias');
       await browser.close();
       return res.status(200).json({
         results: [],
