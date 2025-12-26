@@ -110,71 +110,87 @@ export default async function handler(req, res) {
 
     console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');
 
-    // Esperar a que el contenido JavaScript se renderice
-    // Qwik toma tiempo en hidratar - esperamos más tiempo
-    await new Promise(resolve => setTimeout(resolve, 8000)); // 8 segundos para Qwik
+    // Esperar renderizado inicial
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    console.log('[Ikigai Search] Intentando cargar todos los resultados con scroll...');
+
+    // Hacer scroll para cargar todos los resultados (scroll infinito)
+    let previousHeight = 0;
+    let scrollAttempts = 0;
+    const maxScrollAttempts = 20; // Máximo 20 scrolls para búsqueda
+
+    while (scrollAttempts < maxScrollAttempts) {
+      // Hacer scroll hasta el final
+      await puppeteerPage.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      // Esperar a que cargue contenido nuevo
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Verificar si hay un botón "Cargar más" y hacer clic
+      const loadMoreClicked = await puppeteerPage.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const loadBtn = buttons.find(btn =>
+          btn.textContent.toLowerCase().includes('cargar') ||
+          btn.textContent.toLowerCase().includes('más') ||
+          btn.textContent.toLowerCase().includes('load') ||
+          btn.textContent.toLowerCase().includes('more')
+        );
+
+        if (loadBtn && !loadBtn.disabled) {
+          loadBtn.click();
+          return true;
+        }
+        return false;
+      });
+
+      if (loadMoreClicked) {
+        console.log('[Ikigai Search] Botón "Cargar más" clickeado');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // Verificar si la altura cambió (se cargó más contenido)
+      const currentHeight = await puppeteerPage.evaluate(() => document.body.scrollHeight);
+
+      if (currentHeight === previousHeight) {
+        // No hay más contenido para cargar
+        console.log('[Ikigai Search] No se detectó más contenido nuevo');
+        break;
+      }
+
+      previousHeight = currentHeight;
+      scrollAttempts++;
+      console.log(`[Ikigai Search] Scroll ${scrollAttempts}: altura ${currentHeight}px`);
+    }
+
+    console.log(`[Ikigai Search] Scroll completado después de ${scrollAttempts} intentos`);
 
     // Verificar si hay contenido en la página
     const pageContent = await puppeteerPage.content();
     console.log('[Ikigai Search] Tamaño de HTML:', pageContent.length);
 
-    // Contar enlaces totales primero
+    // Contar enlaces totales
     const linkCount = await puppeteerPage.evaluate(() => {
       return document.querySelectorAll('a').length;
     });
     console.log(`[Ikigai Search] Total de enlaces en página: ${linkCount}`);
 
-    // Intentar múltiples estrategias para encontrar series
-    let seriesFound = false;
-    let seriesLinkCount = 0;
-
-    // Estrategia 1: Esperar por enlaces /series/
-    try {
-      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 5000 });
-      seriesFound = true;
-      console.log('[Ikigai Search] ✓ Estrategia 1: Enlaces encontrados');
-    } catch (e) {
-      console.log('[Ikigai Search] ✗ Estrategia 1 falló');
-    }
-
-    // Estrategia 2: Esperar a que haya imágenes (las series tienen portadas)
-    if (!seriesFound) {
-      try {
-        await puppeteerPage.waitForSelector('img', { timeout: 5000 });
-        seriesFound = true;
-        console.log('[Ikigai Search] ✓ Estrategia 2: Imágenes encontradas');
-      } catch (e) {
-        console.log('[Ikigai Search] ✗ Estrategia 2 falló');
-      }
-    }
-
     // Contar enlaces que contienen /series/
-    seriesLinkCount = await puppeteerPage.evaluate(() => {
+    const seriesLinkCount = await puppeteerPage.evaluate(() => {
       return document.querySelectorAll('a[href*="/series/"]').length;
     });
     console.log(`[Ikigai Search] Enlaces de series encontrados: ${seriesLinkCount}`);
 
-    // Si no hay series, intentar scroll para trigger lazy loading
     if (seriesLinkCount === 0) {
-      console.log('[Ikigai Search] Intentando scroll para activar lazy loading...');
-      await puppeteerPage.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      seriesLinkCount = await puppeteerPage.evaluate(() => {
-        return document.querySelectorAll('a[href*="/series/"]').length;
-      });
-      console.log(`[Ikigai Search] Enlaces después de scroll: ${seriesLinkCount}`);
-    }
-
-    if (seriesLinkCount === 0) {
-      console.warn('[Ikigai Search] No se encontraron series después de todas las estrategias');
+      console.warn('[Ikigai Search] No se encontraron series después del scroll');
       await browser.close();
       return res.status(200).json({
         results: [],
         page,
-        hasMore: false
+        hasMore: false,
+        scrollAttempts
       });
     }
 
@@ -212,17 +228,17 @@ export default async function handler(req, res) {
 
         // Extraer título (buscar h3, h2, h1 dentro del enlace)
         const titleElement = link.querySelector('h3') ||
-                            link.querySelector('h2') ||
-                            link.querySelector('h1');
+          link.querySelector('h2') ||
+          link.querySelector('h1');
         const title = titleElement?.textContent?.trim() ||
-                     link.getAttribute('title') ||
-                     link.getAttribute('alt') || '';
+          link.getAttribute('title') ||
+          link.getAttribute('alt') || '';
 
         // Extraer imagen
         const imgElement = link.querySelector('img');
         const cover = imgElement?.src ||
-                     imgElement?.getAttribute('src') ||
-                     imgElement?.srcset?.split(' ')[0] || '';
+          imgElement?.getAttribute('src') ||
+          imgElement?.srcset?.split(' ')[0] || '';
 
         // Extraer slug de la URL
         let slug = '';
@@ -247,39 +263,16 @@ export default async function handler(req, res) {
       }).filter(item => item !== null);
     });
 
-    // Verificar si hay página siguiente para paginación
-    const hasMore = await puppeteerPage.evaluate(() => {
-      // Buscar botón de siguiente página
-      const nextSelectors = [
-        'button.next-page:not(.disabled)',
-        'a.next-page:not(.disabled)',
-        'button.siguiente:not(.disabled)',
-        'a.siguiente:not(.disabled)',
-        '.pagination .next:not(.disabled)',
-        '.pagination a[rel="next"]',
-        'a[aria-label="Next"]:not(.disabled)',
-        'button[aria-label="Next"]:not(.disabled)'
-      ];
-
-      for (const selector of nextSelectors) {
-        const btn = document.querySelector(selector);
-        if (btn && !btn.disabled && !btn.classList.contains('disabled')) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-
     await browser.close();
 
     console.log(`[Ikigai Search] ${results.length} resultados encontrados`);
-    console.log(`[Ikigai Search] ¿Hay más páginas?: ${hasMore}`);
 
     return res.status(200).json({
       results,
       page,
-      hasMore
+      hasMore: false, // Con scroll infinito, cargamos todo de una vez
+      scrollAttempts,
+      totalResults: results.length
     });
 
   } catch (error) {
