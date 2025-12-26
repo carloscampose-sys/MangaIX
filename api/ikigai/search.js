@@ -375,7 +375,7 @@ export default async function handler(req, res) {
 
 // Función helper para construir URL
 function buildSearchUrl(query, filters, page) {
-  const baseUrl = 'https://viralikigai.ozoviral.xyz/series/';
+  const baseUrl = 'https://viralikigai.foodib.net/series/';
   const params = new URLSearchParams();
 
   // Tipos
