@@ -5,12 +5,14 @@
 
 import * as tumanga from './tumanga';
 import * as manhwaweb from './manhwaweb';
+import * as ikigai from './ikigai';
 import { getSourceById } from './sources';
 
 // Mapa de servicios por fuente
 const serviceMap = {
     tumanga,
-    manhwaweb
+    manhwaweb,
+    ikigai
 };
 
 /**
@@ -31,13 +33,15 @@ function getService(source) {
 export async function unifiedSearch(query, filters, source, page = 1) {
     try {
         const service = getService(source);
-        
+
         if (source === 'tumanga') {
             return await service.searchTuManga(query, filters);
         } else if (source === 'manhwaweb') {
             return await service.searchManhwaWeb(query, filters, page);
+        } else if (source === 'ikigai') {
+            return await service.searchIkigai(query, filters, page);
         }
-        
+
         return [];
     } catch (error) {
         console.error(`[Unified] Error en búsqueda (${source}):`, error);
@@ -51,13 +55,15 @@ export async function unifiedSearch(query, filters, source, page = 1) {
 export async function unifiedGetDetails(slug, source) {
     try {
         const service = getService(source);
-        
+
         if (source === 'tumanga') {
             return await service.getTuMangaDetails(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebDetails(slug);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiDetails(slug);
         }
-        
+
         return null;
     } catch (error) {
         console.error(`[Unified] Error obteniendo detalles (${source}):`, error);
@@ -71,13 +77,15 @@ export async function unifiedGetDetails(slug, source) {
 export async function unifiedGetChapters(slug, source) {
     try {
         const service = getService(source);
-        
+
         if (source === 'tumanga') {
             return await service.getTuMangaChapters(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebChapters(slug);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiChapters(slug);
         }
-        
+
         return [];
     } catch (error) {
         console.error(`[Unified] Error obteniendo capítulos (${source}):`, error);
@@ -91,13 +99,15 @@ export async function unifiedGetChapters(slug, source) {
 export async function unifiedGetPages(slug, chapter, source) {
     try {
         const service = getService(source);
-        
+
         if (source === 'tumanga') {
             return await service.getTuMangaPages(slug, chapter);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiPages(slug, chapter);
         }
-        
+
         return [];
     } catch (error) {
         console.error(`[Unified] Error obteniendo páginas (${source}):`, error);
@@ -111,13 +121,15 @@ export async function unifiedGetPages(slug, chapter, source) {
 export async function unifiedGetRandom(genreIds, source) {
     try {
         const service = getService(source);
-        
+
         if (source === 'tumanga') {
             return await service.getRandomManga(genreIds);
         } else if (source === 'manhwaweb') {
             return await service.getRandomManhwaWeb(genreIds);
+        } else if (source === 'ikigai') {
+            return await service.getRandomIkigai(genreIds);
         }
-        
+
         return null;
     } catch (error) {
         console.error(`[Unified] Error obteniendo aleatorio (${source}):`, error);
@@ -138,21 +150,26 @@ export function unifiedNormalizeTitle(title, source) {
  */
 export async function searchAllSources(query, filters) {
     try {
-        const [tumangaResults, manhwawebResults] = await Promise.allSettled([
+        const [tumangaResults, manhwawebResults, ikigaiResults] = await Promise.allSettled([
             unifiedSearch(query, filters, 'tumanga'),
-            unifiedSearch(query, filters, 'manhwaweb')
+            unifiedSearch(query, filters, 'manhwaweb'),
+            unifiedSearch(query, filters, 'ikigai')
         ]);
-        
+
         const results = [];
-        
+
         if (tumangaResults.status === 'fulfilled') {
             results.push(...tumangaResults.value);
         }
-        
+
         if (manhwawebResults.status === 'fulfilled') {
             results.push(...manhwawebResults.value);
         }
-        
+
+        if (ikigaiResults.status === 'fulfilled') {
+            results.push(...ikigaiResults.value);
+        }
+
         return results;
     } catch (error) {
         console.error('[Unified] Error en búsqueda multi-fuente:', error);

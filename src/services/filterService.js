@@ -24,9 +24,17 @@ import {
     MANHWAWEB_MOODS
 } from './manhwawebFilters';
 
+import {
+    IKIGAI_GENRES,
+    IKIGAI_TYPES,
+    IKIGAI_STATUSES,
+    IKIGAI_SORT_OPTIONS,
+    IKIGAI_MOODS
+} from './ikigaiFilters';
+
 /**
  * Obtiene los filtros disponibles según la fuente
- * @param {string} source - 'tumanga' o 'manhwaweb'
+ * @param {string} source - 'tumanga', 'manhwaweb' o 'ikigai'
  * @returns {object} Objeto con todos los filtros disponibles para esa fuente
  */
 export const getFiltersForSource = (source) => {
@@ -47,7 +55,7 @@ export const getFiltersForSource = (source) => {
             demographics: []
         };
     }
-    
+
     if (source === 'manhwaweb') {
         return {
             genres: MANHWAWEB_GENRES,
@@ -63,7 +71,26 @@ export const getFiltersForSource = (source) => {
             formats: []
         };
     }
-    
+
+    if (source === 'ikigai') {
+        return {
+            genres: IKIGAI_GENRES,
+            types: IKIGAI_TYPES,
+            status: IKIGAI_STATUSES,
+            sortOptions: IKIGAI_SORT_OPTIONS,
+            moods: IKIGAI_MOODS,
+            hasAdvancedFilters: true,
+            hasSortOptions: true,
+            hasPagination: true,
+            // Campos vacíos para consistencia
+            formats: [],
+            erotic: [],
+            demographics: [],
+            sortBy: [],
+            sortOrder: []
+        };
+    }
+
     // Fallback a TuManga si la fuente no es reconocida
     console.warn(`Fuente desconocida: ${source}, usando TuManga por defecto`);
     return getFiltersForSource('tumanga');
@@ -98,7 +125,7 @@ export const getGenresForSource = (source) => {
 export const validateFiltersForSource = (filters, source) => {
     const availableFilters = getFiltersForSource(source);
     const validatedFilters = {};
-    
+
     if (source === 'tumanga') {
         // Permitir genres, formats, sortBy, sortOrder, page
         if (filters.genres) validatedFilters.genres = filters.genres;
@@ -115,8 +142,14 @@ export const validateFiltersForSource = (filters, source) => {
         if (filters.demographic) validatedFilters.demographic = filters.demographic;
         if (filters.sortBy) validatedFilters.sortBy = filters.sortBy;
         if (filters.sortOrder) validatedFilters.sortOrder = filters.sortOrder;
+    } else if (source === 'ikigai') {
+        // Permitir filtros de Ikigai
+        if (filters.genres) validatedFilters.genres = filters.genres;
+        if (filters.types) validatedFilters.types = filters.types;
+        if (filters.statuses) validatedFilters.statuses = filters.statuses;
+        if (filters.sortBy) validatedFilters.sortBy = filters.sortBy;
     }
-    
+
     return validatedFilters;
 };
 
@@ -135,7 +168,7 @@ export const getEmptyFiltersForSource = (source) => {
             page: 0
         };
     }
-    
+
     if (source === 'manhwaweb') {
         return {
             genres: [],
@@ -147,6 +180,15 @@ export const getEmptyFiltersForSource = (source) => {
             sortOrder: ''
         };
     }
-    
+
+    if (source === 'ikigai') {
+        return {
+            genres: [],
+            types: [],
+            statuses: [],
+            sortBy: ''
+        };
+    }
+
     return {};
 };

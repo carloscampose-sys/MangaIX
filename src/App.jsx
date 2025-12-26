@@ -45,6 +45,12 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
   const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
 
+  // Filtros específicos de Ikigai (Tipos, Estados, Ordenar)
+  // Estos estados solo se usan cuando selectedSource === 'ikigai'
+  const [selectedIkigaiTypes, setSelectedIkigaiTypes] = useState([]);
+  const [selectedIkigaiStatuses, setSelectedIkigaiStatuses] = useState([]);
+  const [selectedIkigaiSortBy, setSelectedIkigaiSortBy] = useState('');
+
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
@@ -172,7 +178,7 @@ const MainApp = ({ userName, userGender }) => {
 
       // Construir filtros según la fuente seleccionada
       let filters = {};
-      
+
       if (selectedSource === 'tumanga') {
         filters = {
           genres: selectedGenres,
@@ -198,6 +204,22 @@ const MainApp = ({ userName, userGender }) => {
           demographic: selectedDemographic,
           sortBy: selectedSortBy,
           sortOrder: selectedSortOrder
+        };
+      } else if (selectedSource === 'ikigai') {
+        // Para Ikigai, convertir IDs a values
+        const genreValues = selectedGenres.map(genreId => {
+          const genre = currentFilters.genres.find(g => g.id === genreId);
+          return genre ? genre.value : genreId;
+        });
+
+        console.log('[App] Ikigai - Géneros seleccionados (IDs):', selectedGenres);
+        console.log('[App] Ikigai - Géneros convertidos (values):', genreValues);
+
+        filters = {
+          genres: genreValues,
+          types: selectedIkigaiTypes,
+          statuses: selectedIkigaiStatuses,
+          sortBy: selectedIkigaiSortBy
         };
       }
       
@@ -499,15 +521,15 @@ const MainApp = ({ userName, userGender }) => {
                   <div className="flex justify-center gap-2 sm:gap-3 mb-4">
                     {getActiveSources().map(source => {
                       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                      const isDisabled = isLocal && source.id === 'manhwaweb';
-                      
+                      const isDisabled = isLocal && (source.id === 'manhwaweb' || source.id === 'ikigai');
+
                       return (
                         <button
                           key={source.id}
                           type="button"
                           onClick={() => {
                             if (isDisabled) {
-                              showToast(`⚠️ ManhwaWeb requiere Vercel. Usa TuManga en local 📚`);
+                              showToast(`⚠️ ${source.name} requiere Vercel. Usa TuManga en local 📚`);
                               return;
                             }
                             
@@ -525,6 +547,10 @@ const MainApp = ({ userName, userGender }) => {
                             // Resetear ordenamiento de TuManga
                             setSelectedTuMangaSortBy('title');
                             setSelectedTuMangaSortOrder('asc');
+                            // Resetear filtros de Ikigai
+                            setSelectedIkigaiTypes([]);
+                            setSelectedIkigaiStatuses([]);
+                            setSelectedIkigaiSortBy('');
                             setCurrentPage(1); // Reset página también
                             
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
@@ -865,6 +891,95 @@ const MainApp = ({ userName, userGender }) => {
                                     ))}
                                   </select>
                                 </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Filtros Avanzados (solo Ikigai) */}
+                          {selectedSource === 'ikigai' && currentFilters.hasAdvancedFilters && (
+                            <>
+                              {/* Tipos */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipos</h4>
+                                </div>
+                                <div className="flex gap-2">
+                                  {currentFilters.types.map(type => {
+                                    const isSelected = selectedIkigaiTypes.includes(type.value);
+                                    return (
+                                      <button
+                                        key={type.id}
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            setSelectedIkigaiTypes(selectedIkigaiTypes.filter(t => t !== type.value));
+                                          } else {
+                                            setSelectedIkigaiTypes([...selectedIkigaiTypes, type.value]);
+                                          }
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                          isSelected
+                                            ? 'bg-pink-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-pink-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {type.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Estados */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Estado</h4>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {currentFilters.status.map(status => {
+                                    const isSelected = selectedIkigaiStatuses.includes(status.value);
+                                    return (
+                                      <button
+                                        key={status.id}
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            setSelectedIkigaiStatuses(selectedIkigaiStatuses.filter(s => s !== status.value));
+                                          } else {
+                                            setSelectedIkigaiStatuses([...selectedIkigaiStatuses, status.value]);
+                                          }
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                          isSelected
+                                            ? 'bg-purple-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-purple-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {status.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Ordenar */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 ml-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Ordenar</h4>
+                                </div>
+                                <select
+                                  value={selectedIkigaiSortBy}
+                                  onChange={(e) => setSelectedIkigaiSortBy(e.target.value)}
+                                  className="w-full px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                >
+                                  <option value="">Por defecto</option>
+                                  {currentFilters.sortOptions.map(sort => (
+                                    <option key={sort.value} value={sort.value}>
+                                      {sort.name}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             </>
                           )}

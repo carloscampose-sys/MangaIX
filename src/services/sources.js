@@ -25,6 +25,17 @@ export const SOURCES = {
         textColor: 'text-purple-500',
         features: ['search', 'details', 'chapters', 'read'],
         status: 'active'
+    },
+    IKIGAI: {
+        id: 'ikigai',
+        name: 'Ikigai',
+        icon: '🌸',
+        baseUrl: 'https://viralikigai.eurofiyati.online',
+        color: 'bg-pink-500',
+        hoverColor: 'hover:bg-pink-600',
+        textColor: 'text-pink-500',
+        features: ['search', 'details', 'chapters', 'read', 'random'],
+        status: 'active'
     }
 };
 
