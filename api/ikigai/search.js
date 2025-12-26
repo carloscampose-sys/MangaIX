@@ -257,11 +257,19 @@ export default async function handler(req, res) {
 
         console.log(`[Ikigai Eval ${index}] slug: ${slug}, title: ${title}, cover: ${cover ? 'yes' : 'no'}`);
 
-        // Solo retornar si tenemos slug (obligatorio) y al menos título o portada
+        // Solo retornar si tenemos slug (obligatorio)
         if (!slug) {
           console.log(`[Ikigai Eval ${index}] ✗ DESCARTADO: sin slug`);
           return null;
         }
+
+        // Validar que tengamos al menos título o portada
+        if (!title && !cover) {
+          console.log(`[Ikigai Eval ${index}] ✗ DESCARTADO: sin título ni portada (slug: ${slug})`);
+          return null;
+        }
+
+        console.log(`[Ikigai Eval ${index}] ✓ VÁLIDO: ${slug}`);
 
         return {
           id: `ikigai-${slug}-${Date.now()}-${index}`,
@@ -294,10 +302,25 @@ export default async function handler(req, res) {
     });
 
     // Verificar si hay página siguiente para paginación
-    const paginationInfo = await puppeteerPage.evaluate(() => {
-      // Buscar botón de siguiente página con múltiples estrategias
+    // NOTA: Ikigai usa paginación numérica (1, 2, 3, ...)
+    const paginationInfo = await puppeteerPage.evaluate((currentPage) => {
+      // Estrategia 1: Buscar indicadores de carga (spinner, loading, etc)
+      const loadingIndicators = document.querySelectorAll(
+        '[class*="loading"], [class*="spinner"], [class*="loader"], [aria-busy="true"]'
+      );
+      const hasLoadingIndicator = loadingIndicators.length > 0;
 
-      // Estrategia 1: Buscar por selectores específicos
+      // Estrategia 2: Buscar botón "Cargar más" o similar
+      const loadMoreButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
+        const text = el.textContent.toLowerCase();
+        return text.includes('cargar más') || 
+               text.includes('load more') || 
+               text.includes('ver más') ||
+               text.includes('show more');
+      });
+      const hasLoadMoreButton = loadMoreButtons.length > 0;
+
+      // Estrategia 3: Buscar botones de paginación tradicional (siguiente/next)
       const nextSelectors = [
         'button.next-page:not(.disabled)',
         'a.next-page:not(.disabled)',
@@ -312,20 +335,20 @@ export default async function handler(req, res) {
         '[class*="pagination"] a:not(.disabled):last-child'
       ];
 
-      let found = false;
+      let hasNextButton = false;
       let foundBy = null;
 
       for (const selector of nextSelectors) {
         const btn = document.querySelector(selector);
         if (btn && !btn.disabled && !btn.classList.contains('disabled')) {
-          found = true;
+          hasNextButton = true;
           foundBy = selector;
           break;
         }
       }
 
-      // Estrategia 2: Buscar cualquier botón o enlace que contenga texto de "siguiente"
-      if (!found) {
+      // Estrategia 4: Buscar texto de "siguiente" en botones
+      if (!hasNextButton) {
         const allButtons = Array.from(document.querySelectorAll('button, a'));
         const nextButton = allButtons.find(btn => {
           const text = btn.textContent.toLowerCase();
@@ -333,8 +356,8 @@ export default async function handler(req, res) {
           return (
             (text.includes('siguiente') ||
              text.includes('next') ||
-             text.includes('>') ||
-             text.includes('→') ||
+             text === '>' ||
+             text === '→' ||
              ariaLabel.includes('siguiente') ||
              ariaLabel.includes('next')) &&
             !btn.disabled &&
@@ -342,47 +365,108 @@ export default async function handler(req, res) {
           );
         });
         if (nextButton) {
-          found = true;
+          hasNextButton = true;
           foundBy = 'text search';
         }
       }
 
-      // Debug: Listar TODOS los botones y enlaces de la página
-      const allButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
-        const text = el.textContent.toLowerCase();
-        return text.includes('siguiente') || text.includes('next') || text.includes('página') || text.includes('page') || /^\d+$/.test(text.trim());
+      // Estrategia 5: NUEVA - Buscar botones numéricos (1, 2, 3, ...)
+      // Ikigai usa paginación numérica, buscar si existe un número mayor a la página actual
+      let hasNumericNext = false;
+      const allButtons = Array.from(document.querySelectorAll('button, a'));
+      const numericButtons = allButtons.filter(btn => {
+        const text = btn.textContent.trim();
+        return /^\d+$/.test(text); // Solo números
       });
 
-      const paginationDebug = allButtons.map(el => ({
+      // Buscar si hay un botón con número mayor a currentPage
+      const nextPageNumber = currentPage + 1;
+      const hasNextPageButton = numericButtons.some(btn => {
+        const pageNum = parseInt(btn.textContent.trim());
+        return pageNum === nextPageNumber && 
+               !btn.disabled && 
+               !btn.classList.contains('disabled');
+      });
+
+      if (hasNextPageButton) {
+        hasNumericNext = true;
+        foundBy = foundBy || 'numeric pagination';
+      }
+
+      // Debug: Listar TODOS los botones y enlaces relacionados con paginación
+      const paginationButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
+        const text = el.textContent.toLowerCase();
+        return text.includes('siguiente') || 
+               text.includes('next') || 
+               text.includes('página') || 
+               text.includes('page') ||
+               text.includes('cargar') ||
+               text.includes('load') ||
+               text.includes('más') ||
+               text.includes('more') ||
+               /^\d+$/.test(text.trim()) ||
+               text === '>' ||
+               text === '→';
+      });
+
+      const paginationDebug = paginationButtons.map(el => ({
         tag: el.tagName,
         text: el.textContent.trim(),
         classes: el.className,
         disabled: el.disabled || el.classList.contains('disabled'),
-        href: el.href || null
+        href: el.href || null,
+        ariaLabel: el.getAttribute('aria-label')
       }));
 
-      console.log('[Ikigai Eval] Botones/enlaces que parecen paginación:', paginationDebug.length);
+      console.log('[Ikigai Eval] Página actual:', currentPage);
+      console.log('[Ikigai Eval] Indicadores de carga encontrados:', loadingIndicators.length);
+      console.log('[Ikigai Eval] Botones "Cargar más" encontrados:', loadMoreButtons.length);
+      console.log('[Ikigai Eval] Botones numéricos encontrados:', numericButtons.length);
+      console.log('[Ikigai Eval] ¿Existe botón página', nextPageNumber + '?:', hasNextPageButton);
+      console.log('[Ikigai Eval] Botones de paginación encontrados:', paginationDebug.length);
+
+      // Determinar si hay más contenido
+      const hasMore = hasLoadingIndicator || hasLoadMoreButton || hasNextButton || hasNumericNext;
+      const detectionMethod = hasLoadingIndicator ? 'loading indicator' :
+                             hasLoadMoreButton ? 'load more button' :
+                             hasNumericNext ? 'numeric pagination' :
+                             hasNextButton ? foundBy || 'next button' :
+                             'none';
 
       return {
-        hasMore: found,
-        foundBy,
-        paginationDebug
+        hasMore,
+        foundBy: detectionMethod,
+        paginationDebug,
+        hasLoadingIndicator,
+        hasLoadMoreButton,
+        hasNextButton,
+        hasNumericNext,
+        currentPage,
+        nextPageNumber
       };
-    });
+    }, page);
 
     await browser.close();
 
     console.log(`[Ikigai Search] ${results.length} resultados encontrados (después de ${scrollAttempts} scrolls)`);
     console.log(`[Ikigai Search] ¿Hay más páginas?: ${paginationInfo.hasMore}`);
-    console.log(`[Ikigai Search] Botón encontrado por: ${paginationInfo.foundBy}`);
-    console.log(`[Ikigai Search] Elementos de paginación:`, JSON.stringify(paginationInfo.paginationDebug));
+    console.log(`[Ikigai Search] Método de detección: ${paginationInfo.foundBy}`);
+    console.log(`[Ikigai Search] - Loading indicator: ${paginationInfo.hasLoadingIndicator}`);
+    console.log(`[Ikigai Search] - Load more button: ${paginationInfo.hasLoadMoreButton}`);
+    console.log(`[Ikigai Search] - Next button: ${paginationInfo.hasNextButton}`);
+    console.log(`[Ikigai Search] - Numeric next (página ${paginationInfo.nextPageNumber}): ${paginationInfo.hasNumericNext}`);
+    console.log(`[Ikigai Search] Elementos de paginación encontrados:`, paginationInfo.paginationDebug.length);
+    if (paginationInfo.paginationDebug.length > 0) {
+      console.log(`[Ikigai Search] Detalles:`, JSON.stringify(paginationInfo.paginationDebug, null, 2));
+    }
 
     return res.status(200).json({
       results,
       page,
       hasMore: paginationInfo.hasMore,
       scrollAttempts,
-      paginationDebug: paginationInfo.paginationDebug
+      paginationDebug: paginationInfo.paginationDebug,
+      detectionMethod: paginationInfo.foundBy
     });
 
   } catch (error) {
