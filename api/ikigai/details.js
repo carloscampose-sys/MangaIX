@@ -67,15 +67,43 @@ export default async function handler(req, res) {
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
     // Buscar todos los botones y buscar por texto
     try {
-      const buttons = await page.$$('button');
-      for (const button of buttons) {
-        const text = await page.evaluate(el => el.textContent, button);
-        if (text && text.toLowerCase().includes('ver más')) {
-          console.log('[Ikigai Details] Botón "Ver más" encontrado');
-          await button.click();
+      // Intentar múltiples selectores para el botón
+      const buttonSelectors = [
+        'button:has-text("Ver más")',
+        'button:has-text("ver más")',
+        'a:has-text("Ver más")',
+        'button[class*="expand"]',
+        'button[class*="more"]'
+      ];
+
+      let buttonFound = false;
+
+      // Primero buscar con selectores específicos
+      for (const selector of buttonSelectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 1000 });
+          await page.click(selector);
+          console.log(`[Ikigai Details] Botón "Ver más" encontrado con selector: ${selector}`);
           await new Promise(resolve => setTimeout(resolve, 500));
-          console.log('[Ikigai Details] Sinopsis expandida');
+          buttonFound = true;
           break;
+        } catch (e) {
+          // Intentar siguiente selector
+        }
+      }
+
+      // Si no funcionó, buscar manualmente
+      if (!buttonFound) {
+        const buttons = await page.$$('button, a');
+        for (const button of buttons) {
+          const text = await page.evaluate(el => el.textContent, button);
+          if (text && (text.toLowerCase().includes('ver más') || text.toLowerCase().includes('leer más'))) {
+            console.log('[Ikigai Details] Botón "Ver más" encontrado manualmente');
+            await button.click();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('[Ikigai Details] Sinopsis expandida');
+            break;
+          }
         }
       }
     } catch (e) {
@@ -107,16 +135,34 @@ export default async function handler(req, res) {
       const possibleSynopsisElements = [
         document.querySelector('p[class*="synopsis"]'),
         document.querySelector('p[class*="description"]'),
+        document.querySelector('p[class*="sinopsis"]'),
         document.querySelector('div[class*="synopsis"]'),
         document.querySelector('div[class*="description"]'),
-        // Buscar el primer párrafo largo (más de 100 caracteres)
+        document.querySelector('div[class*="sinopsis"]'),
+        document.querySelector('div[id*="synopsis"]'),
+        document.querySelector('div[id*="description"]'),
+        // Buscar párrafos largos (más de 100 caracteres)
         ...Array.from(document.querySelectorAll('p')).filter(p => p.textContent.length > 100)
       ];
 
       for (const el of possibleSynopsisElements) {
         if (el && el.textContent.trim().length > 50) {
           synopsis = el.textContent.trim();
+          // Limpiar texto duplicado si existe
+          synopsis = synopsis.replace(/ver más/gi, '').trim();
           break;
+        }
+      }
+
+      // Si no se encontró sinopsis, buscar en todo el contenido
+      if (!synopsis || synopsis.length < 30) {
+        const contentDivs = Array.from(document.querySelectorAll('div')).filter(div => {
+          const text = div.textContent || '';
+          return text.length > 150 && text.length < 1000;
+        });
+
+        if (contentDivs.length > 0) {
+          synopsis = contentDivs[0].textContent.trim();
         }
       }
 

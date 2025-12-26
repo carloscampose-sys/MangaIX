@@ -82,8 +82,9 @@ export default async function handler(req, res) {
 
         // Buscar enlaces de capítulos
         // Estos típicamente contienen /leer/ o /read/ en la URL
+        // También pueden estar en otras rutas
         try {
-          await page.waitForSelector('a[href*="/leer/"], a[href*="/read/"]', { timeout: 4000 });
+          await page.waitForSelector('a[href*="/leer/"], a[href*="/read/"], a[class*="chapter"], a[class*="capitulo"]', { timeout: 4000 });
           console.log(`[Ikigai Chapters] Enlaces de capítulos encontrados en página ${currentPage}`);
         } catch (e) {
           console.warn(`[Ikigai Chapters] No se encontraron capítulos en página ${currentPage}`);
@@ -94,7 +95,8 @@ export default async function handler(req, res) {
         // Extraer capítulos de esta página
         const chaptersOnPage = await page.evaluate(() => {
           // Buscar todos los enlaces que apuntan a /leer/ o /read/
-          const chapterLinks = document.querySelectorAll('a[href*="/leer/"], a[href*="/read/"]');
+          // También buscar por clases que indiquen capítulos
+          const chapterLinks = document.querySelectorAll('a[href*="/leer/"], a[href*="/read/"], a[class*="chapter"], a[class*="capitulo"]');
 
           return Array.from(chapterLinks).map(link => {
             const href = link.getAttribute('href');
@@ -107,24 +109,35 @@ export default async function handler(req, res) {
             // /read/serie-name-1/
             let chapter = '';
 
-            // Primero intentar con el patrón más específico
+            // Primero intentar con el patrón más específico (número al final)
             const urlMatch = href.match(/-(\d+\.?\d*)\/?\s*$/);
             if (urlMatch) {
               chapter = urlMatch[1];
             } else {
-              // Intentar buscar "capitulo-X" o "chapter-X"
-              const chapterMatch = href.match(/(?:capitulo|chapter)-(\d+\.?\d*)/i);
+              // Intentar buscar "capitulo-X" o "chapter-X" o "cap-X"
+              const chapterMatch = href.match(/(?:capitulo|chapter|cap)-(\d+\.?\d*)/i);
               if (chapterMatch) {
                 chapter = chapterMatch[1];
               }
             }
 
-            // Si no se pudo extraer del URL, intentar del texto
+            // Si no se pudo extraer del URL, intentar del texto del enlace
             if (!chapter) {
               const text = link.textContent || '';
-              const textMatch = text.match(/cap[íi]tulo\s*(\d+\.?\d*)|chapter\s*(\d+\.?\d*)|#\s*(\d+\.?\d*)|(\d+\.?\d*)/i);
-              if (textMatch) {
-                chapter = textMatch[1] || textMatch[2] || textMatch[3] || textMatch[4];
+              const textPatterns = [
+                /cap[íi]tulo\s*(\d+\.?\d*)/i,
+                /chapter\s*(\d+\.?\d*)/i,
+                /cap\s*(\d+\.?\d*)/i,
+                /#\s*(\d+\.?\d*)/,
+                /(\d+\.?\d*)/
+              ];
+
+              for (const pattern of textPatterns) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                  chapter = match[1];
+                  break;
+                }
               }
             }
 

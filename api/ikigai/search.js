@@ -189,11 +189,16 @@ export default async function handler(req, res) {
         // Debe tener href válido
         if (!href || href === '/series/' || href === '/series') return false;
 
+        // Excluir enlaces de navegación (inicio, biblioteca, etc)
+        const excludePatterns = ['/clasificacion', '/lists/', '/grupos/'];
+        if (excludePatterns.some(pattern => href.includes(pattern))) return false;
+
         // Debe tener contenido (imagen o título)
         const hasImage = link.querySelector('img') !== null;
         const hasTitle = link.querySelector('h3, h2, h1') !== null;
+        const hasText = link.textContent && link.textContent.trim().length > 2;
 
-        return hasImage || hasTitle;
+        return (hasImage || hasTitle || hasText) && href.split('/series/')[1]?.length > 1;
       });
 
       console.log('[Ikigai Eval] Enlaces válidos después de filtrar:', validLinks.length);
@@ -238,14 +243,39 @@ export default async function handler(req, res) {
       }).filter(item => item !== null);
     });
 
+    // Verificar si hay página siguiente para paginación
+    const hasMore = await puppeteerPage.evaluate(() => {
+      // Buscar botón de siguiente página
+      const nextSelectors = [
+        'button.next-page:not(.disabled)',
+        'a.next-page:not(.disabled)',
+        'button.siguiente:not(.disabled)',
+        'a.siguiente:not(.disabled)',
+        '.pagination .next:not(.disabled)',
+        '.pagination a[rel="next"]',
+        'a[aria-label="Next"]:not(.disabled)',
+        'button[aria-label="Next"]:not(.disabled)'
+      ];
+
+      for (const selector of nextSelectors) {
+        const btn = document.querySelector(selector);
+        if (btn && !btn.disabled && !btn.classList.contains('disabled')) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
     await browser.close();
 
     console.log(`[Ikigai Search] ${results.length} resultados encontrados`);
+    console.log(`[Ikigai Search] ¿Hay más páginas?: ${hasMore}`);
 
     return res.status(200).json({
       results,
       page,
-      hasMore: results.length > 0
+      hasMore
     });
 
   } catch (error) {
