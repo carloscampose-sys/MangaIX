@@ -112,13 +112,86 @@ export default async function handler(req, res) {
 
     // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
-    try {
-      await puppeteerPage.goto(searchUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000
-      });
-    } catch (e) {
-      console.log('[Ikigai Search] Timeout en navegación, continuando...');
+    
+    // Si hay un término de búsqueda, usar la página de búsqueda interactiva
+    // en lugar de navegar directamente con parámetros
+    if (query && query.trim()) {
+      console.log('[Ikigai Search] Usando búsqueda interactiva con checkbox...');
+      
+      // Navegar a la página base de series
+      const baseSeriesUrl = 'https://viralikigai.foodib.net/series/';
+      try {
+        await puppeteerPage.goto(baseSeriesUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
+      } catch (e) {
+        console.log('[Ikigai Search] Timeout en navegación inicial, continuando...');
+      }
+
+      // Esperar a que cargue la página
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Buscar el input de búsqueda y escribir
+      console.log('[Ikigai Search] Buscando input de búsqueda...');
+      const searchInput = await puppeteerPage.$('input[type="search"]');
+      
+      if (searchInput) {
+        console.log('[Ikigai Search] ✓ Input encontrado, escribiendo query...');
+        await searchInput.click();
+        await searchInput.type(query.trim(), { delay: 100 });
+        
+        // Esperar a que aparezcan resultados
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Buscar y marcar el checkbox de "Coincidencia Exacta"
+        console.log('[Ikigai Search] Buscando checkbox de Coincidencia Exacta...');
+        
+        // El checkbox no tiene id/name, así que buscamos por el label
+        const checkboxes = await puppeteerPage.$$('input[type="checkbox"]');
+        
+        for (const checkbox of checkboxes) {
+          const labelText = await puppeteerPage.evaluate(cb => {
+            const label = cb.labels?.[0]?.textContent || cb.parentElement?.textContent || '';
+            return label.trim();
+          }, checkbox);
+          
+          if (labelText.includes('Coincidencia Exacta')) {
+            const isChecked = await puppeteerPage.evaluate(cb => cb.checked, checkbox);
+            
+            if (!isChecked) {
+              console.log('[Ikigai Search] ✓ Checkbox encontrado, marcándolo...');
+              await checkbox.click();
+              // Esperar a que se filtren los resultados
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+              console.log('[Ikigai Search] ✓ Checkbox ya estaba marcado');
+            }
+            break;
+          }
+        }
+      } else {
+        console.log('[Ikigai Search] ⚠ No se encontró input de búsqueda, usando URL directa');
+        // Fallback: usar la URL con parámetros
+        try {
+          await puppeteerPage.goto(searchUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
+        } catch (e) {
+          console.log('[Ikigai Search] Timeout en navegación, continuando...');
+        }
+      }
+    } else {
+      // Sin query, navegar directamente con filtros
+      try {
+        await puppeteerPage.goto(searchUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
+      } catch (e) {
+        console.log('[Ikigai Search] Timeout en navegación, continuando...');
+      }
     }
 
     console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');
@@ -534,10 +607,6 @@ function buildSearchUrl(query, filters, page) {
   // Query de búsqueda (si existe)
   if (query && query.trim()) {
     params.append('buscar', query.trim());
-    
-    // NUEVO: Agregar parámetro de coincidencia exacta
-    // Cuando el usuario busca por título, queremos resultados exactos
-    params.append('exacta', '1');
   }
 
   const queryString = params.toString();
