@@ -112,8 +112,16 @@ export default async function handler(req, res) {
 
     // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
+    
+    // ESTRATEGIA: Si hay query de búsqueda, navegar a la página base primero
+    // y luego usar el campo de búsqueda interactivo
+    const hasSearchQuery = query && query.trim();
+    const navigationUrl = hasSearchQuery ? 'https://viralikigai.foodib.net/series/' : searchUrl;
+    
+    console.log('[Ikigai Search] URL de navegación:', navigationUrl);
+    
     try {
-      await puppeteerPage.goto(searchUrl, {
+      await puppeteerPage.goto(navigationUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });
@@ -125,7 +133,42 @@ export default async function handler(req, res) {
 
     // Esperar a que el contenido JavaScript se renderice
     // Qwik toma tiempo en hidratar - esperamos más tiempo
-    await new Promise(resolve => setTimeout(resolve, 8000)); // 8 segundos para Qwik
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos inicial
+    
+    // Si hay búsqueda por texto, usar el campo de búsqueda del sitio
+    if (hasSearchQuery) {
+      console.log('[Ikigai Search] Usando búsqueda interactiva...');
+      
+      try {
+        // Buscar el input de búsqueda - Ikigai usa un input con placeholder "Buscar..."
+        const searchInputSelector = 'input[type="text"], input[placeholder*="uscar"], input[placeholder*="ombre"]';
+        
+        console.log('[Ikigai Search] Esperando input de búsqueda...');
+        await puppeteerPage.waitForSelector(searchInputSelector, { timeout: 10000 });
+        
+        console.log('[Ikigai Search] Input encontrado, escribiendo query...');
+        await puppeteerPage.type(searchInputSelector, query.trim(), { delay: 100 });
+        
+        // Esperar un momento para que se procese
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Presionar Enter para buscar
+        console.log('[Ikigai Search] Presionando Enter...');
+        await puppeteerPage.keyboard.press('Enter');
+        
+        // Esperar a que se actualicen los resultados (más tiempo para Qwik)
+        console.log('[Ikigai Search] Esperando resultados de búsqueda...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        console.log('[Ikigai Search] ✓ Búsqueda interactiva completada');
+      } catch (error) {
+        console.error('[Ikigai Search] Error en búsqueda interactiva:', error.message);
+        console.log('[Ikigai Search] Continuando con resultados actuales...');
+      }
+    } else {
+      // Sin búsqueda de texto, solo esperar más tiempo para que cargue
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
 
     // Verificar si hay contenido en la página
     const pageContent = await puppeteerPage.content();
@@ -313,6 +356,13 @@ export default async function handler(req, res) {
       }
 
       console.log('[Ikigai Eval] Total resultados únicos finales:', uniqueBySlug.length);
+      
+      // Log de los primeros 5 títulos para debugging
+      console.log('[Ikigai Eval] Primeros 5 títulos encontrados:');
+      uniqueBySlug.slice(0, 5).forEach((item, i) => {
+        console.log(`  ${i + 1}. ${item.title} (slug: ${item.slug})`);
+      });
+      
       return uniqueBySlug;
     });
 
@@ -532,10 +582,8 @@ function buildSearchUrl(query, filters, page) {
     params.append('pagina', page);
   }
 
-  // Query de búsqueda (si existe)
-  if (query && query.trim()) {
-    params.append('buscar', query.trim());
-  }
+  // NOTA: NO incluimos el parámetro 'buscar' aquí
+  // La búsqueda por texto se hace de forma interactiva usando el campo de búsqueda del sitio
 
   const queryString = params.toString();
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
