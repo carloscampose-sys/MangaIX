@@ -135,7 +135,7 @@ export default async function handler(req, res) {
       const scrollDelay = 500;
       
       let currentScroll = 0;
-      const maxScroll = document.body.scrollHeight;
+      let maxScroll = document.body.scrollHeight; // Cambié const por let
       
       while (currentScroll < maxScroll) {
         window.scrollTo(0, currentScroll);
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
         // Actualizar maxScroll por si se cargó más contenido
         const newMaxScroll = document.body.scrollHeight;
         if (newMaxScroll > maxScroll) {
-          maxScroll = newMaxScroll;
+          maxScroll = newMaxScroll; // Ahora sí se puede reasignar
         }
       }
       
