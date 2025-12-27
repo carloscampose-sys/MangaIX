@@ -342,46 +342,82 @@ export default async function handler(req, res) {
 
     // Navegar por las páginas restantes (2 a N)
     for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
-      console.log(`[Ikigai Chapters] Procesando página ${pageNum}...`);
+      console.log(`[Ikigai Chapters] ===== PROCESANDO PÁGINA ${pageNum} =====`);
 
       try {
-        // Hacer clic en el enlace de paginación en lugar de navegar
-        const clickedSuccessfully = await page.evaluate((targetPage) => {
-          // Buscar el enlace de la página específica
-          const links = Array.from(document.querySelectorAll('a[href*="pagina="]'));
-          const targetLink = links.find(link => {
-            const href = link.getAttribute('href') || '';
-            const match = href.match(/pagina=(\d+)/);
-            return match && parseInt(match[1], 10) === targetPage;
-          });
-          
-          if (targetLink) {
-            targetLink.click();
-            return true;
-          }
-          return false;
-        }, pageNum);
-
-        if (!clickedSuccessfully) {
-          console.warn(`[Ikigai Chapters] No se encontró enlace para página ${pageNum}, usando navegación directa`);
-          const pageUrl = `${baseUrl}?pagina=${pageNum}`;
-          await page.goto(pageUrl, {
-            waitUntil: 'domcontentloaded',
-            timeout: 30000
-          });
+        const pageUrl = `${baseUrl}?pagina=${pageNum}`;
+        console.log(`[Ikigai Chapters] Navegando a: ${pageUrl}`);
+        
+        // Usar navegación directa (más confiable que hacer clic)
+        await page.goto(pageUrl, {
+          waitUntil: 'networkidle0',
+          timeout: 30000
+        });
+        
+        console.log(`[Ikigai Chapters] Navegación completada para página ${pageNum}`);
+        
+        // Esperar a que aparezcan capítulos
+        console.log(`[Ikigai Chapters] Esperando a que aparezcan capítulos...`);
+        try {
+          await page.waitForSelector('a[href*="/capitulo/"]', { timeout: 10000 });
+          console.log(`[Ikigai Chapters] ✓ Selector de capítulos encontrado`);
+        } catch (e) {
+          console.warn(`[Ikigai Chapters] ⚠️ Timeout esperando selector de capítulos`);
         }
-
-        // Esperar a que cargue el contenido nuevo
+        
+        // Espera adicional para asegurar renderizado completo
         await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Debug: Verificar qué hay en la página ANTES de extraer
+        const debugInfo = await page.evaluate(() => {
+          const allLinks = document.querySelectorAll('a');
+          const capituloLinks = document.querySelectorAll('a[href*="/capitulo/"]');
+          const capituloLinksArray = Array.from(capituloLinks).map(link => ({
+            href: link.getAttribute('href'),
+            text: link.textContent.trim().substring(0, 50)
+          }));
+          
+          return {
+            url: window.location.href,
+            totalLinks: allLinks.length,
+            capituloLinks: capituloLinks.length,
+            bodyLength: document.body.innerText.length,
+            sampleLinks: capituloLinksArray.slice(0, 3)
+          };
+        });
+        
+        console.log(`[Ikigai Chapters] Debug página ${pageNum}:`, JSON.stringify(debugInfo, null, 2));
 
         // Extraer capítulos
         const pageChapters = await extractChaptersFromPage(page);
         console.log(`[Ikigai Chapters] Página ${pageNum}: ${pageChapters.length} capítulos encontrados`);
+        
+        if (pageChapters.length === 0) {
+          console.error(`[Ikigai Chapters] ❌ No se encontraron capítulos en página ${pageNum}`);
+        } else {
+          console.log(`[Ikigai Chapters] ✅ Capítulos extraídos exitosamente`);
+          // Mostrar muestra de capítulos
+          const sample = pageChapters.slice(0, 3).map(ch => `${ch.chapter}: ${ch.title.substring(0, 30)}`);
+          console.log(`[Ikigai Chapters] Muestra:`, sample);
+        }
+        
         allChaptersArrays.push(pageChapters);
 
       } catch (error) {
-        console.error(`[Ikigai Chapters] Error en página ${pageNum}:`, error.message);
-        console.log(`[Ikigai Chapters] Continuando con siguiente página...`);
+        console.error(`[Ikigai Chapters] ❌ Error en página ${pageNum}:`, error.message);
+        console.log(`[Ikigai Chapters] Stack:`, error.stack);
+        
+        // Intentar extraer capítulos de todas formas
+        try {
+          const pageChapters = await extractChaptersFromPage(page);
+          if (pageChapters.length > 0) {
+            console.log(`[Ikigai Chapters] ✅ Recuperados ${pageChapters.length} capítulos después del error`);
+            allChaptersArrays.push(pageChapters);
+          }
+        } catch (e) {
+          console.error(`[Ikigai Chapters] No se pudieron recuperar capítulos:`, e.message);
+        }
+        
         continue;
       }
     }
