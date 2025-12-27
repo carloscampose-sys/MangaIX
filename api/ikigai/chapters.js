@@ -215,7 +215,7 @@ function consolidateChapters(allChapters) {
  * @param {number} timeout - Tiempo máximo de espera en ms
  * @returns {Promise<boolean>} - true si completó, false si falló
  */
-async function waitForCloudflareChallenge(page, timeout = 20000) {
+async function waitForCloudflareChallenge(page, timeout = 15000) {
   try {
     await page.waitForFunction(() => {
       const title = document.title;
@@ -230,21 +230,15 @@ async function waitForCloudflareChallenge(page, timeout = 20000) {
     
     console.log('[waitForCloudflareChallenge] ✓ Challenge completado');
     
-    // Espera adicional para renderizado
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Espera reducida para renderizado
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     return true;
   } catch (error) {
-    console.warn('[waitForCloudflareChallenge] Timeout, intentando reload...');
-    
-    try {
-      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return true;
-    } catch (reloadError) {
-      console.error('[waitForCloudflareChallenge] Error en reload:', reloadError.message);
-      return false;
-    }
+    console.warn('[waitForCloudflareChallenge] Timeout esperando challenge');
+    // No hacer reload, simplemente esperar un poco más y continuar
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return true; // Continuar de todas formas
   }
 }
 
@@ -348,22 +342,37 @@ export default async function handler(req, res) {
 
     // Navegar por las páginas restantes (2 a N)
     for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
-      const pageUrl = `${baseUrl}?pagina=${pageNum}`;
-      console.log(`[Ikigai Chapters] Navegando a página ${pageNum}: ${pageUrl}`);
+      console.log(`[Ikigai Chapters] Procesando página ${pageNum}...`);
 
       try {
-        // Navegar a la página
-        await page.goto(pageUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        });
+        // Hacer clic en el enlace de paginación en lugar de navegar
+        const clickedSuccessfully = await page.evaluate((targetPage) => {
+          // Buscar el enlace de la página específica
+          const links = Array.from(document.querySelectorAll('a[href*="pagina="]'));
+          const targetLink = links.find(link => {
+            const href = link.getAttribute('href') || '';
+            const match = href.match(/pagina=(\d+)/);
+            return match && parseInt(match[1], 10) === targetPage;
+          });
+          
+          if (targetLink) {
+            targetLink.click();
+            return true;
+          }
+          return false;
+        }, pageNum);
 
-        // Esperar Cloudflare challenge
-        const pageChallenge = await waitForCloudflareChallenge(page);
-        if (!pageChallenge) {
-          console.error(`[Ikigai Chapters] Error en challenge de página ${pageNum}, continuando...`);
-          continue;
+        if (!clickedSuccessfully) {
+          console.warn(`[Ikigai Chapters] No se encontró enlace para página ${pageNum}, usando navegación directa`);
+          const pageUrl = `${baseUrl}?pagina=${pageNum}`;
+          await page.goto(pageUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
         }
+
+        // Esperar a que cargue el contenido nuevo
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Extraer capítulos
         const pageChapters = await extractChaptersFromPage(page);
