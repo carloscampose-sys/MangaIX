@@ -284,6 +284,7 @@ const MainApp = ({ userName, userGender }) => {
         const searchWords = searchTermNormalized.split(/\s+/).filter(w => w.length > 2);
         
         console.log('[App] Palabras de búsqueda:', searchWords);
+        console.log('[App] Total resultados antes de filtrar:', results.length);
         
         const filteredResults = results.filter(manga => {
           const titleNormalized = normalizeText(manga.title);
@@ -293,8 +294,19 @@ const MainApp = ({ userName, userGender }) => {
             titleNormalized.includes(word)
           ).length;
           
-          // Incluir si coincide al menos el 60% de las palabras
-          const threshold = Math.ceil(searchWords.length * 0.6);
+          // Lógica de threshold adaptativa:
+          // - 1 palabra: debe coincidir (100%)
+          // - 2 palabras: al menos 1 debe coincidir (50%)
+          // - 3+ palabras: al menos 50% deben coincidir
+          let threshold;
+          if (searchWords.length === 1) {
+            threshold = 1; // 100%
+          } else if (searchWords.length === 2) {
+            threshold = 1; // 50% (al menos 1 de 2)
+          } else {
+            threshold = Math.ceil(searchWords.length * 0.5); // 50%
+          }
+          
           const matches = matchCount >= threshold;
           
           if (matches) {
