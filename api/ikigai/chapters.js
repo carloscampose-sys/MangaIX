@@ -345,67 +345,87 @@ export default async function handler(req, res) {
       console.log(`[Ikigai Chapters] ===== PROCESANDO PÁGINA ${pageNum} =====`);
 
       try {
+        // Contar capítulos antes de navegar
+        const chaptersBeforeNav = await page.evaluate(() => {
+          return document.querySelectorAll('a[href*="/capitulo/"]').length;
+        });
+        
+        console.log(`[Ikigai Chapters] Capítulos antes de navegar: ${chaptersBeforeNav}`);
+        
         const pageUrl = `${baseUrl}?pagina=${pageNum}`;
         console.log(`[Ikigai Chapters] Navegando a: ${pageUrl}`);
         
-        // Usar navegación directa (más confiable que hacer clic)
+        // Navegar a la página
         await page.goto(pageUrl, {
-          waitUntil: 'networkidle0',
+          waitUntil: 'domcontentloaded',
           timeout: 30000
         });
         
-        console.log(`[Ikigai Chapters] Navegación completada para página ${pageNum}`);
+        console.log(`[Ikigai Chapters] Navegación completada, esperando renderizado de Qwik...`);
         
-        // Esperar a que aparezcan capítulos
-        console.log(`[Ikigai Chapters] Esperando a que aparezcan capítulos...`);
+        // CRÍTICO: Esperar a que Qwik renderice el nuevo contenido
+        // Esperar a que los capítulos cambien (el contenido se actualiza)
         try {
-          await page.waitForSelector('a[href*="/capitulo/"]', { timeout: 10000 });
-          console.log(`[Ikigai Chapters] ✓ Selector de capítulos encontrado`);
+          await page.waitForFunction((prevCount) => {
+            const currentLinks = document.querySelectorAll('a[href*="/capitulo/"]');
+            // Verificar que hay capítulos Y que el contenido cambió
+            if (currentLinks.length === 0) return false;
+            
+            // Verificar que el primer capítulo es diferente
+            const firstLink = currentLinks[2]; // Índice 2 para saltar "Primer Capítulo" y "Último Capítulo"
+            if (!firstLink) return false;
+            
+            const text = firstLink.textContent || '';
+            // Extraer número del primer capítulo visible
+            const match = text.match(/Capítulo\s*(\d+)/i);
+            if (!match) return true; // Si no podemos verificar, asumir que cambió
+            
+            const currentFirstChapter = parseInt(match[1], 10);
+            
+            // En página 1: capítulos 87-65
+            // En página 2: capítulos 64-44
+            // En página 3: capítulos 43-20
+            // En página 4: capítulos 19-1
+            
+            // El primer capítulo visible debe ser menor que 65 para página 2+
+            return currentFirstChapter < 65;
+          }, { timeout: 15000, polling: 500 }, chaptersBeforeNav);
+          
+          console.log(`[Ikigai Chapters] ✓ Contenido actualizado detectado`);
         } catch (e) {
-          console.warn(`[Ikigai Chapters] ⚠️ Timeout esperando selector de capítulos`);
+          console.warn(`[Ikigai Chapters] ⚠️ Timeout esperando actualización de contenido`);
         }
         
         // Espera adicional para asegurar renderizado completo
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Debug: Verificar qué hay en la página ANTES de extraer
-        const debugInfo = await page.evaluate(() => {
-          const allLinks = document.querySelectorAll('a');
-          const capituloLinks = document.querySelectorAll('a[href*="/capitulo/"]');
-          const capituloLinksArray = Array.from(capituloLinks).map(link => ({
-            href: link.getAttribute('href'),
-            text: link.textContent.trim().substring(0, 50)
-          }));
-          
-          return {
-            url: window.location.href,
-            totalLinks: allLinks.length,
-            capituloLinks: capituloLinks.length,
-            bodyLength: document.body.innerText.length,
-            sampleLinks: capituloLinksArray.slice(0, 3)
-          };
-        });
-        
-        console.log(`[Ikigai Chapters] Debug página ${pageNum}:`, JSON.stringify(debugInfo, null, 2));
-
         // Extraer capítulos
         const pageChapters = await extractChaptersFromPage(page);
         console.log(`[Ikigai Chapters] Página ${pageNum}: ${pageChapters.length} capítulos encontrados`);
         
-        if (pageChapters.length === 0) {
-          console.error(`[Ikigai Chapters] ❌ No se encontraron capítulos en página ${pageNum}`);
+        if (pageChapters.length > 0) {
+          console.log(`[Ikigai Chapters] ✅ Rango: Cap ${pageChapters[0]?.chapter} - Cap ${pageChapters[pageChapters.length - 1]?.chapter}`);
         } else {
-          console.log(`[Ikigai Chapters] ✅ Capítulos extraídos exitosamente`);
-          // Mostrar muestra de capítulos
-          const sample = pageChapters.slice(0, 3).map(ch => `${ch.chapter}: ${ch.title.substring(0, 30)}`);
-          console.log(`[Ikigai Chapters] Muestra:`, sample);
+          console.error(`[Ikigai Chapters] ❌ No se encontraron capítulos en página ${pageNum}`);
+          
+          // Debug
+          const debugInfo = await page.evaluate(() => {
+            const allLinks = document.querySelectorAll('a');
+            const capituloLinks = document.querySelectorAll('a[href*="/capitulo/"]');
+            return {
+              url: window.location.href,
+              totalLinks: allLinks.length,
+              capituloLinks: capituloLinks.length,
+              bodyLength: document.body.innerText.length
+            };
+          });
+          console.log(`[Ikigai Chapters] Debug:`, JSON.stringify(debugInfo, null, 2));
         }
         
         allChaptersArrays.push(pageChapters);
 
       } catch (error) {
         console.error(`[Ikigai Chapters] ❌ Error en página ${pageNum}:`, error.message);
-        console.log(`[Ikigai Chapters] Stack:`, error.stack);
         
         // Intentar extraer capítulos de todas formas
         try {
