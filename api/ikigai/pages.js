@@ -115,41 +115,101 @@ export default async function handler(req, res) {
           !title.includes('Error') &&
           !bodyText.includes('Checking your browser') &&
           bodyText.length > 100;
-      }, { timeout: 20000 });
+      }, { timeout: 25000 });
 
       console.log('[Ikigai Pages] ✓ Challenge completado');
     } catch (e) {
       console.warn('[Ikigai Pages] Timeout esperando challenge, continuando...');
     }
 
-    // Esperar a que cargue el contenido (Qwik framework)
+    // Esperar a que cargue el contenido inicial (Qwik framework)
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Buscar imágenes del capítulo
-    // Generalmente son imágenes grandes en el contenido principal
-    await page.waitForFunction(() => {
-      const images = document.querySelectorAll('img');
-      // Contar imágenes grandes (probablemente páginas del manga)
-      const largeImages = Array.from(images).filter(img =>
-        img.naturalHeight > 200 &&
-        !img.src.includes('avatar') &&
-        !img.src.includes('logo') &&
-        !img.src.includes('loader') &&
-        !img.src.includes('placeholder')
-      );
-      return largeImages.length > 0;
-    }, { timeout: 8000 });
+    console.log('[Ikigai Pages] Iniciando detección de imágenes...');
 
-    console.log('[Ikigai Pages] Imágenes detectadas, extrayendo URLs...');
+    // PASO 1: Hacer scroll completo para activar lazy loading
+    console.log('[Ikigai Pages] Haciendo scroll para activar lazy loading...');
+    await page.evaluate(async () => {
+      // Scroll gradual hacia abajo para activar lazy loading
+      const scrollStep = 500;
+      const scrollDelay = 500;
+      
+      let currentScroll = 0;
+      const maxScroll = document.body.scrollHeight;
+      
+      while (currentScroll < maxScroll) {
+        window.scrollTo(0, currentScroll);
+        await new Promise(resolve => setTimeout(resolve, scrollDelay));
+        currentScroll += scrollStep;
+        
+        // Actualizar maxScroll por si se cargó más contenido
+        const newMaxScroll = document.body.scrollHeight;
+        if (newMaxScroll > maxScroll) {
+          maxScroll = newMaxScroll;
+        }
+      }
+      
+      // Scroll final hasta el final
+      window.scrollTo(0, document.body.scrollHeight);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Volver al inicio
+      window.scrollTo(0, 0);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    });
 
-    // Extraer URLs de imágenes
+    console.log('[Ikigai Pages] Scroll completado, esperando carga de imágenes...');
+
+    // PASO 2: Esperar a que se carguen las imágenes (timeout más largo)
+    try {
+      await page.waitForFunction(() => {
+        const images = document.querySelectorAll('img');
+        
+        // Contar imágenes que tienen src válido (no importa si están cargadas)
+        const validImages = Array.from(images).filter(img => {
+          const src = img.src || img.dataset.src || img.dataset.original || '';
+          return src && 
+                 src.startsWith('http') && 
+                 !src.includes('avatar') &&
+                 !src.includes('logo') &&
+                 !src.includes('loader') &&
+                 !src.includes('placeholder');
+        });
+        
+        console.log(`[Client] Imágenes válidas encontradas: ${validImages.length}`);
+        return validImages.length > 0;
+      }, { timeout: 15000 });
+      
+      console.log('[Ikigai Pages] ✓ Imágenes detectadas');
+    } catch (e) {
+      console.warn('[Ikigai Pages] Timeout esperando imágenes, continuando con las disponibles...');
+    }
+
+    // PASO 3: Esperar un poco más para que terminen de cargar
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    console.log('[Ikigai Pages] Extrayendo URLs de imágenes...');
+
+    // Extraer URLs de imágenes (versión mejorada)
     const imageUrls = await page.evaluate(() => {
       const images = document.querySelectorAll('img');
 
       const urls = Array.from(images)
         .map(img => {
-          // Obtener URL de la imagen
-          let src = img.src || img.srcset?.split(' ')[0] || img.dataset.src || img.dataset.original || '';
+          // Obtener URL de múltiples fuentes posibles
+          let src = img.src || 
+                   img.dataset.src || 
+                   img.dataset.original || 
+                   img.dataset.lazy ||
+                   img.getAttribute('data-src') ||
+                   img.getAttribute('data-original') ||
+                   '';
+
+          // También revisar srcset
+          if (!src && img.srcset) {
+            const srcsetUrls = img.srcset.split(',').map(s => s.trim().split(' ')[0]);
+            src = srcsetUrls[0] || '';
+          }
 
           // Si la URL es relativa, convertirla a absoluta
           if (src && !src.startsWith('http')) {
@@ -160,15 +220,18 @@ export default async function handler(req, res) {
             }
           }
 
-          // Verificar que sea una imagen grande (página del manga)
-          // y no un avatar, logo, o placeholder
+          // Filtrar imágenes que no son páginas del manga
           if (src &&
             src.startsWith('http') &&
-            img.naturalHeight > 200 &&
             !src.includes('avatar') &&
             !src.includes('logo') &&
             !src.includes('loader') &&
-            !src.includes('placeholder')) {
+            !src.includes('placeholder') &&
+            !src.includes('icon') &&
+            !src.includes('banner')) {
+            
+            // Log para debug
+            console.log(`[Client] Imagen encontrada: ${src.substring(0, 80)}...`);
             return src;
           }
 
@@ -176,8 +239,11 @@ export default async function handler(req, res) {
         })
         .filter(src => src !== null);
 
-      // Eliminar duplicados
-      return [...new Set(urls)];
+      // Eliminar duplicados y ordenar
+      const uniqueUrls = [...new Set(urls)];
+      
+      console.log(`[Client] Total imágenes únicas: ${uniqueUrls.length}`);
+      return uniqueUrls;
     });
 
     await browser.close();
