@@ -127,45 +127,43 @@ export default async function handler(req, res) {
 
     console.log('[Ikigai Pages] Iniciando detección de imágenes...');
 
-    // PASO 1: Hacer scroll completo para activar lazy loading
+    // PASO 1: Hacer scroll rápido para activar lazy loading
     console.log('[Ikigai Pages] Haciendo scroll para activar lazy loading...');
-    await page.evaluate(async () => {
-      // Scroll gradual hacia abajo para activar lazy loading
-      const scrollStep = 500;
-      const scrollDelay = 500;
-      
-      let currentScroll = 0;
-      let maxScroll = document.body.scrollHeight; // Cambié const por let
-      
-      while (currentScroll < maxScroll) {
-        window.scrollTo(0, currentScroll);
-        await new Promise(resolve => setTimeout(resolve, scrollDelay));
-        currentScroll += scrollStep;
+    try {
+      await page.evaluate(async () => {
+        // Scroll rápido y simple
+        const totalHeight = document.body.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const scrollSteps = Math.ceil(totalHeight / viewportHeight);
         
-        // Actualizar maxScroll por si se cargó más contenido
-        const newMaxScroll = document.body.scrollHeight;
-        if (newMaxScroll > maxScroll) {
-          maxScroll = newMaxScroll; // Ahora sí se puede reasignar
+        // Scroll hacia abajo en pasos
+        for (let i = 0; i <= scrollSteps; i++) {
+          const scrollPosition = (i * viewportHeight);
+          window.scrollTo(0, scrollPosition);
+          await new Promise(resolve => setTimeout(resolve, 300)); // Reducido a 300ms
         }
-      }
+        
+        // Scroll final hasta el final
+        window.scrollTo(0, document.body.scrollHeight);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Volver al inicio
+        window.scrollTo(0, 0);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      });
       
-      // Scroll final hasta el final
-      window.scrollTo(0, document.body.scrollHeight);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Volver al inicio
-      window.scrollTo(0, 0);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    });
+      console.log('[Ikigai Pages] ✓ Scroll completado');
+    } catch (scrollError) {
+      console.warn('[Ikigai Pages] Error en scroll, continuando sin scroll:', scrollError.message);
+    }
 
-    console.log('[Ikigai Pages] Scroll completado, esperando carga de imágenes...');
-
-    // PASO 2: Esperar a que se carguen las imágenes (timeout más largo)
+    // PASO 2: Esperar a que se carguen las imágenes (timeout reducido)
+    console.log('[Ikigai Pages] Esperando carga de imágenes...');
     try {
       await page.waitForFunction(() => {
         const images = document.querySelectorAll('img');
         
-        // Contar imágenes que tienen src válido (no importa si están cargadas)
+        // Contar imágenes que tienen src válido
         const validImages = Array.from(images).filter(img => {
           const src = img.src || img.dataset.src || img.dataset.original || '';
           return src && 
@@ -178,7 +176,7 @@ export default async function handler(req, res) {
         
         console.log(`[Client] Imágenes válidas encontradas: ${validImages.length}`);
         return validImages.length > 0;
-      }, { timeout: 15000 });
+      }, { timeout: 10000 }); // Reducido a 10 segundos
       
       console.log('[Ikigai Pages] ✓ Imágenes detectadas');
     } catch (e) {
@@ -186,7 +184,7 @@ export default async function handler(req, res) {
     }
 
     // PASO 3: Esperar un poco más para que terminen de cargar
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Reducido a 1 segundo
 
     console.log('[Ikigai Pages] Extrayendo URLs de imágenes...');
 
