@@ -291,7 +291,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { slug } = req.body;
+  const { slug, progressive = false } = req.body;
 
   if (!slug) {
     return res.status(400).json({ error: 'Slug is required' });
@@ -299,16 +299,11 @@ export default async function handler(req, res) {
 
   const baseUrl = `https://viralikigai.foodib.net/series/${slug}`;
   console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
+  console.log(`[Ikigai Chapters] Modo progresivo: ${progressive}`);
   console.log(`[Ikigai Chapters] URL base: ${baseUrl}`);
 
-  // ESTRATEGIA: Usar sesiones separadas para cada página
-  // Esto evita que Cloudflare detecte navegaciones múltiples en la misma sesión
-  
-  const allChaptersArrays = [];
-  let totalPages = 1;
-
   try {
-    // PASO 1: Obtener página 1 y detectar total de páginas
+    // PASO 1: Obtener página 1 siempre
     console.log(`[Ikigai Chapters] === PASO 1: PÁGINA 1 ===`);
     const page1Result = await scrapeSinglePage(baseUrl, 1);
     
@@ -319,9 +314,32 @@ export default async function handler(req, res) {
       });
     }
     
-    totalPages = page1Result.totalPages;
-    allChaptersArrays.push(page1Result.chapters);
+    const totalPages = page1Result.totalPages;
     console.log(`[Ikigai Chapters] Página 1: ${page1Result.chapters.length} capítulos, ${totalPages} páginas totales`);
+
+    // Si es modo progresivo, retornar página 1 inmediatamente
+    if (progressive) {
+      console.log(`[Ikigai Chapters] MODO PROGRESIVO: Retornando página 1 inmediatamente`);
+      
+      // Iniciar carga de páginas restantes en background (sin esperar)
+      if (totalPages > 1) {
+        setImmediate(() => {
+          loadRemainingPagesInBackground(baseUrl, totalPages, slug);
+        });
+      }
+
+      return res.status(200).json({
+        chapters: page1Result.chapters,
+        total: page1Result.chapters.length,
+        pagesDetected: totalPages,
+        pagesProcessed: 1,
+        loading: totalPages > 1, // Indica si hay más páginas cargando
+        progressive: true
+      });
+    }
+
+    // Modo completo (comportamiento original)
+    const allChaptersArrays = [page1Result.chapters];
 
     // PASO 2: Procesar páginas restantes con sesiones independientes
     for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
@@ -351,7 +369,9 @@ export default async function handler(req, res) {
       chapters: consolidatedChapters,
       total: consolidatedChapters.length,
       pagesDetected: totalPages,
-      pagesProcessed: allChaptersArrays.length
+      pagesProcessed: allChaptersArrays.length,
+      loading: false,
+      progressive: false
     });
 
   } catch (error) {
@@ -360,6 +380,45 @@ export default async function handler(req, res) {
       error: 'Error obteniendo capítulos',
       details: error.message
     });
+  }
+}
+
+/**
+ * Carga las páginas restantes en background (sin bloquear la respuesta)
+ * @param {string} baseUrl - URL base de la serie
+ * @param {number} totalPages - Total de páginas detectadas
+ * @param {string} slug - Slug de la serie (para logging)
+ */
+async function loadRemainingPagesInBackground(baseUrl, totalPages, slug) {
+  console.log(`[Ikigai Background] Iniciando carga de páginas 2-${totalPages} para ${slug}`);
+  
+  const allChaptersArrays = [];
+  
+  try {
+    // Cargar páginas 2 a N en background
+    for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
+      console.log(`[Ikigai Background] Procesando página ${pageNum}/${totalPages}`);
+      
+      // Esperar entre páginas para evitar detección
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const pageResult = await scrapeSinglePage(baseUrl, pageNum);
+      
+      if (pageResult.success && pageResult.chapters.length > 0) {
+        allChaptersArrays.push(pageResult.chapters);
+        console.log(`[Ikigai Background] Página ${pageNum}: ${pageResult.chapters.length} capítulos`);
+      } else {
+        console.error(`[Ikigai Background] ❌ Página ${pageNum} falló: ${pageResult.error}`);
+      }
+    }
+
+    console.log(`[Ikigai Background] ✅ Carga completa para ${slug}: ${allChaptersArrays.length} páginas adicionales`);
+    
+    // TODO: Aquí se podría implementar cache o notificación al cliente
+    // Por ahora solo loggeamos el resultado
+    
+  } catch (error) {
+    console.error(`[Ikigai Background] Error cargando páginas restantes para ${slug}:`, error);
   }
 }
 
@@ -426,22 +485,27 @@ async function scrapeSinglePage(baseUrl, pageNum) {
     const pageUrl = `${baseUrl}?pagina=${pageNum}`;
     console.log(`[ScrapePage${pageNum}] Navegando a: ${pageUrl}`);
 
+    // Timeouts optimizados: más agresivos para página 1, normales para el resto
+    const isPage1 = pageNum === 1;
+    const navTimeout = isPage1 ? 30000 : 45000; // 30s para página 1, 45s para resto
+    const cloudflareTimeout = isPage1 ? 20000 : 30000; // 20s para página 1, 30s para resto
+
     try {
       await page.goto(pageUrl, {
         waitUntil: 'networkidle0',
-        timeout: 45000
+        timeout: navTimeout
       });
     } catch (navError) {
       console.log(`[ScrapePage${pageNum}] Timeout en networkidle0, intentando domcontentloaded...`);
       await page.goto(pageUrl, {
         waitUntil: 'domcontentloaded',
-        timeout: 35000
+        timeout: navTimeout - 10000
       });
     }
 
-    // Esperar challenge de Cloudflare con timeout más largo
+    // Esperar challenge de Cloudflare con timeout optimizado
     console.log(`[ScrapePage${pageNum}] Esperando challenge de Cloudflare...`);
-    const challengeSuccess = await waitForCloudflareChallenge(page, 30000);
+    const challengeSuccess = await waitForCloudflareChallenge(page, cloudflareTimeout);
     
     if (!challengeSuccess) {
       await browser.close();
