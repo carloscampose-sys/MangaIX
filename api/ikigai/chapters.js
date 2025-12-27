@@ -231,19 +231,20 @@ async function waitForCloudflareChallenge(page, timeout = 20000) {
     
     console.log('[waitForCloudflareChallenge] ✓ Challenge de Cloudflare superado');
     
-    // Paso 2: Esperar a que el contenido real cargue (Qwik es reactivo)
+    // Paso 2: Esperar a que aparezcan los enlaces de capítulos
+    // La página de Ikigai es ligera (~2000-3000 caracteres), lo importante son los enlaces
     await page.waitForFunction(() => {
-      const bodyText = document.body ? document.body.innerText : '';
       const capituloLinks = document.querySelectorAll('a[href*="/capitulo/"]');
+      const bodyText = document.body ? document.body.innerText : '';
       
-      // Verificar que hay contenido sustancial Y enlaces de capítulos
-      return bodyText.length > 5000 && capituloLinks.length > 0;
+      // Verificar que hay enlaces de capítulos Y contenido mínimo
+      return capituloLinks.length > 0 && bodyText.length > 1000;
     }, { timeout: timeout / 2 });
     
     console.log('[waitForCloudflareChallenge] ✓ Contenido cargado');
     
     // Espera adicional para asegurar renderizado completo de Qwik
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     return true;
   } catch (error) {
@@ -261,20 +262,23 @@ async function waitForCloudflareChallenge(page, timeout = 20000) {
     });
     console.log('[waitForCloudflareChallenge] Estado de la página:', JSON.stringify(debugInfo, null, 2));
     
-    // Si hay muy poco contenido, es probable que Cloudflare siga bloqueando
-    if (debugInfo.bodyLength < 1000) {
+    // Si hay enlaces de capítulos, considerar exitoso aunque haya timeout
+    if (debugInfo.capituloLinks > 0) {
+      console.log('[waitForCloudflareChallenge] ✓ Recuperado: hay enlaces de capítulos');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return true;
+    }
+    
+    // Si hay muy poco contenido Y no hay capítulos, es probable que Cloudflare siga bloqueando
+    if (debugInfo.bodyLength < 500) {
       console.error('[waitForCloudflareChallenge] ❌ Página bloqueada por Cloudflare');
       return false;
     }
     
     // Si hay contenido pero no capítulos, esperar más
-    if (debugInfo.bodyLength > 1000 && debugInfo.capituloLinks === 0) {
-      console.warn('[waitForCloudflareChallenge] ⚠️ Contenido cargado pero sin capítulos, esperando más...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return true;
-    }
-    
-    return false;
+    console.warn('[waitForCloudflareChallenge] ⚠️ Contenido cargado pero sin capítulos, esperando más...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return true;
   }
 }
 
