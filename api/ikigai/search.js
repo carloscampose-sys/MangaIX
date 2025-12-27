@@ -112,106 +112,13 @@ export default async function handler(req, res) {
 
     // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
-    
-    // Si hay un término de búsqueda, usar la página de búsqueda interactiva
-    // en lugar de navegar directamente con parámetros
-    if (query && query.trim()) {
-      console.log('[Ikigai Search] Usando búsqueda interactiva con checkbox...');
-      
-      // Navegar a la página base de series
-      const baseSeriesUrl = 'https://viralikigai.foodib.net/series/';
-      try {
-        await puppeteerPage.goto(baseSeriesUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        });
-      } catch (e) {
-        console.log('[Ikigai Search] Timeout en navegación inicial, continuando...');
-      }
-
-      // Esperar a que cargue la página
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Buscar el input de búsqueda y escribir
-      console.log('[Ikigai Search] Buscando input de búsqueda...');
-      
-      try {
-        // Esperar a que el input sea visible
-        await puppeteerPage.waitForSelector('input[type="search"]', { 
-          visible: true, 
-          timeout: 5000 
-        });
-        
-        console.log('[Ikigai Search] ✓ Input encontrado, escribiendo query...');
-        
-        // Usar evaluate para escribir directamente en el input (más confiable)
-        await puppeteerPage.evaluate((searchQuery) => {
-          const input = document.querySelector('input[type="search"]');
-          if (input) {
-            input.value = searchQuery;
-            // Disparar eventos para que el framework reactivo detecte el cambio
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        }, query.trim());
-        
-        // Esperar a que aparezcan resultados
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Buscar y marcar el checkbox de "Coincidencia Exacta"
-        console.log('[Ikigai Search] Buscando checkbox de Coincidencia Exacta...');
-        
-        const checkboxMarked = await puppeteerPage.evaluate(() => {
-          const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-          
-          for (const checkbox of checkboxes) {
-            const label = checkbox.labels?.[0]?.textContent || checkbox.parentElement?.textContent || '';
-            
-            if (label.includes('Coincidencia Exacta')) {
-              if (!checkbox.checked) {
-                checkbox.click();
-                return true;
-              }
-              return false; // Ya estaba marcado
-            }
-          }
-          return null; // No encontrado
-        });
-        
-        if (checkboxMarked === true) {
-          console.log('[Ikigai Search] ✓ Checkbox marcado, esperando filtrado...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        } else if (checkboxMarked === false) {
-          console.log('[Ikigai Search] ✓ Checkbox ya estaba marcado');
-        } else {
-          console.log('[Ikigai Search] ⚠ No se encontró checkbox de Coincidencia Exacta');
-        }
-        
-      } catch (error) {
-        console.log('[Ikigai Search] Error en búsqueda interactiva:', error.message);
-        console.log('[Ikigai Search] Fallback: usando URL directa');
-        
-        // Fallback: usar la URL con parámetros
-        try {
-          await puppeteerPage.goto(searchUrl, {
-            waitUntil: 'domcontentloaded',
-            timeout: 30000
-          });
-          await new Promise(resolve => setTimeout(resolve, 8000));
-        } catch (e) {
-          console.log('[Ikigai Search] Timeout en navegación fallback, continuando...');
-        }
-      }
-    } else {
-      // Sin query, navegar directamente con filtros
-      try {
-        await puppeteerPage.goto(searchUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        });
-      } catch (e) {
-        console.log('[Ikigai Search] Timeout en navegación, continuando...');
-      }
+    try {
+      await puppeteerPage.goto(searchUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+    } catch (e) {
+      console.log('[Ikigai Search] Timeout en navegación, continuando...');
     }
 
     console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');

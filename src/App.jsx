@@ -265,8 +265,61 @@ const MainApp = ({ userName, userGender }) => {
       console.log('[App] hasMore desde API:', hasMore);
       setHasMorePages(hasMore);
       
-      // Iniciar carga de sinopsis en segundo plano
-      loadDescriptionsInBackground(results);
+      // FILTRADO DEL LADO DEL CLIENTE PARA IKIGAI
+      // El motor de búsqueda de Ikigai devuelve muchos resultados irrelevantes
+      // Filtramos localmente para mostrar solo coincidencias relevantes
+      if (searchTerm && selectedSource === 'ikigai' && results.length > 0) {
+        console.log('[App] Aplicando filtro local para Ikigai...');
+        
+        // Normalizar el término de búsqueda (remover acentos, minúsculas)
+        const normalizeText = (text) => {
+          return text
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remover acentos
+            .replace(/[¡!¿?]/g, ""); // Remover signos de exclamación/interrogación
+        };
+        
+        const searchTermNormalized = normalizeText(searchTerm);
+        const searchWords = searchTermNormalized.split(/\s+/).filter(w => w.length > 2);
+        
+        console.log('[App] Palabras de búsqueda:', searchWords);
+        
+        const filteredResults = results.filter(manga => {
+          const titleNormalized = normalizeText(manga.title);
+          
+          // Contar cuántas palabras de búsqueda aparecen en el título
+          const matchCount = searchWords.filter(word => 
+            titleNormalized.includes(word)
+          ).length;
+          
+          // Incluir si coincide al menos el 60% de las palabras
+          const threshold = Math.ceil(searchWords.length * 0.6);
+          const matches = matchCount >= threshold;
+          
+          if (matches) {
+            console.log(`[App] ✓ Incluido: "${manga.title}" (${matchCount}/${searchWords.length} palabras)`);
+          }
+          
+          return matches;
+        });
+        
+        console.log(`[App] Filtrado local: ${results.length} → ${filteredResults.length} resultados`);
+        
+        if (filteredResults.length > 0) {
+          setSearchResults(filteredResults);
+          loadDescriptionsInBackground(filteredResults);
+        } else {
+          // Si el filtro elimina todo, mostrar los resultados originales
+          // pero con un mensaje
+          console.log('[App] El filtro eliminó todos los resultados, mostrando originales');
+          showToast('⚠️ No se encontraron coincidencias exactas. Mostrando resultados relacionados.');
+          loadDescriptionsInBackground(results);
+        }
+      } else {
+        // Sin filtrado, cargar sinopsis normalmente
+        loadDescriptionsInBackground(results);
+      }
     } catch (error) {
       console.error('[App] Error en búsqueda:', error);
       showToast('❌ Error al buscar. Intenta de nuevo.');
