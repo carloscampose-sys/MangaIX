@@ -164,77 +164,95 @@ export default async function handler(req, res) {
     
     // Si hay búsqueda por texto, usar el campo de búsqueda del sitio
     if (hasSearchQuery) {
-      console.log('[Ikigai Search] Usando búsqueda interactiva...');
+      console.log('[Ikigai Search] Usando búsqueda interactiva con modal...');
       
       try {
-        // Tomar screenshot ANTES de buscar el input
-        await puppeteerPage.screenshot({ path: '/tmp/ikigai-before-search.png', fullPage: false });
-        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-before-search.png');
+        // PASO 1: Buscar y hacer click en el botón que abre el modal de búsqueda
+        // Según el debug: "Buscar SeriesBETA" con clase "btn btn-lg btn-ghost btn-block relative"
+        console.log('[Ikigai Search] Buscando botón para abrir modal de búsqueda...');
         
-        // Buscar el input de búsqueda - Ikigai usa un input con placeholder "Buscar..."
-        // Intentar múltiples selectores
-        const searchInputSelectors = [
-          'input[type="text"]',
-          'input[type="search"]',
-          'input[placeholder*="uscar"]',
-          'input[placeholder*="ombre"]',
-          'input[name="search"]',
-          'input[name="query"]',
-          'input[name="buscar"]',
-          '.search-input',
-          '#search-input'
+        const modalTriggerSelectors = [
+          'button:has-text("Buscar Series")',
+          'button.btn-lg.btn-ghost',
+          'button[type="submit"]:has-text("Buscar")',
+          'button.btn-block'
         ];
         
-        let inputFound = null;
-        let foundSelector = null;
-        console.log('[Ikigai Search] Buscando input de búsqueda...');
+        let modalOpened = false;
         
-        for (const selector of searchInputSelectors) {
+        // Intentar hacer click en el botón que abre el modal
+        for (const selector of modalTriggerSelectors) {
           try {
-            inputFound = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
-            if (inputFound) {
-              foundSelector = selector;
-              console.log(`[Ikigai Search] ✓ Input encontrado con selector: ${selector}`);
+            const button = await puppeteerPage.$(selector);
+            if (button) {
+              console.log(`[Ikigai Search] ✓ Botón encontrado: ${selector}`);
+              await button.click();
+              console.log('[Ikigai Search] Click en botón para abrir modal');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              modalOpened = true;
               break;
             }
           } catch (e) {
-            console.log(`[Ikigai Search] ✗ Selector no encontrado: ${selector}`);
+            console.log(`[Ikigai Search] ✗ Botón no encontrado: ${selector}`);
           }
         }
         
-        if (!inputFound || !foundSelector) {
-          throw new Error('No se encontró el input de búsqueda con ningún selector');
+        // Si no encontramos el botón, intentar abrir el modal directamente con JavaScript
+        if (!modalOpened) {
+          console.log('[Ikigai Search] Intentando abrir modal con JavaScript...');
+          await puppeteerPage.evaluate(() => {
+            // Buscar el dialog modal
+            const modal = document.querySelector('dialog.modal');
+            if (modal && typeof modal.showModal === 'function') {
+              modal.showModal();
+              return true;
+            }
+            return false;
+          });
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
-        // Limpiar el input primero (por si tiene texto)
+        // PASO 2: Buscar el input DENTRO del modal
+        console.log('[Ikigai Search] Buscando input dentro del modal...');
+        
+        // El input está dentro de un dialog.modal según el debug
+        const modalInputSelector = 'dialog.modal input[type="search"]';
+        
+        let modalInput = null;
+        try {
+          modalInput = await puppeteerPage.waitForSelector(modalInputSelector, { timeout: 5000 });
+          console.log('[Ikigai Search] ✓ Input del modal encontrado');
+        } catch (e) {
+          console.log('[Ikigai Search] ✗ No se encontró input en el modal');
+          throw new Error('No se pudo encontrar el input de búsqueda en el modal');
+        }
+        
+        // PASO 3: Escribir en el input del modal
+        console.log('[Ikigai Search] Escribiendo en el input del modal:', query.trim());
+        
+        // Limpiar el input primero
         await puppeteerPage.evaluate((sel) => {
           const input = document.querySelector(sel);
           if (input) input.value = '';
-        }, foundSelector);
+        }, modalInputSelector);
         
-        console.log('[Ikigai Search] Escribiendo query:', query.trim());
-        await puppeteerPage.type(foundSelector, query.trim(), { delay: 150 });
+        // Escribir el texto
+        await puppeteerPage.type(modalInputSelector, query.trim(), { delay: 150 });
         
-        // Esperar más tiempo para que se procese
+        // Esperar un momento
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Tomar screenshot DESPUÉS de escribir
-        await puppeteerPage.screenshot({ path: '/tmp/ikigai-after-typing.png', fullPage: false });
-        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-after-typing.png');
+        console.log('[Ikigai Search] Texto escrito en el modal');
         
-        // Presionar Enter para buscar
+        // PASO 4: Presionar Enter o buscar botón de submit en el modal
         console.log('[Ikigai Search] Presionando Enter...');
         await puppeteerPage.keyboard.press('Enter');
         
-        // Esperar a que se actualicen los resultados (MÁS tiempo para Qwik)
+        // Esperar a que se actualicen los resultados
         console.log('[Ikigai Search] Esperando resultados de búsqueda (10 segundos)...');
         await new Promise(resolve => setTimeout(resolve, 10000));
         
-        // Tomar screenshot DESPUÉS de buscar
-        await puppeteerPage.screenshot({ path: '/tmp/ikigai-after-search.png', fullPage: false });
-        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-after-search.png');
-        
-        // Verificar si la URL cambió (debería tener ?buscar=)
+        // Verificar si la URL cambió
         const currentUrl = puppeteerPage.url();
         console.log('[Ikigai Search] URL actual después de buscar:', currentUrl);
         
