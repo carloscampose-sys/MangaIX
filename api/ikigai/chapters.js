@@ -210,13 +210,14 @@ function consolidateChapters(allChapters) {
 }
 
 /**
- * Espera a que se complete el challenge de Cloudflare
+ * Espera a que se complete el challenge de Cloudflare y el contenido cargue
  * @param {Page} page - Puppeteer page object
  * @param {number} timeout - Tiempo máximo de espera en ms
  * @returns {Promise<boolean>} - true si completó, false si falló
  */
-async function waitForCloudflareChallenge(page, timeout = 15000) {
+async function waitForCloudflareChallenge(page, timeout = 20000) {
   try {
+    // Paso 1: Esperar a que desaparezca el challenge de Cloudflare
     await page.waitForFunction(() => {
       const title = document.title;
       const bodyText = document.body ? document.body.innerText : '';
@@ -225,20 +226,55 @@ async function waitForCloudflareChallenge(page, timeout = 15000) {
         !title.includes('Just a moment') &&
         !title.includes('Error') &&
         !bodyText.includes('Checking your browser') &&
-        bodyText.length > 100;
-    }, { timeout });
+        !bodyText.includes('Verifying you are human');
+    }, { timeout: timeout / 2 });
     
-    console.log('[waitForCloudflareChallenge] ✓ Challenge completado');
+    console.log('[waitForCloudflareChallenge] ✓ Challenge de Cloudflare superado');
     
-    // Espera reducida para renderizado
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Paso 2: Esperar a que el contenido real cargue (Qwik es reactivo)
+    await page.waitForFunction(() => {
+      const bodyText = document.body ? document.body.innerText : '';
+      const capituloLinks = document.querySelectorAll('a[href*="/capitulo/"]');
+      
+      // Verificar que hay contenido sustancial Y enlaces de capítulos
+      return bodyText.length > 5000 && capituloLinks.length > 0;
+    }, { timeout: timeout / 2 });
+    
+    console.log('[waitForCloudflareChallenge] ✓ Contenido cargado');
+    
+    // Espera adicional para asegurar renderizado completo de Qwik
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     return true;
   } catch (error) {
-    console.warn('[waitForCloudflareChallenge] Timeout esperando challenge');
-    // No hacer reload, simplemente esperar un poco más y continuar
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    return true; // Continuar de todas formas
+    console.error('[waitForCloudflareChallenge] ❌ Error:', error.message);
+    
+    // Debug: Ver qué hay en la página
+    const debugInfo = await page.evaluate(() => {
+      return {
+        title: document.title,
+        bodyLength: document.body ? document.body.innerText.length : 0,
+        capituloLinks: document.querySelectorAll('a[href*="/capitulo/"]').length,
+        allLinks: document.querySelectorAll('a').length,
+        url: window.location.href
+      };
+    });
+    console.log('[waitForCloudflareChallenge] Estado de la página:', JSON.stringify(debugInfo, null, 2));
+    
+    // Si hay muy poco contenido, es probable que Cloudflare siga bloqueando
+    if (debugInfo.bodyLength < 1000) {
+      console.error('[waitForCloudflareChallenge] ❌ Página bloqueada por Cloudflare');
+      return false;
+    }
+    
+    // Si hay contenido pero no capítulos, esperar más
+    if (debugInfo.bodyLength > 1000 && debugInfo.capituloLinks === 0) {
+      console.warn('[waitForCloudflareChallenge] ⚠️ Contenido cargado pero sin capítulos, esperando más...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return true;
+    }
+    
+    return false;
   }
 }
 
@@ -314,20 +350,24 @@ export default async function handler(req, res) {
 
     try {
       await page.goto(firstPageUrl, {
+        waitUntil: 'networkidle0',
+        timeout: 40000
+      });
+    } catch (navError) {
+      console.log(`[Ikigai Chapters] Timeout en networkidle0, intentando con domcontentloaded...`);
+      await page.goto(firstPageUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });
-    } catch (navError) {
-      console.log(`[Ikigai Chapters] Timeout en navegación a página 1, continuando...`);
     }
 
     // Esperar a que Cloudflare complete su challenge
-    const challengeSuccess = await waitForCloudflareChallenge(page);
+    const challengeSuccess = await waitForCloudflareChallenge(page, 25000);
     if (!challengeSuccess) {
       await browser.close();
       return res.status(500).json({
         error: 'Error cargando página',
-        details: 'No se pudo superar el challenge de Cloudflare'
+        details: 'No se pudo superar el challenge de Cloudflare en página 1'
       });
     }
 
@@ -345,59 +385,35 @@ export default async function handler(req, res) {
       console.log(`[Ikigai Chapters] ===== PROCESANDO PÁGINA ${pageNum} =====`);
 
       try {
-        // Contar capítulos antes de navegar
-        const chaptersBeforeNav = await page.evaluate(() => {
-          return document.querySelectorAll('a[href*="/capitulo/"]').length;
-        });
-        
-        console.log(`[Ikigai Chapters] Capítulos antes de navegar: ${chaptersBeforeNav}`);
-        
         const pageUrl = `${baseUrl}?pagina=${pageNum}`;
         console.log(`[Ikigai Chapters] Navegando a: ${pageUrl}`);
         
-        // Navegar a la página
-        await page.goto(pageUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        });
-        
-        console.log(`[Ikigai Chapters] Navegación completada, esperando renderizado de Qwik...`);
-        
-        // CRÍTICO: Esperar a que Qwik renderice el nuevo contenido
-        // Esperar a que los capítulos cambien (el contenido se actualiza)
+        // Navegar a la página con networkidle0 para asegurar que todo cargue
         try {
-          await page.waitForFunction((prevCount) => {
-            const currentLinks = document.querySelectorAll('a[href*="/capitulo/"]');
-            // Verificar que hay capítulos Y que el contenido cambió
-            if (currentLinks.length === 0) return false;
-            
-            // Verificar que el primer capítulo es diferente
-            const firstLink = currentLinks[2]; // Índice 2 para saltar "Primer Capítulo" y "Último Capítulo"
-            if (!firstLink) return false;
-            
-            const text = firstLink.textContent || '';
-            // Extraer número del primer capítulo visible
-            const match = text.match(/Capítulo\s*(\d+)/i);
-            if (!match) return true; // Si no podemos verificar, asumir que cambió
-            
-            const currentFirstChapter = parseInt(match[1], 10);
-            
-            // En página 1: capítulos 87-65
-            // En página 2: capítulos 64-44
-            // En página 3: capítulos 43-20
-            // En página 4: capítulos 19-1
-            
-            // El primer capítulo visible debe ser menor que 65 para página 2+
-            return currentFirstChapter < 65;
-          }, { timeout: 15000, polling: 500 }, chaptersBeforeNav);
-          
-          console.log(`[Ikigai Chapters] ✓ Contenido actualizado detectado`);
-        } catch (e) {
-          console.warn(`[Ikigai Chapters] ⚠️ Timeout esperando actualización de contenido`);
+          await page.goto(pageUrl, {
+            waitUntil: 'networkidle0',
+            timeout: 40000
+          });
+        } catch (navError) {
+          console.warn(`[Ikigai Chapters] Timeout en networkidle0, intentando con domcontentloaded...`);
+          await page.goto(pageUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
+          });
         }
         
-        // Espera adicional para asegurar renderizado completo
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log(`[Ikigai Chapters] Navegación completada para página ${pageNum}`);
+        
+        // CRÍTICO: Esperar challenge de Cloudflare en CADA página
+        console.log(`[Ikigai Chapters] Esperando challenge de Cloudflare para página ${pageNum}...`);
+        const challengeSuccess = await waitForCloudflareChallenge(page, 25000);
+        
+        if (!challengeSuccess) {
+          console.error(`[Ikigai Chapters] ❌ Challenge de Cloudflare falló en página ${pageNum}, saltando...`);
+          continue;
+        }
+        
+        console.log(`[Ikigai Chapters] ✓ Challenge completado para página ${pageNum}`);
 
         // Extraer capítulos
         const pageChapters = await extractChaptersFromPage(page);
@@ -405,6 +421,7 @@ export default async function handler(req, res) {
         
         if (pageChapters.length > 0) {
           console.log(`[Ikigai Chapters] ✅ Rango: Cap ${pageChapters[0]?.chapter} - Cap ${pageChapters[pageChapters.length - 1]?.chapter}`);
+          allChaptersArrays.push(pageChapters);
         } else {
           console.error(`[Ikigai Chapters] ❌ No se encontraron capítulos en página ${pageNum}`);
           
@@ -416,13 +433,12 @@ export default async function handler(req, res) {
               url: window.location.href,
               totalLinks: allLinks.length,
               capituloLinks: capituloLinks.length,
-              bodyLength: document.body.innerText.length
+              bodyLength: document.body.innerText.length,
+              title: document.title
             };
           });
           console.log(`[Ikigai Chapters] Debug:`, JSON.stringify(debugInfo, null, 2));
         }
-        
-        allChaptersArrays.push(pageChapters);
 
       } catch (error) {
         console.error(`[Ikigai Chapters] ❌ Error en página ${pageNum}:`, error.message);
