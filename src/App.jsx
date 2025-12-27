@@ -665,7 +665,11 @@ const MainApp = ({ userName, userGender }) => {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Busca por título..."
+                      placeholder={
+                        selectedSource === 'ikigai' 
+                          ? "Escribe el título exacto (ej: Amor Maldito)..." 
+                          : "Busca por título..."
+                      }
                       className="w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base"
                     />
                     <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">

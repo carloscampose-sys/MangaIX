@@ -126,6 +126,87 @@ export default async function handler(req, res) {
       }
     });
 
+    // ESTRATEGIA ESPECIAL PARA IKIGAI: Búsqueda directa por slug
+    // Si el usuario proporciona un título, intentamos convertirlo a slug y acceder directamente
+    // Ejemplo: "Amor Maldito" → "amor-maldito" → /series/amor-maldito/
+    if (hasSearchQuery) {
+      console.log('[Ikigai Search] Intentando búsqueda directa por slug...');
+      
+      // Convertir título a slug
+      const slug = query.trim()
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remover acentos
+        .replace(/[¡!¿?]/g, "") // Remover signos de exclamación/interrogación
+        .replace(/\s+/g, '-') // Espacios → guiones
+        .replace(/[^a-z0-9-]/g, '') // Remover caracteres especiales
+        .replace(/-+/g, '-') // Múltiples guiones → uno solo
+        .replace(/^-|-$/g, ''); // Remover guiones al inicio/final
+      
+      console.log('[Ikigai Search] Slug generado:', slug);
+      
+      const directUrl = `https://viralikigai.foodib.net/series/${slug}/`;
+      console.log('[Ikigai Search] Intentando acceso directo:', directUrl);
+      
+      try {
+        // Intentar navegar directamente a la página de la obra
+        const response = await puppeteerPage.goto(directUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15000
+        });
+        
+        const statusCode = response.status();
+        console.log('[Ikigai Search] Status code:', statusCode);
+        
+        if (statusCode === 200) {
+          // ¡Éxito! La obra existe
+          console.log('[Ikigai Search] ✓ Obra encontrada directamente');
+          
+          // Esperar a que cargue el contenido
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Extraer información de la obra
+          const seriesInfo = await puppeteerPage.evaluate((slugParam) => {
+            // Extraer título
+            const titleEl = document.querySelector('h1, h2, .title, [class*="title"]');
+            const title = titleEl?.textContent?.trim() || '';
+            
+            // Extraer imagen
+            const imgEl = document.querySelector('img[src*="ikigai"], img[alt*="cover"], .cover img, [class*="cover"] img');
+            const cover = imgEl?.src || imgEl?.getAttribute('src') || '';
+            
+            console.log('[Ikigai Eval] Título encontrado:', title);
+            console.log('[Ikigai Eval] Cover encontrado:', cover ? 'yes' : 'no');
+            
+            return {
+              id: `ikigai-${slugParam}-${Date.now()}`,
+              slug: slugParam,
+              title: title || slugParam.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+              cover: cover,
+              source: 'ikigai'
+            };
+          }, slug);
+          
+          await browser.close();
+          
+          console.log('[Ikigai Search] Retornando 1 resultado (acceso directo)');
+          return res.status(200).json({
+            results: [seriesInfo],
+            page: 1,
+            hasMore: false,
+            directAccess: true
+          });
+        } else {
+          console.log('[Ikigai Search] ✗ Obra no encontrada (status:', statusCode + '), intentando búsqueda normal...');
+        }
+      } catch (error) {
+        console.log('[Ikigai Search] ✗ Error en acceso directo:', error.message);
+        console.log('[Ikigai Search] Continuando con búsqueda normal...');
+      }
+    }
+    
+    // Si el acceso directo falló o no hay query, continuar con búsqueda normal
+    console.log('[Ikigai Search] Navegando a URL de búsqueda...');
+    
     // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
     
