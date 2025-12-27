@@ -186,12 +186,14 @@ export default async function handler(req, res) {
         ];
         
         let inputFound = null;
+        let foundSelector = null;
         console.log('[Ikigai Search] Buscando input de búsqueda...');
         
         for (const selector of searchInputSelectors) {
           try {
             inputFound = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
             if (inputFound) {
+              foundSelector = selector;
               console.log(`[Ikigai Search] ✓ Input encontrado con selector: ${selector}`);
               break;
             }
@@ -200,7 +202,7 @@ export default async function handler(req, res) {
           }
         }
         
-        if (!inputFound) {
+        if (!inputFound || !foundSelector) {
           throw new Error('No se encontró el input de búsqueda con ningún selector');
         }
         
@@ -208,10 +210,10 @@ export default async function handler(req, res) {
         await puppeteerPage.evaluate((sel) => {
           const input = document.querySelector(sel);
           if (input) input.value = '';
-        }, searchInputSelectors.find(s => inputFound));
+        }, foundSelector);
         
         console.log('[Ikigai Search] Escribiendo query:', query.trim());
-        await puppeteerPage.type(searchInputSelectors.find(s => inputFound), query.trim(), { delay: 150 });
+        await puppeteerPage.type(foundSelector, query.trim(), { delay: 150 });
         
         // Esperar más tiempo para que se procese
         await new Promise(resolve => setTimeout(resolve, 2000));
