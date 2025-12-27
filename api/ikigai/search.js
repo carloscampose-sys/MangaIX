@@ -13,6 +13,9 @@ export default async function handler(req, res) {
   try {
     // Construir URL con filtros
     const searchUrl = buildSearchUrl(query, filters, page);
+    
+    // Determinar si hay búsqueda por texto
+    const hasSearchQuery = query && query.trim();
 
     console.log('[Ikigai Search] ============================================');
     console.log('[Ikigai Search] Página solicitada:', page);
@@ -126,27 +129,47 @@ export default async function handler(req, res) {
     // Navegar a la URL con estrategia flexible
     console.log('[Ikigai Search] Navegando a URL...');
     
-    // ESTRATEGIA: Si hay query de búsqueda, navegar a la página base primero
-    // y luego usar el campo de búsqueda interactivo
-    const hasSearchQuery = query && query.trim();
-    const navigationUrl = hasSearchQuery ? 'https://viralikigai.foodib.net/series/' : searchUrl;
+    // NUEVA ESTRATEGIA: Usar el parámetro URL directamente
+    // Ikigai procesa la búsqueda en el cliente con JavaScript (Qwik)
+    // Necesitamos navegar a la URL con ?buscar= y esperar a que Qwik procese
+    const finalSearchUrl = hasSearchQuery 
+      ? `${searchUrl}${searchUrl.includes('?') ? '&' : '?'}buscar=${encodeURIComponent(query.trim())}`
+      : searchUrl;
     
-    console.log('[Ikigai Search] URL de navegación:', navigationUrl);
+    console.log('[Ikigai Search] URL final con búsqueda:', finalSearchUrl);
     
     try {
-      await puppeteerPage.goto(navigationUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000
+      await puppeteerPage.goto(finalSearchUrl, {
+        waitUntil: 'networkidle0', // Esperar a que no haya más peticiones de red
+        timeout: 45000 // 45 segundos de timeout
       });
     } catch (e) {
       console.log('[Ikigai Search] Timeout en navegación, continuando...');
     }
 
-    console.log('[Ikigai Search] Página cargada, esperando renderizado JS...');
+    console.log('[Ikigai Search] Página cargada, esperando procesamiento de Qwik...');
 
-    // Esperar a que el contenido JavaScript se renderice
-    // Qwik toma tiempo en hidratar - esperamos más tiempo
-    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos inicial
+    // Esperar MUCHO más tiempo para que Qwik procese la búsqueda
+    // Qwik es un framework que hace lazy loading y procesamiento diferido
+    if (hasSearchQuery) {
+      console.log('[Ikigai Search] Esperando 20 segundos para procesamiento de búsqueda...');
+      await new Promise(resolve => setTimeout(resolve, 20000)); // 20 segundos
+      
+      // Verificar si hay resultados de búsqueda
+      const hasResults = await puppeteerPage.evaluate(() => {
+        const links = document.querySelectorAll('a[href*="/series/"]');
+        return links.length > 0;
+      });
+      
+      console.log('[Ikigai Search] ¿Hay resultados después de esperar?:', hasResults);
+      
+      if (!hasResults) {
+        console.log('[Ikigai Search] No hay resultados, esperando 10 segundos más...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
+    } else {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
     
     // Debug: Listar todos los inputs en la página
     const inputsDebug = await puppeteerPage.evaluate(() => {
@@ -162,111 +185,17 @@ export default async function handler(req, res) {
     });
     console.log('[Ikigai Search] Inputs encontrados en la página:', JSON.stringify(inputsDebug, null, 2));
     
-    // Si hay búsqueda por texto, usar el campo de búsqueda del sitio
+    // Si hay búsqueda por texto, verificar que se aplicó
     if (hasSearchQuery) {
-      console.log('[Ikigai Search] Usando búsqueda interactiva con modal...');
+      // Verificar si la URL tiene el parámetro de búsqueda
+      const currentUrl = puppeteerPage.url();
+      console.log('[Ikigai Search] URL actual:', currentUrl);
       
-      try {
-        // PASO 1: Buscar y hacer click en el botón que abre el modal de búsqueda
-        // Según el debug: "Buscar SeriesBETA" con clase "btn btn-lg btn-ghost btn-block relative"
-        console.log('[Ikigai Search] Buscando botón para abrir modal de búsqueda...');
-        
-        const modalTriggerSelectors = [
-          'button:has-text("Buscar Series")',
-          'button.btn-lg.btn-ghost',
-          'button[type="submit"]:has-text("Buscar")',
-          'button.btn-block'
-        ];
-        
-        let modalOpened = false;
-        
-        // Intentar hacer click en el botón que abre el modal
-        for (const selector of modalTriggerSelectors) {
-          try {
-            const button = await puppeteerPage.$(selector);
-            if (button) {
-              console.log(`[Ikigai Search] ✓ Botón encontrado: ${selector}`);
-              await button.click();
-              console.log('[Ikigai Search] Click en botón para abrir modal');
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              modalOpened = true;
-              break;
-            }
-          } catch (e) {
-            console.log(`[Ikigai Search] ✗ Botón no encontrado: ${selector}`);
-          }
-        }
-        
-        // Si no encontramos el botón, intentar abrir el modal directamente con JavaScript
-        if (!modalOpened) {
-          console.log('[Ikigai Search] Intentando abrir modal con JavaScript...');
-          await puppeteerPage.evaluate(() => {
-            // Buscar el dialog modal
-            const modal = document.querySelector('dialog.modal');
-            if (modal && typeof modal.showModal === 'function') {
-              modal.showModal();
-              return true;
-            }
-            return false;
-          });
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        // PASO 2: Buscar el input DENTRO del modal
-        console.log('[Ikigai Search] Buscando input dentro del modal...');
-        
-        // El input está dentro de un dialog.modal según el debug
-        const modalInputSelector = 'dialog.modal input[type="search"]';
-        
-        let modalInput = null;
-        try {
-          modalInput = await puppeteerPage.waitForSelector(modalInputSelector, { timeout: 5000 });
-          console.log('[Ikigai Search] ✓ Input del modal encontrado');
-        } catch (e) {
-          console.log('[Ikigai Search] ✗ No se encontró input en el modal');
-          throw new Error('No se pudo encontrar el input de búsqueda en el modal');
-        }
-        
-        // PASO 3: Escribir en el input del modal
-        console.log('[Ikigai Search] Escribiendo en el input del modal:', query.trim());
-        
-        // Limpiar el input primero
-        await puppeteerPage.evaluate((sel) => {
-          const input = document.querySelector(sel);
-          if (input) input.value = '';
-        }, modalInputSelector);
-        
-        // Escribir el texto
-        await puppeteerPage.type(modalInputSelector, query.trim(), { delay: 150 });
-        
-        // Esperar un momento
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        console.log('[Ikigai Search] Texto escrito en el modal');
-        
-        // PASO 4: Presionar Enter o buscar botón de submit en el modal
-        console.log('[Ikigai Search] Presionando Enter...');
-        await puppeteerPage.keyboard.press('Enter');
-        
-        // Esperar a que se actualicen los resultados
-        console.log('[Ikigai Search] Esperando resultados de búsqueda (10 segundos)...');
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        // Verificar si la URL cambió
-        const currentUrl = puppeteerPage.url();
-        console.log('[Ikigai Search] URL actual después de buscar:', currentUrl);
-        
-        // Log de peticiones de red capturadas
-        console.log('[Ikigai Search] Peticiones de red capturadas:', JSON.stringify(networkRequests, null, 2));
-        
-        console.log('[Ikigai Search] ✓ Búsqueda interactiva completada');
-      } catch (error) {
-        console.error('[Ikigai Search] Error en búsqueda interactiva:', error.message);
-        console.log('[Ikigai Search] Continuando con resultados actuales...');
+      if (currentUrl.includes('buscar=')) {
+        console.log('[Ikigai Search] ✓ Parámetro de búsqueda presente en URL');
+      } else {
+        console.log('[Ikigai Search] ✗ Parámetro de búsqueda NO presente en URL');
       }
-    } else {
-      // Sin búsqueda de texto, solo esperar más tiempo para que cargue
-      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     // Verificar si hay contenido en la página
@@ -651,7 +580,7 @@ export default async function handler(req, res) {
   }
 }
 
-// Función helper para construir URL
+// Función helper para construir URL (sin parámetro buscar, se agrega después)
 function buildSearchUrl(query, filters, page) {
   const baseUrl = 'https://viralikigai.foodib.net/series/';
   const params = new URLSearchParams();
@@ -681,8 +610,8 @@ function buildSearchUrl(query, filters, page) {
     params.append('pagina', page);
   }
 
-  // NOTA: NO incluimos el parámetro 'buscar' aquí
-  // La búsqueda por texto se hace de forma interactiva usando el campo de búsqueda del sitio
+  // NOTA: El parámetro 'buscar' se agrega manualmente en el código principal
+  // para tener más control sobre cuándo y cómo se aplica
 
   const queryString = params.toString();
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
