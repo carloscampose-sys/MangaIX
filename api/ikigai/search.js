@@ -135,30 +135,93 @@ export default async function handler(req, res) {
     // Qwik toma tiempo en hidratar - esperamos más tiempo
     await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos inicial
     
+    // Debug: Listar todos los inputs en la página
+    const inputsDebug = await puppeteerPage.evaluate(() => {
+      const inputs = Array.from(document.querySelectorAll('input'));
+      return inputs.map(input => ({
+        type: input.type,
+        name: input.name,
+        placeholder: input.placeholder,
+        id: input.id,
+        className: input.className,
+        value: input.value
+      }));
+    });
+    console.log('[Ikigai Search] Inputs encontrados en la página:', JSON.stringify(inputsDebug, null, 2));
+    
     // Si hay búsqueda por texto, usar el campo de búsqueda del sitio
     if (hasSearchQuery) {
       console.log('[Ikigai Search] Usando búsqueda interactiva...');
       
       try {
+        // Tomar screenshot ANTES de buscar el input
+        await puppeteerPage.screenshot({ path: '/tmp/ikigai-before-search.png', fullPage: false });
+        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-before-search.png');
+        
         // Buscar el input de búsqueda - Ikigai usa un input con placeholder "Buscar..."
-        const searchInputSelector = 'input[type="text"], input[placeholder*="uscar"], input[placeholder*="ombre"]';
+        // Intentar múltiples selectores
+        const searchInputSelectors = [
+          'input[type="text"]',
+          'input[type="search"]',
+          'input[placeholder*="uscar"]',
+          'input[placeholder*="ombre"]',
+          'input[name="search"]',
+          'input[name="query"]',
+          'input[name="buscar"]',
+          '.search-input',
+          '#search-input'
+        ];
         
-        console.log('[Ikigai Search] Esperando input de búsqueda...');
-        await puppeteerPage.waitForSelector(searchInputSelector, { timeout: 10000 });
+        let inputFound = null;
+        console.log('[Ikigai Search] Buscando input de búsqueda...');
         
-        console.log('[Ikigai Search] Input encontrado, escribiendo query...');
-        await puppeteerPage.type(searchInputSelector, query.trim(), { delay: 100 });
+        for (const selector of searchInputSelectors) {
+          try {
+            inputFound = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
+            if (inputFound) {
+              console.log(`[Ikigai Search] ✓ Input encontrado con selector: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`[Ikigai Search] ✗ Selector no encontrado: ${selector}`);
+          }
+        }
         
-        // Esperar un momento para que se procese
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!inputFound) {
+          throw new Error('No se encontró el input de búsqueda con ningún selector');
+        }
+        
+        // Limpiar el input primero (por si tiene texto)
+        await puppeteerPage.evaluate((sel) => {
+          const input = document.querySelector(sel);
+          if (input) input.value = '';
+        }, searchInputSelectors.find(s => inputFound));
+        
+        console.log('[Ikigai Search] Escribiendo query:', query.trim());
+        await puppeteerPage.type(searchInputSelectors.find(s => inputFound), query.trim(), { delay: 150 });
+        
+        // Esperar más tiempo para que se procese
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Tomar screenshot DESPUÉS de escribir
+        await puppeteerPage.screenshot({ path: '/tmp/ikigai-after-typing.png', fullPage: false });
+        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-after-typing.png');
         
         // Presionar Enter para buscar
         console.log('[Ikigai Search] Presionando Enter...');
         await puppeteerPage.keyboard.press('Enter');
         
-        // Esperar a que se actualicen los resultados (más tiempo para Qwik)
-        console.log('[Ikigai Search] Esperando resultados de búsqueda...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Esperar a que se actualicen los resultados (MÁS tiempo para Qwik)
+        console.log('[Ikigai Search] Esperando resultados de búsqueda (10 segundos)...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        // Tomar screenshot DESPUÉS de buscar
+        await puppeteerPage.screenshot({ path: '/tmp/ikigai-after-search.png', fullPage: false });
+        console.log('[Ikigai Search] Screenshot guardado: /tmp/ikigai-after-search.png');
+        
+        // Verificar si la URL cambió (debería tener ?buscar=)
+        const currentUrl = puppeteerPage.url();
+        console.log('[Ikigai Search] URL actual después de buscar:', currentUrl);
         
         console.log('[Ikigai Search] ✓ Búsqueda interactiva completada');
       } catch (error) {
