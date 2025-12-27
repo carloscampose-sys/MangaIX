@@ -297,20 +297,92 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Slug is required' });
   }
 
-  let browser = null;
+  const baseUrl = `https://viralikigai.foodib.net/series/${slug}`;
+  console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
+  console.log(`[Ikigai Chapters] URL base: ${baseUrl}`);
+
+  // ESTRATEGIA: Usar sesiones separadas para cada página
+  // Esto evita que Cloudflare detecte navegaciones múltiples en la misma sesión
+  
+  const allChaptersArrays = [];
+  let totalPages = 1;
 
   try {
-    const baseUrl = `https://viralikigai.foodib.net/series/${slug}`;
+    // PASO 1: Obtener página 1 y detectar total de páginas
+    console.log(`[Ikigai Chapters] === PASO 1: PÁGINA 1 ===`);
+    const page1Result = await scrapeSinglePage(baseUrl, 1);
+    
+    if (!page1Result.success) {
+      return res.status(500).json({
+        error: 'Error en página 1',
+        details: page1Result.error
+      });
+    }
+    
+    totalPages = page1Result.totalPages;
+    allChaptersArrays.push(page1Result.chapters);
+    console.log(`[Ikigai Chapters] Página 1: ${page1Result.chapters.length} capítulos, ${totalPages} páginas totales`);
 
-    console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
-    console.log(`[Ikigai Chapters] URL base: ${baseUrl}`);
+    // PASO 2: Procesar páginas restantes con sesiones independientes
+    for (let pageNum = 2; pageNum <= totalPages; pageNum++) {
+      console.log(`[Ikigai Chapters] === PASO ${pageNum}: PÁGINA ${pageNum} ===`);
+      
+      // Esperar entre páginas para evitar detección
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const pageResult = await scrapeSinglePage(baseUrl, pageNum);
+      
+      if (pageResult.success && pageResult.chapters.length > 0) {
+        allChaptersArrays.push(pageResult.chapters);
+        console.log(`[Ikigai Chapters] Página ${pageNum}: ${pageResult.chapters.length} capítulos`);
+      } else {
+        console.error(`[Ikigai Chapters] ❌ Página ${pageNum} falló: ${pageResult.error}`);
+      }
+    }
 
+    // Consolidar, deduplicar y ordenar capítulos
+    const consolidatedChapters = consolidateChapters(allChaptersArrays);
+
+    console.log(`[Ikigai Chapters] ===== RESULTADO FINAL =====`);
+    console.log(`[Ikigai Chapters] Total capítulos únicos: ${consolidatedChapters.length}`);
+    console.log(`[Ikigai Chapters] Páginas procesadas: ${allChaptersArrays.length}/${totalPages}`);
+
+    return res.status(200).json({
+      chapters: consolidatedChapters,
+      total: consolidatedChapters.length,
+      pagesDetected: totalPages,
+      pagesProcessed: allChaptersArrays.length
+    });
+
+  } catch (error) {
+    console.error('[Ikigai Chapters] Error general:', error);
+    return res.status(500).json({
+      error: 'Error obteniendo capítulos',
+      details: error.message
+    });
+  }
+}
+
+/**
+ * Scraper para una sola página usando sesión independiente
+ * @param {string} baseUrl - URL base de la serie
+ * @param {number} pageNum - Número de página
+ * @returns {Promise<{success: boolean, chapters: Array, totalPages: number, error?: string}>}
+ */
+async function scrapeSinglePage(baseUrl, pageNum) {
+  let browser = null;
+  
+  try {
+    console.log(`[ScrapePage${pageNum}] Iniciando sesión independiente...`);
+    
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled'
+        '--disable-blink-features=AutomationControlled',
+        // Rotar User-Agent para cada sesión
+        `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36`
       ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -319,10 +391,15 @@ export default async function handler(req, res) {
 
     const page = await browser.newPage();
 
-    // User Agent real
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    );
+    // User Agent único por sesión
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    ];
+    
+    await page.setUserAgent(userAgents[pageNum % userAgents.length]);
 
     // Anti-detección
     await page.evaluateOnNewDocument(() => {
@@ -345,74 +422,74 @@ export default async function handler(req, res) {
       }
     });
 
-    // ESTRATEGIA SIMPLIFICADA: Solo extraer de página 1 de manera robusta
-    console.log(`[Ikigai Chapters] ESTRATEGIA: Extracción robusta desde página 1`);
-    
-    // Navegar a la primera página
-    const firstPageUrl = `${baseUrl}?pagina=1`;
-    console.log(`[Ikigai Chapters] Navegando a página 1: ${firstPageUrl}`);
+    // Navegar a la página específica
+    const pageUrl = `${baseUrl}?pagina=${pageNum}`;
+    console.log(`[ScrapePage${pageNum}] Navegando a: ${pageUrl}`);
 
     try {
-      await page.goto(firstPageUrl, {
+      await page.goto(pageUrl, {
         waitUntil: 'networkidle0',
-        timeout: 40000
+        timeout: 45000
       });
     } catch (navError) {
-      console.log(`[Ikigai Chapters] Timeout en networkidle0, intentando con domcontentloaded...`);
-      await page.goto(firstPageUrl, {
+      console.log(`[ScrapePage${pageNum}] Timeout en networkidle0, intentando domcontentloaded...`);
+      await page.goto(pageUrl, {
         waitUntil: 'domcontentloaded',
-        timeout: 30000
+        timeout: 35000
       });
     }
 
-    // Esperar a que Cloudflare complete su challenge
-    const challengeSuccess = await waitForCloudflareChallenge(page, 25000);
+    // Esperar challenge de Cloudflare con timeout más largo
+    console.log(`[ScrapePage${pageNum}] Esperando challenge de Cloudflare...`);
+    const challengeSuccess = await waitForCloudflareChallenge(page, 30000);
+    
     if (!challengeSuccess) {
       await browser.close();
-      return res.status(500).json({
-        error: 'Error cargando página',
-        details: 'No se pudo superar el challenge de Cloudflare en página 1'
-      });
+      return {
+        success: false,
+        chapters: [],
+        totalPages: 1,
+        error: 'Challenge de Cloudflare falló'
+      };
     }
 
-    // Detectar total de páginas
-    const totalPages = await detectTotalPages(page);
-    console.log(`[Ikigai Chapters] Total de páginas detectadas: ${totalPages}`);
+    console.log(`[ScrapePage${pageNum}] ✓ Challenge completado`);
 
-    // Extraer capítulos de página 1
-    const page1Chapters = await extractChaptersFromPage(page);
-    console.log(`[Ikigai Chapters] Página 1: ${page1Chapters.length} capítulos encontrados`);
+    // Detectar total de páginas (solo en página 1)
+    let totalPages = 1;
+    if (pageNum === 1) {
+      totalPages = await detectTotalPages(page);
+    }
 
-    // Consolidar y ordenar capítulos
-    const consolidatedChapters = consolidateChapters([page1Chapters]);
-
-    console.log(`[Ikigai Chapters] Total capítulos únicos: ${consolidatedChapters.length}`);
-    console.log(`[Ikigai Chapters] Páginas detectadas: ${totalPages} (solo procesada página 1 debido a limitaciones de Cloudflare)`);
+    // Extraer capítulos
+    const chapters = await extractChaptersFromPage(page);
+    console.log(`[ScrapePage${pageNum}] Extraídos ${chapters.length} capítulos`);
 
     await browser.close();
 
-    return res.status(200).json({
-      chapters: consolidatedChapters,
-      total: consolidatedChapters.length,
-      pagesDetected: totalPages,
-      pagesScanned: 1,
-      note: 'Solo página 1 procesada debido a protección Cloudflare en páginas adicionales'
-    });
+    return {
+      success: true,
+      chapters,
+      totalPages,
+      error: null
+    };
 
   } catch (error) {
-    console.error('[Ikigai Chapters] Error:', error);
-
+    console.error(`[ScrapePage${pageNum}] Error:`, error.message);
+    
     if (browser) {
       try {
         await browser.close();
       } catch (e) {
-        console.error('[Ikigai Chapters] Error cerrando browser:', e);
+        console.error(`[ScrapePage${pageNum}] Error cerrando browser:`, e);
       }
     }
 
-    return res.status(500).json({
-      error: 'Error obteniendo capítulos',
-      details: error.message
-    });
+    return {
+      success: false,
+      chapters: [],
+      totalPages: 1,
+      error: error.message
+    };
   }
 }
