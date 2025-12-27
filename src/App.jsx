@@ -311,6 +311,8 @@ const MainApp = ({ userName, userGender }) => {
           
           if (matches) {
             console.log(`[App] ✓ Incluido: "${manga.title}" (${matchCount}/${searchWords.length} palabras)`);
+          } else {
+            console.log(`[App] ✗ Excluido: "${manga.title}" (${matchCount}/${searchWords.length} palabras, necesita ${threshold})`);
           }
           
           return matches;
@@ -323,9 +325,9 @@ const MainApp = ({ userName, userGender }) => {
           loadDescriptionsInBackground(filteredResults);
         } else {
           // Si el filtro elimina todo, mostrar los resultados originales
-          // pero con un mensaje
+          // pero con un mensaje explicativo
           console.log('[App] El filtro eliminó todos los resultados, mostrando originales');
-          showToast('⚠️ No se encontraron coincidencias exactas. Mostrando resultados relacionados.');
+          showToast(`⚠️ "${searchTerm}" no encontrado en esta página. Prueba navegando a la siguiente página o usa filtros de género.`);
           loadDescriptionsInBackground(results);
         }
       } else {
