@@ -92,6 +92,10 @@ export default async function handler(req, res) {
 
     // Bloquear ads y recursos innecesarios
     await puppeteerPage.setRequestInterception(true);
+    
+    // Capturar peticiones de red para debugging
+    const networkRequests = [];
+    
     puppeteerPage.on('request', (request) => {
       const blockedResources = [
         'ads',
@@ -102,6 +106,15 @@ export default async function handler(req, res) {
         'tracking'
       ];
       const url = request.url().toLowerCase();
+
+      // Guardar peticiones de API para debugging
+      if (url.includes('/api/') || url.includes('/search') || url.includes('/series')) {
+        networkRequests.push({
+          method: request.method(),
+          url: request.url(),
+          postData: request.postData()
+        });
+      }
 
       if (blockedResources.some(resource => url.includes(resource))) {
         request.abort();
@@ -222,6 +235,9 @@ export default async function handler(req, res) {
         // Verificar si la URL cambió (debería tener ?buscar=)
         const currentUrl = puppeteerPage.url();
         console.log('[Ikigai Search] URL actual después de buscar:', currentUrl);
+        
+        // Log de peticiones de red capturadas
+        console.log('[Ikigai Search] Peticiones de red capturadas:', JSON.stringify(networkRequests, null, 2));
         
         console.log('[Ikigai Search] ✓ Búsqueda interactiva completada');
       } catch (error) {
