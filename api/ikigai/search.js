@@ -229,10 +229,11 @@ export default async function handler(req, res) {
         const excludePatterns = ['/clasificacion', '/lists/', '/grupos/'];
         if (excludePatterns.some(pattern => href.includes(pattern))) return false;
 
-        // NUEVO: Excluir enlaces que contienen query strings de búsqueda o paginación
-        // Estos son enlaces de paginación, no de series
-        if (href.includes('?buscar=') || href.includes('&buscar=')) return false;
+        // Excluir enlaces de paginación que NO son de series
+        // Los enlaces de series pueden tener query strings (ej: /series/amor-maldito?buscar=...)
+        // Solo excluir si es SOLO paginación sin /series/ en la ruta
         if (href.includes('?pagina=') && !href.includes('/series/')) return false;
+        if (href.includes('&pagina=') && !href.includes('/series/')) return false;
 
         // Debe tener contenido (imagen o título)
         const hasImage = link.querySelector('img') !== null;
@@ -266,8 +267,8 @@ export default async function handler(req, res) {
         let slug = '';
         if (href.includes('/series/')) {
           const slugPart = href.split('/series/')[1];
-          // Remover trailing slash y query strings
-          slug = slugPart?.split('?')[0]?.replace(/\/$/, '') || '';
+          // Remover trailing slash y query strings (ej: ?buscar=..., ?pagina=...)
+          slug = slugPart?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
         }
 
         console.log(`[Ikigai Eval ${index}] href: ${href}, slug: ${slug}, title: ${title}, cover: ${cover ? 'yes' : 'no'}`);
