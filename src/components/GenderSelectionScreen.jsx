@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import StarAnimation from './StarAnimation';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { 
   shake,
   pulse,

@@ -3,7 +3,7 @@
  * Funciones reutilizables y configuraciones para animaciones con anime.js
  */
 
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 
 // ============================================================
 // CONFIGURACIONES PREDEFINIDAS

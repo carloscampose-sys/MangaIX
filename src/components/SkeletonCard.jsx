@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 
 export const SkeletonCard = () => {
   const shimmerRef = useRef(null);

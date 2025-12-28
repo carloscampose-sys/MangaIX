@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { prefersReducedMotion } from '../utils/animeHelpers';
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Confetti from 'react-confetti';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { 
   fadeInUp, 
   scaleInBounce, 

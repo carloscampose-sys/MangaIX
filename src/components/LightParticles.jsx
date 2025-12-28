@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 
 const PARTICLE_CONFIG = {
   count: {

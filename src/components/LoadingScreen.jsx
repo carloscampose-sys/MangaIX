@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 const ORBIT_EMOJIS = [

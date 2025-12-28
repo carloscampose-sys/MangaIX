@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, BookOpen, MoreVertical } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 import { DetailModal } from './DetailModal';

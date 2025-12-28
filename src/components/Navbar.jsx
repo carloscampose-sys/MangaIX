@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { Moon, Sun, Eye, EyeOff, Book, Search } from 'lucide-react';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 export const Navbar = ({ setPage }) => {

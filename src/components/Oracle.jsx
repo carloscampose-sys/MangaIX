@@ -12,7 +12,7 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
-import anime from 'animejs';
+import anime from 'animejs/lib/anime.es.js';
 import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibrary }) => {
