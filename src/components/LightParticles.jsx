@@ -8,16 +8,16 @@ import { useChristmasTheme } from '../context/ChristmasThemeContext';
  */
 const PARTICLE_CONFIG = {
   count: {
-    desktop: 50,      // Pantallas > 768px
-    mobile: 30        // Pantallas <= 768px
+    desktop: 30,      // Reducido de 50 a 30 para mejor rendimiento
+    mobile: 15        // Reducido de 30 a 15
   },
   size: {
     min: 4,           // Minimum particle size in pixels
     max: 12           // Maximum particle size in pixels
   },
   duration: {
-    min: 4,           // Minimum animation duration in seconds
-    max: 10           // Maximum animation duration in seconds
+    min: 6,           // Aumentado para animaciones más suaves
+    max: 12           // Aumentado para animaciones más suaves
   },
   opacity: {
     min: 0.3,         // Minimum opacity for visibility
@@ -41,20 +41,10 @@ const PARTICLE_CONFIG = {
 const getParticleCount = () => {
   if (typeof window === 'undefined') return PARTICLE_CONFIG.count.desktop;
   
-  // Check for reduced motion preference (accessibility)
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  console.log('[LightParticles] prefersReducedMotion:', prefersReducedMotion);
-  
-  // Even with reduced motion, show particles but with slower animations
-  // The CSS will handle making them less intense
-  
   // Reduce particles on mobile
-  const count = window.innerWidth <= 768 
+  return window.innerWidth <= 768 
     ? PARTICLE_CONFIG.count.mobile 
     : PARTICLE_CONFIG.count.desktop;
-  
-  console.log('[LightParticles] Window width:', window.innerWidth, 'Count:', count);
-  return count;
 };
 
 /**
@@ -121,29 +111,22 @@ export const LightParticles = () => {
   const { theme } = useTheme();
   const { isChristmasMode } = useChristmasTheme();
 
-  console.log('[LightParticles] Rendering - theme:', theme, 'isChristmasMode:', isChristmasMode);
-
   // Memoize particles to generate them only once
   const particles = useMemo(() => {
     // Check browser support
     if (!checkBrowserSupport()) {
-      console.warn('LightParticles: Browser does not support required CSS features');
       return [];
     }
     
     const count = getParticleCount();
-    console.log('[LightParticles] Generating', count, 'particles');
     
     // If count is 0 (e.g., reduced motion preference), return empty array
     if (count === 0) {
-      console.log('[LightParticles] Count is 0, not generating particles');
       return [];
     }
     
     try {
-      const generated = generateParticles(count);
-      console.log('[LightParticles] Successfully generated', generated.length, 'particles');
-      return generated;
+      return generateParticles(count);
     } catch (error) {
       console.error('LightParticles: Failed to generate particles', error);
       // Fallback: generate simplified version with fewer particles
@@ -153,17 +136,13 @@ export const LightParticles = () => {
 
   // Only render in light mode and when christmas mode is not active
   if (theme !== 'light' || isChristmasMode) {
-    console.log('[LightParticles] Not rendering - wrong theme or christmas mode');
     return null;
   }
 
   // Don't render if no particles were generated
   if (particles.length === 0) {
-    console.log('[LightParticles] Not rendering - no particles generated');
     return null;
   }
-
-  console.log('[LightParticles] Rendering', particles.length, 'particles');
 
   return (
     <div className="light-particles" aria-hidden="true">
