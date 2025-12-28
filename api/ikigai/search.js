@@ -4,28 +4,35 @@ import chromium from '@sparticuz/chromium';
 /**
  * Espera a que se complete el challenge de Cloudflare
  */
-async function waitForCloudflareChallenge(page, timeout = 25000) {
+async function waitForCloudflareChallenge(page, timeout = 30000) {
   try {
+    // Paso 1: Esperar a que desaparezca el challenge
     await page.waitForFunction(() => {
       const title = document.title;
       const bodyText = document.body ? document.body.innerText : '';
       
-      return !title.includes('Just a moment') &&
+      return !title.includes('500') &&
+        !title.includes('Just a moment') &&
         !title.includes('Un momento') &&
+        !title.includes('Error') &&
         !bodyText.includes('Checking your browser') &&
+        !bodyText.includes('Verifying you are human') &&
         !bodyText.includes('Enable JavaScript and cookies to continue');
     }, { timeout: timeout / 2 });
     
     console.log('[Ikigai Search] ✓ Challenge de Cloudflare superado');
     
+    // Paso 2: Esperar a que aparezcan enlaces de series
     await page.waitForFunction(() => {
       const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
       const bodyText = document.body ? document.body.innerText : '';
-      return seriesLinks.length > 0 && bodyText.length > 1000;
+      return seriesLinks.length > 5 && bodyText.length > 1000;
     }, { timeout: timeout / 2 });
     
     console.log('[Ikigai Search] ✓ Contenido cargado');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Espera adicional para Qwik
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     return true;
   } catch (error) {
@@ -36,18 +43,30 @@ async function waitForCloudflareChallenge(page, timeout = 25000) {
         title: document.title,
         bodyLength: document.body ? document.body.innerText.length : 0,
         seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length,
-        url: window.location.href
+        allLinksCount: document.querySelectorAll('a').length,
+        url: window.location.href,
+        bodyPreview: document.body ? document.body.innerText.substring(0, 300) : ''
       };
     });
     console.log('[Ikigai Search] Estado de la página:', JSON.stringify(debugInfo, null, 2));
     
-    if (debugInfo.seriesLinksCount > 0) {
+    // Si hay enlaces de series, considerar exitoso
+    if (debugInfo.seriesLinksCount > 5) {
       console.log('[Ikigai Search] ✓ Recuperado: hay enlaces de series');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       return true;
     }
     
-    return false;
+    // Si hay muy poco contenido, Cloudflare sigue bloqueando
+    if (debugInfo.bodyLength < 500) {
+      console.error('[Ikigai Search] ❌ Página bloqueada por Cloudflare');
+      return false;
+    }
+    
+    // Si hay contenido pero pocos enlaces, esperar más
+    console.warn('[Ikigai Search] ⚠️ Contenido cargado pero pocos enlaces, esperando más...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    return true;
   }
 }
 
@@ -117,21 +136,20 @@ export default async function handler(req, res) {
       }
     });
 
-    // PASO 1: Establecer sesión navegando a la home
-    console.log('[Ikigai Search] Estableciendo sesión...');
+    // PASO 1: Establecer sesión navegando a /series/ primero (sin filtros)
+    console.log('[Ikigai Search] Estableciendo sesión en /series/...');
     try {
-      await puppeteerPage.goto('https://viralikigai.foodib.net/', {
-        waitUntil: 'networkidle0',
+      await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+        waitUntil: 'domcontentloaded',
         timeout: 30000
       });
     } catch (navError) {
-      console.log('[Ikigai Search] Timeout en home, intentando domcontentloaded...');
-      await puppeteerPage.goto('https://viralikigai.foodib.net/', {
-        waitUntil: 'domcontentloaded',
-        timeout: 20000
-      });
+      console.log('[Ikigai Search] Error en navegación inicial:', navError.message);
     }
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Esperar a que pase el challenge de Cloudflare en la primera carga
+    console.log('[Ikigai Search] Esperando challenge inicial...');
+    await new Promise(resolve => setTimeout(resolve, 8000));
 
     // PASO 2: Construir URL con parámetros
     const baseUrl = 'https://viralikigai.foodib.net/series/';
@@ -176,30 +194,61 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Navegando a URL con filtros...');
     try {
       await puppeteerPage.goto(targetUrl, {
-        waitUntil: 'networkidle0',
+        waitUntil: 'domcontentloaded',
         timeout: 45000
       });
     } catch (navError) {
-      console.log('[Ikigai Search] Timeout en networkidle0, intentando domcontentloaded...');
-      await puppeteerPage.goto(targetUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 35000
-      });
+      console.log('[Ikigai Search] Error navegando con filtros:', navError.message);
     }
 
-    // PASO 4: Esperar challenge de Cloudflare
+    // PASO 4: Esperar challenge de Cloudflare con timeout extendido
     console.log('[Ikigai Search] Esperando challenge de Cloudflare...');
-    const challengeSuccess = await waitForCloudflareChallenge(puppeteerPage, 25000);
+    const challengeSuccess = await waitForCloudflareChallenge(puppeteerPage, 30000);
     
     if (!challengeSuccess) {
-      await browser.close();
-      return res.status(200).json({
-        results: [],
-        page,
-        hasMore: false,
-        error: 'Cloudflare bloqueó la solicitud',
-        searchMethod: 'cloudflare-blocked'
+      // Último intento: verificar si realmente está bloqueado o solo lento
+      console.log('[Ikigai Search] Challenge falló, verificando estado real...');
+      
+      const finalCheck = await puppeteerPage.evaluate(() => {
+        return {
+          title: document.title,
+          bodyLength: document.body ? document.body.innerText.length : 0,
+          seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length,
+          hasCloudflareText: document.body ? (
+            document.body.innerText.includes('Just a moment') ||
+            document.body.innerText.includes('Checking your browser') ||
+            document.body.innerText.includes('Enable JavaScript')
+          ) : false
+        };
       });
+      
+      console.log('[Ikigai Search] Verificación final:', JSON.stringify(finalCheck, null, 2));
+      
+      // Si definitivamente está bloqueado por Cloudflare
+      if (finalCheck.hasCloudflareText || finalCheck.bodyLength < 300) {
+        await browser.close();
+        return res.status(200).json({
+          results: [],
+          page,
+          hasMore: false,
+          error: 'Cloudflare bloqueó la solicitud. La búsqueda por filtros en Ikigai está temporalmente no disponible.',
+          searchMethod: 'cloudflare-blocked'
+        });
+      }
+      
+      // Si hay algo de contenido, intentar extraer de todos modos
+      if (finalCheck.seriesLinksCount > 0) {
+        console.log('[Ikigai Search] Hay algunos enlaces, continuando extracción...');
+      } else {
+        await browser.close();
+        return res.status(200).json({
+          results: [],
+          page,
+          hasMore: false,
+          error: 'No se pudieron cargar los resultados',
+          searchMethod: 'timeout'
+        });
+      }
     }
 
     // PASO 5: Scroll para lazy loading
