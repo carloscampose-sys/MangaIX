@@ -442,3 +442,74 @@ body.christmas-mode {
 }
 
 
+
+
+/* ========== LIGHT MODE PARTICLES ========== */
+
+/* Keyframe for particle floating animation */
+@keyframes float-particle {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: var(--particle-opacity);
+  }
+  
+  25% {
+    transform: translate(10px, -15px) rotate(90deg);
+  }
+  
+  50% {
+    transform: translate(-5px, -30px) rotate(180deg);
+    opacity: calc(var(--particle-opacity) * 0.7);
+  }
+  
+  75% {
+    transform: translate(-15px, -15px) rotate(270deg);
+  }
+  
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+    opacity: var(--particle-opacity);
+  }
+}
+
+/* Keyframe for particle fade-in on mount */
+@keyframes fade-in-particle {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: var(--particle-opacity);
+    transform: scale(1);
+  }
+}
+
+/* Light particles container */
+.light-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+/* Individual particle styling */
+.light-particles .particle {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  animation: 
+    float-particle var(--particle-duration, 5s) ease-in-out infinite,
+    fade-in-particle 0.8s ease-out;
+  --particle-opacity: 0.3;
+}
+
+/* Hide particles in dark mode (extra safety) */
+.dark .light-particles {
+  display: none;
+}
+
+/* Hide particles in christmas mode (extra safety) */
+.christmas-mode .light-particles {
+  display: none;
+}

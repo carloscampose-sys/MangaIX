@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getGreeting } from './utils/greetingUtils';
 import { ChristmasThemeProvider } from './context/ChristmasThemeContext';
 import { SnowEffect } from './components/SnowEffect';
+import { LightParticles } from './components/LightParticles';
 import { useChristmasTheme } from './context/ChristmasThemeContext';
 
 const MainApp = ({ userName, userGender }) => {
@@ -452,6 +453,9 @@ const MainApp = ({ userName, userGender }) => {
     <div className="min-h-screen pb-24 md:pb-32 relative">
       {/* Christmas Snow Effect */}
       {isChristmasMode && <SnowEffect />}
+
+      {/* Light Mode Particles */}
+      <LightParticles />
 
       <AnimatePresence>
         {/* Global Toasts handled by ToastProvider */}
