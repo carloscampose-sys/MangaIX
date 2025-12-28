@@ -157,15 +157,16 @@ export default async function handler(req, res) {
       timeout: 30000,  // 30 segundos de timeout
       headers: {
         'Accept': 'application/json'
-      }
+      },
+      responseType: 'text'  // Importante: recibir como texto primero
     });
 
-    const responseBody = response.data.body || '';
+    // Con GET, la respuesta es el contenido directamente de la URL target
+    const responseBody = response.data || '';
 
     console.log('[Ikigai Search] Response recibida de ScrapingBee');
     console.log('[Ikigai Search] Longitud del body:', responseBody.length);
-    console.log('[Ikigai Search] Request ID:', response.data.request_id);
-    console.log('[Ikigai Search] Requests restantes:', response.data.remaining_requests);
+    console.log('[Ikigai Search] Headers:', JSON.stringify(response.headers, null, 2));
 
     // ========================================
     // PARSEAR RESPUESTA DE SCRAPINGBEE
@@ -263,8 +264,7 @@ export default async function handler(req, res) {
       hasMore: !!parsedData.next_page_url,        // Hay más páginas
       total: parsedData.total,                    // Total de resultados
       lastPage: parsedData.last_page,             // Última página
-      searchMethod: 'scrapingbee-free',        // Método usado (para debugging)
-      remainingRequests: response.data.remaining_requests  // Requests restantes en ScrapingBee
+      searchMethod: 'scrapingbee-free'        // Método usado (para debugging)
     });
 
   } catch (error) {
@@ -290,16 +290,14 @@ export default async function handler(req, res) {
       if (error.response.status === 402) {
         return res.status(402).json({
           error: 'Requests de ScrapingBee agotadas',
-          details: 'El plan gratuito tiene 1000 requests/mes. Si se agotaron, espera el próximo mes o actualiza a un plan de pago.',
-          remainingRequests: error.response.data?.remaining_requests || 0
+          details: 'El plan gratuito tiene 1000 requests/mes. Si se agotaron, espera el próximo mes o actualiza a un plan de pago.'
         });
       }
 
       if (error.response.status === 429) {
         return res.status(429).json({
           error: 'Límite de velocidad de ScrapingBee excedido',
-          details: 'Demasiadas requests muy rápido. Reduce la velocidad o agrega un delay entre requests.',
-          remainingRequests: error.response.data?.remaining_requests || 0
+          details: 'Demasiadas requests muy rápido. Reduce la velocidad o agrega un delay entre requests.'
         });
       }
 
