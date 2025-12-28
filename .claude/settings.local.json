@@ -11,7 +11,10 @@
       "WebSearch",
       "WebFetch(domain:www.scrapingbee.com)",
       "WebFetch(domain:www.zenrows.com)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node -e \"const fs = require\\(''fs''\\); fs.unlinkSync\\(''C:/Users/Isma/Documents/Proyectos Perosnakes/MangaIX/api/ikigai/proxyConfig.js''\\); console.log\\(''Archivo eliminado''\\);\")",
+      "Bash(dir /s /b \"C:\\\\Users\\\\Isma\\\\Documents\\\\Proyectos Perosnakes\\\\MangaIX\\\\api\")",
+      "Bash(dir:*)"
     ]
   }
 }

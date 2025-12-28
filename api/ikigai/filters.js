@@ -1,4 +1,4 @@
-import { GENRES, TYPES, STATUSES, SORT_OPTIONS } from './proxyConfig.js';
+import { GENRES, TYPES, STATUSES, SORT_OPTIONS } from '../../lib/ikigai/proxyConfig.js';
 
 /**
  * Endpoint para listar todos los filtros disponibles en Ikigai

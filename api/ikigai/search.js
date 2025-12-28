@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { buildApiParams } from '../../lib/ikigai/proxyConfig.js';
 
 /**
  * Busca series en Ikigai usando el endpoint API directo
