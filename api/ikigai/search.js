@@ -9,7 +9,7 @@ async function waitForCloudflareChallenge(page, timeout = 60000) {
   try {
     console.log('[Ikigai Search] Esperando que desaparezca challenge...');
 
-    // Paso 1: Esperar a que desaparezca el challenge
+    // Paso1: Esperar a que desaparezca el challenge
     await page.waitForFunction(() => {
       const title = document.title;
       const bodyText = document.body ? document.body.innerText : '';
@@ -105,7 +105,7 @@ async function waitForCloudflareChallenge(page, timeout = 60000) {
 /**
  * Intento de scraping individual con retry
  */
-async function attemptScraping(query, filters, page, attempt) {
+async function attemptScraping(browser, query, filters, page, attempt) {
   const puppeteerPage = await browser.newPage();
 
   try {
@@ -429,6 +429,8 @@ export default async function handler(req, res) {
   const maxRetries = 3;  // Máximo de reintentos
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let browser = null;  // Declarar browser fuera del try para manejarlo en finally
+
     try {
       console.log(`[Ikigai Search] Intento ${attempt}/${maxRetries}...`);
 
@@ -437,7 +439,7 @@ export default async function handler(req, res) {
 
       // Iniciar Puppeteer con configuración mejorada
       console.log('[Ikigai Search] Iniciando browser con configuración anti-detección...');
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         args: [
           ...chromium.args,
           '--no-sandbox',
@@ -453,11 +455,12 @@ export default async function handler(req, res) {
         defaultViewport: { width: 1920, height: 1080 }
       });
 
-      // Intentar scraping
-      const result = await attemptScraping(query, filters, page, attempt);
+      // Intentar scraping pasando browser como parámetro
+      const result = await attemptScraping(browser, query, filters, page, attempt);
 
-      // Cerrar browser siempre
+      // Cerrar browser siempre en finally
       await browser.close();
+      browser = null;
 
       if (result.success) {
         console.log(`[Ikigai Search] ✅ Intento ${attempt} exitoso`);
@@ -523,7 +526,7 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('[Ikigai Search] Error crítico en intento:', error);
 
-      // Asegurar cerrar browser si existe
+      // Siempre cerrar browser si existe
       try {
         if (browser) {
           await browser.close();
@@ -540,6 +543,17 @@ export default async function handler(req, res) {
       }
 
       await new Promise(resolve => setTimeout(resolve, 3000));  // Esperar más entre reintentos
+    }
+
+    // Bloque para asegurar que nunca salimos sin cerrar browser
+    finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (e) {
+          console.error('[Ikigai Search] Error final cerrando browser:', e);
+        }
+      }
     }
   }
 }
