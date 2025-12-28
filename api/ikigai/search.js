@@ -153,6 +153,8 @@ export default async function handler(req, res) {
     scrapingbeeUrl.searchParams.append('render_js', 'false');  // NO renderizar JS, la API directa es suficiente
     scrapingbeeUrl.searchParams.append('country_code', 'us');  // IP de Estados Unidos
 
+    console.log('[Ikigai Search] ScrapingBee URL:', scrapingbeeUrl.toString());
+
     const response = await axios.get(scrapingbeeUrl.toString(), {
       timeout: 30000,  // 30 segundos de timeout
       headers: {
@@ -161,12 +163,16 @@ export default async function handler(req, res) {
       responseType: 'text'  // Importante: recibir como texto primero
     });
 
-    // Con GET, la respuesta es el contenido directamente de la URL target
-    const responseBody = response.data || '';
+    console.log('[Ikigai Search] Response status:', response.status);
+    console.log('[Ikigai Search] Response data type:', typeof response.data);
+    console.log('[Ikigai Search] Response data is null:', response.data === null);
+    console.log('[Ikigai Search] Response data is undefined:', response.data === undefined);
+    console.log('[Ikigai Search] Response data length:', response.data?.length || 0);
 
-    console.log('[Ikigai Search] Response recibida de ScrapingBee');
+    // Con GET, la respuesta es el contenido directamente de la URL target
+    const responseBody = typeof response.data === 'string' ? response.data : '';
+
     console.log('[Ikigai Search] Longitud del body:', responseBody.length);
-    console.log('[Ikigai Search] Headers:', JSON.stringify(response.headers, null, 2));
 
     // ========================================
     // PARSEAR RESPUESTA DE SCRAPINGBEE
