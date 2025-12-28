@@ -18,35 +18,36 @@ export default async function handler(req, res) {
   const hasSearchQuery = query && query.trim();
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] ESTRATEGIA HÍBRIDA: Interactiva + API Discovery');
+  console.log('[Ikigai Search] NUEVA ESTRATEGIA: URL + Paginación Mejorada');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
   console.log('[Ikigai Search] ============================================');
 
-  // PASO 1: Intentar usar API directa si ya la conocemos
-  if (hasSearchQuery && discoveredAPIs.searchEndpoint) {
-    console.log('[Ikigai Search] Intentando API directa conocida...');
+  // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación
+  if (hasSearchQuery) {
+    console.log('[Ikigai Search] Usando búsqueda por URL con paginación...');
     
     try {
-      const apiResult = await tryDirectAPI(query, filters, page);
-      if (apiResult && apiResult.results && apiResult.results.length > 0) {
-        console.log(`[Ikigai Search] ✅ API directa exitosa: ${apiResult.results.length} resultados`);
-        return res.status(200).json(apiResult);
+      const urlResult = await performURLSearchWithPagination(query, filters, page);
+      if (urlResult && urlResult.results && urlResult.results.length > 0) {
+        console.log(`[Ikigai Search] ✅ Búsqueda URL exitosa: ${urlResult.results.length} resultados`);
+        return res.status(200).json(urlResult);
       } else {
-        console.log('[Ikigai Search] ❌ API directa no retornó resultados, usando búsqueda interactiva...');
+        console.log('[Ikigai Search] ❌ Búsqueda URL no retornó resultados');
       }
     } catch (error) {
-      console.log('[Ikigai Search] ❌ API directa falló:', error.message);
-      console.log('[Ikigai Search] Continuando con búsqueda interactiva...');
+      console.log('[Ikigai Search] ❌ Búsqueda URL falló:', error.message);
     }
   }
 
-  // PASO 2: Usar Puppeteer para descubrir/usar API
+  // FALLBACK: Navegación básica sin búsqueda específica
+  console.log('[Ikigai Search] Fallback: navegación básica...');
+  
   let browser = null;
 
   try {
-    // Iniciar Puppeteer con configuración anti-detección AVANZADA
+    // Iniciar Puppeteer con configuración anti-detección
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
@@ -70,12 +71,11 @@ export default async function handler(req, res) {
 
     const puppeteerPage = await browser.newPage();
 
-    // Configuración anti-detección AVANZADA
+    // Configuración anti-detección
     await puppeteerPage.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     );
 
-    // Headers adicionales para parecer más humano
     await puppeteerPage.setExtraHTTPHeaders({
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
@@ -90,163 +90,7 @@ export default async function handler(req, res) {
       'Cache-Control': 'max-age=0'
     });
 
-    // Anti-detección JavaScript AVANZADA
-    await puppeteerPage.evaluateOnNewDocument(() => {
-      // Eliminar rastros de webdriver
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      
-      // Simular Chrome real
-      window.navigator.chrome = {
-        runtime: {},
-        loadTimes: function() {},
-        csi: function() {},
-        app: {}
-      };
-      
-      // Plugins falsos
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => [1, 2, 3, 4, 5]
-      });
-      
-      // Idiomas
-      Object.defineProperty(navigator, 'languages', {
-        get: () => ['es-ES', 'es', 'en-US', 'en']
-      });
-      
-      // Permisos
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: Cypress.env('NOTIFICATION_PERMISSION') || 'granted' }) :
-          originalQuery(parameters)
-      );
-      
-      // Eliminar _phantom, __nightmare, callPhantom
-      delete window._phantom;
-      delete window.__nightmare;
-      delete window.callPhantom;
-    });
-
-    // INTERCEPTAR TODAS LAS PETICIONES DE RED
-    const networkRequests = [];
-    const apiRequests = [];
-
-    await puppeteerPage.setRequestInterception(true);
-    
-    puppeteerPage.on('request', (request) => {
-      const url = request.url().toLowerCase();
-      const method = request.method();
-      const postData = request.postData();
-
-      // Capturar peticiones que podrían ser APIs
-      if (url.includes('/api/') || 
-          url.includes('/search') || 
-          url.includes('/buscar') ||
-          url.includes('/series') ||
-          (method === 'POST' && postData)) {
-        
-        const apiRequest = {
-          method,
-          url: request.url(),
-          headers: request.headers(),
-          postData,
-          timestamp: Date.now()
-        };
-        
-        apiRequests.push(apiRequest);
-        console.log(`[Ikigai API Discovery] ${method} ${request.url()}`);
-        if (postData) {
-          console.log(`[Ikigai API Discovery] Body:`, postData.substring(0, 200));
-        }
-      }
-
-      // Bloquear ads pero permitir todo lo demás
-      const blockedResources = ['ads', 'analytics', 'doubleclick', 'tracking'];
-      if (blockedResources.some(resource => url.includes(resource))) {
-        request.abort();
-      } else {
-        request.continue();
-      }
-    });
-
-    // Capturar respuestas también
-    puppeteerPage.on('response', async (response) => {
-      const url = response.url().toLowerCase();
-      const status = response.status();
-      
-      if ((url.includes('/api/') || 
-           url.includes('/search') || 
-           url.includes('/buscar')) && 
-          status === 200) {
-        
-        try {
-          const responseText = await response.text();
-          console.log(`[Ikigai API Discovery] Response ${status} from ${response.url()}`);
-          console.log(`[Ikigai API Discovery] Response preview:`, responseText.substring(0, 300));
-          
-          // Intentar parsear como JSON
-          try {
-            const jsonData = JSON.parse(responseText);
-            if (jsonData && (jsonData.results || jsonData.data || Array.isArray(jsonData))) {
-              console.log(`[Ikigai API Discovery] ✅ JSON válido encontrado en ${response.url()}`);
-              
-              // Guardar API descubierta
-              const matchingRequest = apiRequests.find(req => req.url === response.url());
-              if (matchingRequest) {
-                discoveredAPIs = {
-                  searchEndpoint: response.url(),
-                  searchMethod: matchingRequest.method,
-                  searchHeaders: matchingRequest.headers,
-                  lastDiscovery: Date.now(),
-                  sampleRequest: matchingRequest,
-                  sampleResponse: jsonData
-                };
-                console.log(`[Ikigai API Discovery] 🎯 API guardada: ${response.url()}`);
-              }
-            }
-          } catch (e) {
-            // No es JSON válido
-          }
-        } catch (e) {
-          console.log(`[Ikigai API Discovery] Error leyendo respuesta:`, e.message);
-        }
-      }
-    });
-
-    // PASO 3: ESTRATEGIA 1 - Búsqueda Interactiva Real (Recomendada)
-    if (hasSearchQuery) {
-      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda Interactiva Real');
-      
-      try {
-        const interactiveResult = await performInteractiveSearchReal(puppeteerPage, query);
-        
-        if (interactiveResult && interactiveResult.length > 0) {
-          await browser.close();
-          console.log(`[Ikigai Search] ✅ Búsqueda interactiva real exitosa: ${interactiveResult.length} resultados`);
-          
-          return res.status(200).json({
-            results: interactiveResult,
-            page,
-            hasMore: false,
-            searchMethod: 'interactive-real',
-            apiDiscovery: {
-              foundAPI: !!discoveredAPIs.searchEndpoint,
-              endpoint: discoveredAPIs.searchEndpoint,
-              requestsCaptured: apiRequests.length
-            }
-          });
-        } else {
-          console.log('[Ikigai Search] ❌ Búsqueda interactiva real no retornó resultados');
-        }
-      } catch (error) {
-        console.log('[Ikigai Search] ❌ Error en búsqueda interactiva real:', error.message);
-      }
-    }
-
-    // PASO 4: Fallback - navegar con parámetro URL y descubrir API
-    console.log('[Ikigai Search] Navegando para descubrir API...');
-    
-    // Navegar a la página principal de series
+    // Navegar a la página de series
     await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
       waitUntil: 'networkidle0',
       timeout: 30000
@@ -255,161 +99,15 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Página cargada, esperando contenido...');
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Si hay búsqueda, intentar realizarla para capturar la API
-    if (hasSearchQuery) {
-      console.log('[Ikigai Search] Realizando búsqueda para descubrir API...');
-      
-      try {
-        // Buscar campo de búsqueda
-        const searchSelectors = [
-          'input[type="search"]',
-          'input[placeholder*="buscar"]',
-          'input[placeholder*="search"]',
-          'input[name*="search"]',
-          'input[name*="buscar"]',
-          'input[id*="search"]',
-          'input[id*="buscar"]',
-          '.search input',
-          '[class*="search"] input'
-        ];
-
-        let searchInput = null;
-        for (const selector of searchSelectors) {
-          try {
-            searchInput = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
-            if (searchInput) {
-              console.log(`[Ikigai Search] Campo encontrado con selector: ${selector}`);
-              break;
-            }
-          } catch (e) {
-            // Continuar con el siguiente selector
-          }
-        }
-
-        if (searchInput) {
-          console.log('[Ikigai Search] Escribiendo en campo de búsqueda...');
-          
-          // Limpiar campo y escribir
-          await searchInput.click({ clickCount: 3 }); // Seleccionar todo
-          await searchInput.type(query, { delay: 100 });
-          
-          // Esperar un momento para que se registren las peticiones
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Presionar Enter
-          await puppeteerPage.keyboard.press('Enter');
-          
-          // Esperar respuestas de API
-          console.log('[Ikigai Search] Esperando respuestas de API...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-        } else {
-          console.log('[Ikigai Search] ❌ No se encontró campo de búsqueda');
-        }
-      } catch (error) {
-        console.log('[Ikigai Search] Error en búsqueda interactiva:', error.message);
-      }
-    }
-
-    // PASO 4: Analizar APIs descubiertas
-    console.log(`[Ikigai Search] APIs capturadas: ${apiRequests.length}`);
-    
-    if (apiRequests.length > 0) {
-      console.log('[Ikigai Search] Peticiones API encontradas:');
-      apiRequests.forEach((req, i) => {
-        console.log(`  ${i + 1}. ${req.method} ${req.url}`);
-        if (req.postData) {
-          console.log(`     Body: ${req.postData.substring(0, 100)}...`);
-        }
-      });
-    }
-
-    // PASO 5: Si descubrimos API, intentar usarla directamente
-    if (discoveredAPIs.searchEndpoint && hasSearchQuery) {
-      console.log('[Ikigai Search] Intentando usar API recién descubierta...');
-      
-      try {
-        const apiResult = await tryDirectAPI(query, filters, page);
-        if (apiResult && apiResult.results && apiResult.results.length > 0) {
-          await browser.close();
-          console.log(`[Ikigai Search] ✅ API recién descubierta exitosa: ${apiResult.results.length} resultados`);
-          return res.status(200).json({
-            ...apiResult,
-            discoveredAPI: true,
-            apiEndpoint: discoveredAPIs.searchEndpoint
-          });
-        }
-      } catch (error) {
-        console.log('[Ikigai Search] ❌ API recién descubierta falló:', error.message);
-      }
-    }
-
-    // PASO 5: Fallback - probar múltiples variaciones de slug
-    if (hasSearchQuery) {
-      console.log('[Ikigai Search] ESTRATEGIA 2: Entrada alternativa');
-      
-      try {
-        const alternativeResult = await tryAlternativeEntry(puppeteerPage, query);
-        
-        if (alternativeResult && alternativeResult.length > 0) {
-          await browser.close();
-          console.log(`[Ikigai Search] ✅ Entrada alternativa exitosa: ${alternativeResult.length} resultados`);
-          
-          return res.status(200).json({
-            results: alternativeResult,
-            page,
-            hasMore: false,
-            searchMethod: 'alternative-entry',
-            apiDiscovery: {
-              foundAPI: !!discoveredAPIs.searchEndpoint,
-              endpoint: discoveredAPIs.searchEndpoint,
-              requestsCaptured: apiRequests.length
-            }
-          });
-        } else {
-          console.log('[Ikigai Search] ❌ Entrada alternativa no retornó resultados');
-        }
-      } catch (error) {
-        console.log('[Ikigai Search] ❌ Error en entrada alternativa:', error.message);
-      }
-    }
-    if (hasSearchQuery) {
-      console.log('[Ikigai Search] ESTRATEGIA 2: Múltiples variaciones de slug');
-      
-      try {
-        const slugResult = await tryMultipleSlugVariations(puppeteerPage, query);
-        
-        if (slugResult && slugResult.length > 0) {
-          await browser.close();
-          console.log(`[Ikigai Search] ✅ Variación de slug exitosa: ${slugResult.length} resultados`);
-          
-          return res.status(200).json({
-            results: slugResult,
-            page,
-            hasMore: false,
-            searchMethod: 'slug-variation',
-            apiDiscovery: {
-              foundAPI: !!discoveredAPIs.searchEndpoint,
-              endpoint: discoveredAPIs.searchEndpoint,
-              requestsCaptured: apiRequests.length
-            }
-          });
-        } else {
-          console.log('[Ikigai Search] ❌ Variaciones de slug no encontraron resultados');
-        }
-      } catch (error) {
-        console.log('[Ikigai Search] ❌ Error en variaciones de slug:', error.message);
-      }
-    }
-
-    // PASO 6: Fallback final - extraer resultados de la página actual
-    console.log('[Ikigai Search] Fallback: extrayendo resultados de página...');
-    
-    // Esperar a que aparezcan resultados
-    try {
-      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 10000 });
-    } catch (e) {
-      console.log('[Ikigai Search] No se encontraron enlaces de series');
+    // Hacer scroll para cargar más contenido
+    for (let i = 1; i <= 3; i++) {
+      await puppeteerPage.evaluate((step) => {
+        window.scrollTo({
+          top: document.body.scrollHeight * step / 3,
+          behavior: 'smooth'
+        });
+      }, i);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     // Extraer resultados usando el método original
@@ -464,17 +162,12 @@ export default async function handler(req, res) {
     await browser.close();
 
     console.log(`[Ikigai Search] Resultados extraídos: ${results.length}`);
-    console.log(`[Ikigai Search] API descubierta: ${discoveredAPIs.searchEndpoint ? 'SÍ' : 'NO'}`);
 
     return res.status(200).json({
       results,
       page,
       hasMore: false, // Por simplicidad en esta implementación
-      apiDiscovery: {
-        foundAPI: !!discoveredAPIs.searchEndpoint,
-        endpoint: discoveredAPIs.searchEndpoint,
-        requestsCaptured: apiRequests.length
-      }
+      searchMethod: 'fallback'
     });
 
   } catch (error) {
@@ -1811,4 +1504,409 @@ async function tryDirectAPI(query, filters, page) {
     hasMore: data.hasMore || false,
     directAPI: true
   };
+}
+
+/**
+ * NUEVA FUNCIÓN: Búsqueda por URL con paginación mejorada
+ */
+async function performURLSearchWithPagination(query, filters, page) {
+  console.log('[Ikigai URL Pagination] Iniciando búsqueda con paginación...');
+  console.log(`[Ikigai URL Pagination] Query: "${query}", Página: ${page}`);
+  
+  let browser = null;
+
+  try {
+    // Iniciar Puppeteer con configuración anti-detección
+    browser = await puppeteer.launch({
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-web-security',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+      ],
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true
+    });
+
+    const puppeteerPage = await browser.newPage();
+
+    // Configuración anti-detección
+    await puppeteerPage.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    );
+
+    await puppeteerPage.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
+    });
+
+    // PASO 1: Establecer sesión navegando a la página principal
+    console.log('[Ikigai URL Pagination] Estableciendo sesión...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+    
+    // Esperar a que se establezca la sesión
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // PASO 2: Construir URL de búsqueda con paginación
+    let searchUrl = `https://viralikigai.foodib.net/series/?buscar=${encodeURIComponent(query)}`;
+    
+    // Agregar paginación si es página > 1
+    if (page > 1) {
+      searchUrl += `&pagina=${page}`;
+    }
+    
+    console.log(`[Ikigai URL Pagination] URL de búsqueda: ${searchUrl}`);
+
+    // PASO 3: Navegar a la URL de búsqueda
+    console.log('[Ikigai URL Pagination] Navegando a URL de búsqueda...');
+    const response = await puppeteerPage.goto(searchUrl, {
+      waitUntil: 'networkidle0',
+      timeout: 60000 // Más tiempo para Cloudflare
+    });
+
+    console.log(`[Ikigai URL Pagination] Respuesta: ${response.status()}`);
+
+    if (response.status() === 403) {
+      console.log('[Ikigai URL Pagination] ❌ Bloqueado por Cloudflare (403)');
+      await browser.close();
+      return null;
+    }
+
+    // PASO 4: Esperar a que se procese la búsqueda y superar Cloudflare
+    console.log('[Ikigai URL Pagination] Esperando procesamiento de búsqueda...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    // Verificar si Cloudflare está bloqueando
+    const pageInfo = await puppeteerPage.evaluate(() => {
+      return {
+        title: document.title,
+        bodyText: document.body ? document.body.textContent.substring(0, 200) : '',
+        bodyLength: document.body ? document.body.textContent.length : 0,
+        url: window.location.href,
+        hasCloudflareChallenge: document.body ? document.body.textContent.includes('Just a moment') : false,
+        hasAccessDenied: document.body ? document.body.textContent.includes('Access denied') : false
+      };
+    });
+    
+    console.log('[Ikigai URL Pagination] Estado de la página:', JSON.stringify(pageInfo, null, 2));
+    
+    if (pageInfo.hasCloudflareChallenge) {
+      console.log('[Ikigai URL Pagination] ⚠️ Cloudflare challenge detectado, esperando más tiempo...');
+      await new Promise(resolve => setTimeout(resolve, 30000)); // Esperar 30s más
+      
+      // Verificar de nuevo
+      const pageInfo2 = await puppeteerPage.evaluate(() => {
+        return {
+          title: document.title,
+          hasCloudflareChallenge: document.body ? document.body.textContent.includes('Just a moment') : false,
+          hasAccessDenied: document.body ? document.body.textContent.includes('Access denied') : false
+        };
+      });
+      
+      if (pageInfo2.hasCloudflareChallenge || pageInfo2.hasAccessDenied) {
+        console.log('[Ikigai URL Pagination] ❌ Cloudflare sigue bloqueando después de 40s');
+        await browser.close();
+        return null;
+      }
+    }
+
+    // PASO 5: Hacer scroll extensivo para cargar TODO el contenido
+    console.log('[Ikigai URL Pagination] Activando lazy loading con scroll extensivo...');
+    
+    for (let i = 0; i < 5; i++) {
+      await puppeteerPage.evaluate((step) => {
+        window.scrollTo(0, document.body.scrollHeight * step / 5);
+      }, i + 1);
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Más tiempo entre scrolls
+    }
+    
+    // Scroll final hasta el fondo y esperar más tiempo
+    await puppeteerPage.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // PASO 6: Buscar botones de paginación para determinar hasMore
+    console.log('[Ikigai URL Pagination] Buscando controles de paginación...');
+    
+    const paginationInfo = await puppeteerPage.evaluate((currentPage) => {
+      // Buscar botones de paginación
+      const paginationSelectors = [
+        'a[href*="pagina="]',
+        'button[class*="page"]',
+        '.pagination a',
+        '[class*="pagination"] a',
+        'a[class*="next"]',
+        'button[class*="next"]',
+        'a:contains("Siguiente")',
+        'button:contains("Siguiente")',
+        'a:contains(">")',
+        'button:contains(">")'
+      ];
+      
+      let nextPageExists = false;
+      let maxPageFound = currentPage;
+      
+      for (const selector of paginationSelectors) {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            const href = element.getAttribute('href') || '';
+            const text = element.textContent || '';
+            
+            // Buscar enlaces a páginas específicas
+            const pageMatch = href.match(/pagina=(\d+)/);
+            if (pageMatch) {
+              const pageNum = parseInt(pageMatch[1]);
+              if (pageNum > maxPageFound) {
+                maxPageFound = pageNum;
+              }
+              if (pageNum > currentPage) {
+                nextPageExists = true;
+              }
+            }
+            
+            // Buscar botones "Siguiente" o ">"
+            if (text.includes('Siguiente') || text.includes('>') || text.includes('Next')) {
+              nextPageExists = true;
+            }
+          });
+        } catch (e) {
+          // Continuar con el siguiente selector
+        }
+      }
+      
+      return {
+        nextPageExists,
+        maxPageFound,
+        currentPage
+      };
+    }, page);
+    
+    console.log('[Ikigai URL Pagination] Info de paginación:', paginationInfo);
+
+    // PASO 7: Extraer resultados con filtrado mejorado
+    console.log('[Ikigai URL Pagination] Extrayendo resultados...');
+    
+    const results = await puppeteerPage.evaluate((searchQuery) => {
+      // Selectores más amplios para encontrar series
+      const selectors = [
+        'a[href*="/series/"]',
+        'a[href*="/serie/"]', 
+        '[href*="/series/"]',
+        '[href*="/serie/"]'
+      ];
+
+      let allLinks = [];
+      
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector);
+        allLinks.push(...Array.from(links));
+      }
+
+      console.log(`[Ikigai URL Pagination] Enlaces encontrados: ${allLinks.length}`);
+
+      // Filtrar enlaces válidos
+      const validLinks = allLinks.filter(link => {
+        const href = link.getAttribute('href');
+        if (!href) return false;
+        
+        // Excluir patrones no deseados
+        const excludePatterns = [
+          '/clasificacion', '/lists/', '/grupos/', '/generos/', 
+          '/tags/', '/autores/', '/usuarios/', '/perfil/'
+        ];
+        
+        if (excludePatterns.some(pattern => href.includes(pattern))) return false;
+        
+        // Debe tener contenido útil
+        const hasImage = link.querySelector('img') !== null;
+        const hasTitle = link.textContent && link.textContent.trim().length > 2;
+        
+        return hasImage || hasTitle;
+      });
+
+      console.log(`[Ikigai URL Pagination] Enlaces válidos: ${validLinks.length}`);
+
+      // Extraer información de cada enlace
+      const extractedResults = validLinks.map((link, index) => {
+        const href = link.getAttribute('href');
+        
+        // Extraer slug
+        let slug = '';
+        if (href.includes('/series/')) {
+          slug = href.split('/series/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        } else if (href.includes('/serie/')) {
+          slug = href.split('/serie/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        }
+        
+        if (!slug || slug.length < 2) return null;
+
+        // Extraer título con selectores exhaustivos
+        let title = '';
+        
+        const titleSelectors = [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          '.title', '.name', '.series-title', '.serie-title',
+          '[class*="title"]', '[class*="name"]', '[class*="series"]', '[class*="serie"]',
+          '.card-title', '.item-title', '.manga-title', '.manhwa-title',
+          '[data-title]', '[title]', 'span', 'div', 'p'
+        ];
+        
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent && titleEl.textContent.trim().length > 1) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+        
+        // Fallbacks para título
+        if (!title) {
+          title = link.getAttribute('title') || 
+                 link.getAttribute('alt') || 
+                 link.getAttribute('data-title') ||
+                 link.getAttribute('aria-label') ||
+                 '';
+        }
+        
+        if (!title) {
+          const linkText = link.textContent.trim();
+          if (linkText && linkText.length > 1 && linkText.length < 200) {
+            title = linkText;
+          }
+        }
+        
+        if (!title) {
+          title = slug.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+        }
+
+        // Extraer imagen
+        const imgElement = link.querySelector('img');
+        const cover = imgElement?.src || 
+                     imgElement?.getAttribute('src') || 
+                     imgElement?.getAttribute('data-src') || 
+                     imgElement?.getAttribute('data-original') || '';
+
+        // Calcular relevancia basada en la búsqueda
+        let relevance = 0;
+        if (searchQuery && title) {
+          const queryWords = searchQuery.toLowerCase().split(' ');
+          const titleLower = title.toLowerCase();
+          const slugLower = slug.toLowerCase();
+          
+          // Búsqueda exacta completa (máxima prioridad)
+          if (titleLower.includes(searchQuery.toLowerCase())) {
+            relevance += 100;
+          }
+          
+          // Búsqueda por palabras individuales
+          queryWords.forEach(word => {
+            if (word.length < 2) return;
+            
+            if (titleLower.includes(word)) {
+              relevance += word.length * 10;
+            }
+            if (slugLower.includes(word)) {
+              relevance += word.length * 8;
+            }
+          });
+          
+          // Bonus por número de palabras coincidentes
+          const matchingWords = queryWords.filter(word => 
+            titleLower.includes(word) || slugLower.includes(word)
+          ).length;
+          
+          if (matchingWords === queryWords.length) {
+            relevance += 50;
+          }
+        }
+
+        return {
+          id: `ikigai-${slug}-${Date.now()}-${index}`,
+          slug,
+          title: title.substring(0, 100),
+          cover,
+          source: 'ikigai',
+          relevance,
+          searchMethod: 'url-pagination'
+        };
+      }).filter(item => item !== null);
+
+      // Ordenar por relevancia y eliminar duplicados
+      const uniqueResults = [];
+      const seenSlugs = new Set();
+      
+      extractedResults
+        .sort((a, b) => b.relevance - a.relevance)
+        .forEach(result => {
+          if (!seenSlugs.has(result.slug)) {
+            seenSlugs.add(result.slug);
+            uniqueResults.push(result);
+          }
+        });
+
+      console.log(`[Ikigai URL Pagination] Resultados únicos: ${uniqueResults.length}`);
+      
+      return uniqueResults;
+    }, query);
+
+    await browser.close();
+
+    console.log(`[Ikigai URL Pagination] Resultados procesados: ${results.length}`);
+    console.log(`[Ikigai URL Pagination] Página siguiente disponible: ${paginationInfo.nextPageExists}`);
+    
+    // Log de los primeros resultados
+    if (results.length > 0) {
+      console.log('[Ikigai URL Pagination] Primeros 5 resultados:');
+      results.slice(0, 5).forEach((result, i) => {
+        console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance}`);
+      });
+    }
+
+    return {
+      results,
+      page,
+      hasMore: paginationInfo.nextPageExists,
+      searchMethod: 'url-pagination',
+      paginationInfo
+    };
+
+  } catch (error) {
+    console.log('[Ikigai URL Pagination] ❌ Error:', error.message);
+    
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (e) {
+        console.error('[Ikigai URL Pagination] Error cerrando browser:', e);
+      }
+    }
+    
+    return null;
+  }
 }

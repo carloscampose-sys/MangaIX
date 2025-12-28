@@ -265,75 +265,11 @@ const MainApp = ({ userName, userGender }) => {
       console.log('[App] hasMore desde API:', hasMore);
       setHasMorePages(hasMore);
       
-      // FILTRADO DEL LADO DEL CLIENTE PARA IKIGAI
-      // El motor de búsqueda de Ikigai devuelve muchos resultados irrelevantes
-      // Filtramos localmente para mostrar solo coincidencias relevantes
-      if (searchTerm && selectedSource === 'ikigai' && results.length > 0) {
-        console.log('[App] Aplicando filtro local para Ikigai...');
-        
-        // Normalizar el término de búsqueda (remover acentos, minúsculas)
-        const normalizeText = (text) => {
-          return text
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "") // Remover acentos
-            .replace(/[¡!¿?]/g, ""); // Remover signos de exclamación/interrogación
-        };
-        
-        const searchTermNormalized = normalizeText(searchTerm);
-        const searchWords = searchTermNormalized.split(/\s+/).filter(w => w.length > 2);
-        
-        console.log('[App] Palabras de búsqueda:', searchWords);
-        console.log('[App] Total resultados antes de filtrar:', results.length);
-        
-        const filteredResults = results.filter(manga => {
-          const titleNormalized = normalizeText(manga.title);
-          
-          // Contar cuántas palabras de búsqueda aparecen en el título
-          const matchCount = searchWords.filter(word => 
-            titleNormalized.includes(word)
-          ).length;
-          
-          // Lógica de threshold adaptativa:
-          // - 1 palabra: debe coincidir (100%)
-          // - 2 palabras: al menos 1 debe coincidir (50%)
-          // - 3+ palabras: al menos 50% deben coincidir
-          let threshold;
-          if (searchWords.length === 1) {
-            threshold = 1; // 100%
-          } else if (searchWords.length === 2) {
-            threshold = 1; // 50% (al menos 1 de 2)
-          } else {
-            threshold = Math.ceil(searchWords.length * 0.5); // 50%
-          }
-          
-          const matches = matchCount >= threshold;
-          
-          if (matches) {
-            console.log(`[App] ✓ Incluido: "${manga.title}" (${matchCount}/${searchWords.length} palabras)`);
-          } else {
-            console.log(`[App] ✗ Excluido: "${manga.title}" (${matchCount}/${searchWords.length} palabras, necesita ${threshold})`);
-          }
-          
-          return matches;
-        });
-        
-        console.log(`[App] Filtrado local: ${results.length} → ${filteredResults.length} resultados`);
-        
-        if (filteredResults.length > 0) {
-          setSearchResults(filteredResults);
-          loadDescriptionsInBackground(filteredResults);
-        } else {
-          // Si el filtro elimina todo, mostrar los resultados originales
-          // pero con un mensaje explicativo
-          console.log('[App] El filtro eliminó todos los resultados, mostrando originales');
-          showToast(`⚠️ "${searchTerm}" no encontrado en esta página. Prueba navegando a la siguiente página o usa filtros de género.`);
-          loadDescriptionsInBackground(results);
-        }
-      } else {
-        // Sin filtrado, cargar sinopsis normalmente
-        loadDescriptionsInBackground(results);
-      }
+      // NO aplicar filtrado del lado del cliente para Ikigai
+      // Esto interfiere con la paginación y debe manejarse en el backend
+      
+      // Sin filtrado del lado del cliente, cargar sinopsis normalmente
+      loadDescriptionsInBackground(results);
     } catch (error) {
       console.error('[App] Error en búsqueda:', error);
       showToast('❌ Error al buscar. Intenta de nuevo.');
