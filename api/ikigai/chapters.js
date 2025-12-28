@@ -1,5 +1,9 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import puppeteerPluginStealth from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
+
+// Aplicar plugin stealth para evadir detección de Cloudflare
+puppeteer.use(puppeteerPluginStealth());
 
 // ========================================
 // HELPER FUNCTIONS
@@ -430,16 +434,16 @@ async function loadRemainingPagesInBackground(baseUrl, totalPages, slug) {
  */
 async function scrapeSinglePage(baseUrl, pageNum) {
   let browser = null;
-  
+
   try {
-    console.log(`[ScrapePage${pageNum}] Iniciando sesión independiente...`);
-    
+    console.log(`[ScrapePage${pageNum}] Iniciando sesión independiente con stealth plugin...`);
+
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
+        // Nota: El plugin stealth maneja automáticamente --disable-blink-features=AutomationControlled
         // Rotar User-Agent para cada sesión
         `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36`
       ],

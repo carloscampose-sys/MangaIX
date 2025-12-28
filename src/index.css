@@ -516,3 +516,22 @@ body.christmas-mode {
 .christmas-mode .light-particles {
   display: none;
 }
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .light-particles .particle {
+    animation-duration: 20s !important; /* Much slower */
+    animation-timing-function: linear !important;
+  }
+  
+  @keyframes float-particle {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg) scale(1);
+      opacity: var(--particle-opacity);
+    }
+    50% {
+      transform: translate(5px, -10px) rotate(10deg) scale(1);
+      opacity: calc(var(--particle-opacity) * 0.8);
+    }
+  }
+}

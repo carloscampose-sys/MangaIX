@@ -43,12 +43,18 @@ const getParticleCount = () => {
   
   // Check for reduced motion preference (accessibility)
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReducedMotion) return 0; // No particles if user prefers reduced motion
+  console.log('[LightParticles] prefersReducedMotion:', prefersReducedMotion);
+  
+  // Even with reduced motion, show particles but with slower animations
+  // The CSS will handle making them less intense
   
   // Reduce particles on mobile
-  return window.innerWidth <= 768 
+  const count = window.innerWidth <= 768 
     ? PARTICLE_CONFIG.count.mobile 
     : PARTICLE_CONFIG.count.desktop;
+  
+  console.log('[LightParticles] Window width:', window.innerWidth, 'Count:', count);
+  return count;
 };
 
 /**

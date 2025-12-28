@@ -75,29 +75,47 @@ const [isConfirming, setIsConfirming] = useState<boolean>(false);
 - Botones: Gradiente `from-potaxie-green to-potaxie-green-pastel`
 - Opciones seleccionadas: Colores diferenciados por género
 
-**Opciones de Género:**
+**Opciones de Género con Figuras Ilustradas:**
 
 1. **Masculino**
-   - Emoji: 👨
-   - Color: `bg-blue-500` (cuando está seleccionado)
-   - Icono: Opcional
+   - Figura: Personaje con hoodie verde y controlador de videojuegos
+   - Archivo: `public/gender-masculino.png`
+   - Color de selección: `ring-blue-500` con `shadow-blue-500/50`
+   - Animación hover: `scale-110` con `brightness-110`
 
 2. **Femenino**
-   - Emoji: 👩
-   - Color: `bg-pink-500` (cuando está seleccionado)
-   - Icono: Opcional
+   - Figura: Personaje con flores rosadas y vestido crema
+   - Archivo: `public/gender-femenino.png`
+   - Color de selección: `ring-pink-500` con `shadow-pink-500/50`
+   - Animación hover: `scale-110` con `brightness-110`
 
 3. **Otro**
-   - Emoji: 🌈
-   - Color: `bg-purple-500` (cuando está seleccionado)
-   - Icono: Opcional
+   - Figura: Personaje con poncho multicolor y lentes
+   - Archivo: `public/gender-otro.png`
+   - Color de selección: `ring-purple-500` con `shadow-purple-500/50`
+   - Animación hover: `scale-110` con `brightness-110`
+
+**Animaciones de Fondo:**
+- Estrellas animadas usando CSS o librería de partículas
+- Opciones de implementación:
+  1. CSS puro con keyframes y múltiples elementos
+  2. `react-tsparticles` para efectos más complejos
+  3. Canvas API para máximo control
+- Configuración recomendada:
+  - 30-50 estrellas
+  - Velocidad lenta (1-3 segundos por ciclo)
+  - Opacidad variable (0.3-0.8)
+  - Tamaños variados (2-6px)
+  - Colores: blanco, amarillo claro, dorado suave
 
 **Layout:**
 - Modal glass con `rounded-lg` y `shadow-xl`
 - Título: "¿Cuál es tu género, Potaxina?"
-- Tres botones de género en grid o flex
+- Tres botones de género en grid con figuras ilustradas
+- Cada figura con tamaño consistente (120-150px de altura)
 - Botón de confirmación al pie
 - Mensaje de error si no hay selección
+- Fondo con animaciones de estrellas detrás del modal
 
 ## Data Models
 
@@ -118,6 +136,50 @@ interface GenderSelection {
   "userGender": "femenino"
 }
 ```
+
+## Technical Implementation Details
+
+### Asset Preparation
+
+**Herramientas para Extraer Figuras:**
+1. **remove.bg** (https://www.remove.bg/) - Servicio online para remover fondos automáticamente
+2. **Photoshop/GIMP** - Para edición manual y ajustes finos
+3. **Figma** - Para exportar con transparencia y optimizar tamaño
+4. **ImageMagick** - Para procesamiento por lotes desde línea de comandos
+
+**Proceso de Extracción:**
+1. Subir imagen a remove.bg o usar herramienta de edición
+2. Remover fondo blanco y texto
+3. Recortar cada figura individualmente
+4. Exportar como PNG con transparencia
+5. Optimizar tamaño (recomendado: 300-400px de altura)
+6. Guardar en `public/` con nombres: `gender-masculino.png`, `gender-femenino.png`, `gender-otro.png`
+
+### Star Animation Implementation
+
+**Opción 1: CSS Puro (Recomendado para simplicidad)**
+```css
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+.star {
+  animation: twinkle 2s ease-in-out infinite;
+  animation-delay: calc(var(--delay) * 1s);
+}
+```
+
+**Opción 2: react-tsparticles (Recomendado para efectos complejos)**
+- Instalación: `npm install react-tsparticles tsparticles`
+- Configuración preset: "stars" o personalizada
+- Ventajas: Rendimiento optimizado, muchas opciones de personalización
+
+**Opción 3: Canvas API (Para máximo control)**
+- Implementación custom con `useEffect` y `requestAnimationFrame`
+- Mayor control pero más código
+
+**Recomendación:** Usar CSS puro para mantener simplicidad y buen rendimiento, similar a como se implementó `SnowEffect.jsx` en el proyecto.
 
 ## Correctness Properties
 

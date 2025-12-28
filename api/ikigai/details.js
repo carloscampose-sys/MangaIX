@@ -1,5 +1,9 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import puppeteerPluginStealth from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
+
+// Aplicar plugin stealth para evadir detección de Cloudflare
+puppeteer.use(puppeteerPluginStealth());
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -23,8 +27,8 @@ export default async function handler(req, res) {
       args: [
         ...chromium.args,
         '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled'
+        '--disable-setuid-sandbox'
+        // Nota: El plugin stealth maneja automáticamente --disable-blink-features=AutomationControlled
       ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -80,13 +84,18 @@ export default async function handler(req, res) {
         const title = document.title;
         const bodyText = document.body ? document.body.innerText : '';
 
-        // Verificar que NO sea página de error o challenge
+        // Verificar que NO sea página de error o challenge (detección mejorada)
         return !title.includes('500') &&
           !title.includes('Just a moment') &&
+          !title.includes('Un momento') &&
           !title.includes('Error') &&
+          !title.includes('Attention Required') &&
           !bodyText.includes('Checking your browser') &&
+          !bodyText.includes('Ray ID') &&
+          !bodyText.includes('Performance & security by Cloudflare') &&
+          !bodyText.includes('Please wait while we verify your browser') &&
           bodyText.length > 100;
-      }, { timeout: 20000 });
+      }, { timeout: 30000 });  // Aumentado de 20s a 30s
 
       console.log('[Ikigai Details] ✓ Cloudflare challenge completado');
     } catch (e) {

@@ -27,9 +27,9 @@ Este documento define los requisitos para implementar una pantalla de selección
 4. WHEN GenderSelectionScreen se renderiza, THE System SHALL mostrar un título indicando que el usuario debe seleccionar su género
 5. THE GenderSelectionScreen SHALL usar la misma estructura de glass-modal que WelcomeScreen
 
-### Requirement 2: Permitir selección de género
+### Requirement 2: Permitir selección de género con figuras ilustradas
 
-**User Story:** Como usuario, quiero poder seleccionar mi género de forma clara e intuitiva con opciones visuales diferenciadas.
+**User Story:** Como usuario, quiero poder seleccionar mi género de forma clara e intuitiva con figuras ilustradas personalizadas que representen cada opción.
 
 #### Acceptance Criteria
 
@@ -38,6 +38,9 @@ Este documento define los requisitos para implementar una pantalla de selección
 3. WHEN el usuario selecciona una opción, THE System SHALL permitir cambiar de opción antes de confirmar
 4. WHEN el usuario intenta confirmar sin seleccionar un género, THE System SHALL mostrar un mensaje de error
 5. THE System SHALL mostrar un botón "Confirmar Género" que solo se habilita cuando hay una selección
+6. THE System SHALL usar figuras ilustradas personalizadas (personajes animados) en lugar de emojis simples
+7. WHEN se muestran las opciones de género, THE System SHALL mostrar tres figuras ilustradas: un personaje con hoodie (Masculino), un personaje con flores (Femenino), y un personaje con poncho (Otro)
+8. THE System SHALL extraer las figuras de la imagen de referencia sin fondo ni texto
 
 ### Requirement 3: Persistir selección de género
 
@@ -61,9 +64,9 @@ Este documento define los requisitos para implementar una pantalla de selección
 3. WHEN se muestra la animación de carga, THE System SHALL mantener la información del usuario (nombre y género)
 4. THE System SHALL usar la misma animación de carga existente (LoadingScreen) sin cambios
 
-### Requirement 5: Mantener consistencia visual
+### Requirement 5: Mantener consistencia visual con animaciones de fondo
 
-**User Story:** Como diseñador, quiero que la pantalla de selección de género mantenga la estética del Santuario Potaxie.
+**User Story:** Como diseñador, quiero que la pantalla de selección de género mantenga la estética del Santuario Potaxie con animaciones de fondo atractivas.
 
 #### Acceptance Criteria
 
@@ -72,6 +75,9 @@ Este documento define los requisitos para implementar una pantalla de selección
 3. WHEN GenderSelectionScreen se renderiza, THE System SHALL usar animaciones suaves y transiciones consistentes
 4. THE GenderSelectionScreen SHALL tener el mismo fondo degradado que WelcomeScreen
 5. THE GenderSelectionScreen SHALL usar los mismos efectos de vidrio (glass-modal) que WelcomeScreen
+6. WHEN GenderSelectionScreen se renderiza, THE System SHALL mostrar animaciones de estrellas en el fondo
+7. THE System SHALL usar animaciones CSS o una librería de partículas para crear el efecto de estrellas
+8. WHEN las estrellas se animan, THE System SHALL mantener un rendimiento fluido sin afectar la interacción del usuario
 
 ### Requirement 6: Personalizar saludo según género
 
@@ -84,3 +90,18 @@ Este documento define los requisitos para implementar una pantalla de selección
 3. WHEN el usuario selecciona "Otro", THE System SHALL mostrar "Bienvenide" en la página principal
 4. WHEN el usuario recarga la página, THE System SHALL mantener el saludo personalizado según el género guardado
 5. THE System SHALL usar el género guardado en localStorage para determinar el saludo correcto
+
+### Requirement 7: Implementar figuras ilustradas personalizadas
+
+**User Story:** Como diseñador, quiero usar figuras ilustradas personalizadas para cada opción de género que sean visualmente atractivas y consistentes con la estética del Santuario Potaxie.
+
+#### Acceptance Criteria
+
+1. WHEN se preparan los assets, THE System SHALL extraer las tres figuras de la imagen de referencia
+2. WHEN se extraen las figuras, THE System SHALL remover el fondo y el texto de cada figura
+3. WHEN se extraen las figuras, THE System SHALL guardar cada figura como archivo PNG con transparencia
+4. THE System SHALL guardar las figuras en la carpeta `public/` con nombres descriptivos (masculino.png, femenino.png, otro.png)
+5. WHEN GenderSelectionScreen se renderiza, THE System SHALL cargar las figuras desde los archivos PNG
+6. WHEN el usuario hace hover sobre una figura, THE System SHALL aplicar una animación de escala o brillo
+7. WHEN una figura está seleccionada, THE System SHALL aplicar un efecto visual distintivo (borde, sombra, o glow)
+8. THE System SHALL mantener la calidad visual de las figuras en diferentes tamaños de pantalla
