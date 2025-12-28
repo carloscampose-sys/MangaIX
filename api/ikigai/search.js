@@ -98,6 +98,56 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Esperando carga de Qwik (20s)...');
     await new Promise(resolve => setTimeout(resolve, 20000));
 
+    // PASO 4.5: Verificar estado de la página
+    const pageState = await puppeteerPage.evaluate(() => {
+      return {
+        title: document.title,
+        bodyLength: document.body ? document.body.textContent.length : 0,
+        url: window.location.href,
+        hasCloudflare: document.body ? (
+          document.body.textContent.includes('Just a moment') ||
+          document.body.textContent.includes('Un momento') ||
+          document.body.textContent.includes('Checking your browser')
+        ) : false,
+        seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length,
+        bodyPreview: document.body ? document.body.textContent.substring(0, 500) : ''
+      };
+    });
+    
+    console.log('[Ikigai Search] Estado de la página:', JSON.stringify(pageState, null, 2));
+    
+    // Si Cloudflare está bloqueando o no hay contenido, esperar más
+    if (pageState.hasCloudflare || pageState.bodyLength < 10000 || pageState.seriesLinksCount < 5) {
+      console.log('[Ikigai Search] ⚠️ Página no cargada, esperando 20s más...');
+      await new Promise(resolve => setTimeout(resolve, 20000));
+      
+      const pageState2 = await puppeteerPage.evaluate(() => {
+        return {
+          title: document.title,
+          bodyLength: document.body ? document.body.textContent.length : 0,
+          hasCloudflare: document.body ? (
+            document.body.textContent.includes('Just a moment') ||
+            document.body.textContent.includes('Un momento')
+          ) : false,
+          seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length
+        };
+      });
+      
+      console.log('[Ikigai Search] Estado después de espera adicional:', JSON.stringify(pageState2, null, 2));
+      
+      if (pageState2.hasCloudflare || pageState2.seriesLinksCount === 0) {
+        console.log('[Ikigai Search] ❌ Página sigue sin cargar después de 40s');
+        await browser.close();
+        return res.status(200).json({
+          results: [],
+          page,
+          hasMore: false,
+          error: 'Cloudflare bloqueando o página no cargó',
+          searchMethod: 'url-direct-failed'
+        });
+      }
+    }
+
     // PASO 5: Scroll para lazy loading
     console.log('[Ikigai Search] Haciendo scroll...');
     for (let i = 0; i < 5; i++) {
@@ -133,30 +183,59 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Paginación:', paginationInfo);
 
     // PASO 7: Extraer resultados
+    console.log('[Ikigai Search] Extrayendo resultados...');
     const results = await puppeteerPage.evaluate(() => {
-      const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
+      // Buscar enlaces de series con múltiples selectores
+      const selectors = [
+        'a[href*="/series/"]',
+        'a[href*="/serie/"]',
+        '[href*="/series/"]'
+      ];
       
-      const validLinks = Array.from(seriesLinks).filter(link => {
+      let allLinks = [];
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector);
+        allLinks.push(...Array.from(links));
+      }
+      
+      console.log(`[Ikigai Evaluate] Total enlaces encontrados: ${allLinks.length}`);
+      
+      const validLinks = Array.from(allLinks).filter(link => {
         const href = link.getAttribute('href');
         if (!href || href === '/series/' || href === '/series') return false;
         
-        const excludePatterns = ['/clasificacion', '/lists/', '/grupos/'];
+        const excludePatterns = ['/clasificacion', '/lists/', '/grupos/', '/generos/', '/tags/'];
         if (excludePatterns.some(pattern => href.includes(pattern))) return false;
         
         const hasImage = link.querySelector('img') !== null;
-        const hasTitle = link.querySelector('h3, h2, h1') !== null;
+        const hasTitle = link.querySelector('h3, h2, h1, .title, [class*="title"]') !== null;
+        const hasText = link.textContent && link.textContent.trim().length > 2;
         
-        return (hasImage || hasTitle) && href.split('/series/')[1]?.length > 1;
+        return (hasImage || hasTitle || hasText) && href.split('/series/')[1]?.length > 1;
       });
 
-      return validLinks.map((link, index) => {
+      console.log(`[Ikigai Evaluate] Enlaces válidos: ${validLinks.length}`);
+
+      const extractedResults = validLinks.map((link, index) => {
         const href = link.getAttribute('href');
         
-        const titleElement = link.querySelector('h3') || link.querySelector('h2') || link.querySelector('h1');
-        const title = titleElement?.textContent?.trim() || link.getAttribute('title') || '';
+        // Buscar título en múltiples lugares
+        let title = '';
+        const titleSelectors = ['h3', 'h2', 'h1', '.title', '[class*="title"]', 'span', 'div'];
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent && titleEl.textContent.trim().length > 1) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+        
+        if (!title) {
+          title = link.getAttribute('title') || link.getAttribute('alt') || '';
+        }
         
         const imgElement = link.querySelector('img');
-        const cover = imgElement?.src || imgElement?.getAttribute('src') || '';
+        const cover = imgElement?.src || imgElement?.getAttribute('src') || imgElement?.getAttribute('data-src') || '';
         
         let slug = '';
         if (href.includes('/series/')) {
@@ -178,11 +257,33 @@ export default async function handler(req, res) {
           source: 'ikigai'
         };
       }).filter(item => item !== null);
+      
+      // Eliminar duplicados
+      const uniqueResults = [];
+      const seenSlugs = new Set();
+      
+      extractedResults.forEach(result => {
+        if (!seenSlugs.has(result.slug)) {
+          seenSlugs.add(result.slug);
+          uniqueResults.push(result);
+        }
+      });
+
+      console.log(`[Ikigai Evaluate] Resultados únicos: ${uniqueResults.length}`);
+      
+      return uniqueResults;
     });
 
     await browser.close();
 
     console.log(`[Ikigai Search] ✅ ${results.length} resultados encontrados`);
+    
+    if (results.length > 0) {
+      console.log('[Ikigai Search] Primeros 3 resultados:');
+      results.slice(0, 3).forEach((result, i) => {
+        console.log(`  ${i + 1}. "${result.title}" (${result.slug})`);
+      });
+    }
 
     return res.status(200).json({
       results,
