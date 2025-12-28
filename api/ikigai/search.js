@@ -16,16 +16,23 @@ export default async function handler(req, res) {
 
   const { query = '', filters = {}, page = 1 } = req.body;
   const hasSearchQuery = query && query.trim();
+  const hasFilters = filters && (
+    (filters.genres && filters.genres.length > 0) ||
+    (filters.types && filters.types.length > 0) ||
+    (filters.statuses && filters.statuses.length > 0)
+  );
 
   console.log('[Ikigai Search] ============================================');
   console.log('[Ikigai Search] NUEVA ESTRATEGIA: URL + Paginación Mejorada');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
+  console.log('[Ikigai Search] hasSearchQuery:', hasSearchQuery);
+  console.log('[Ikigai Search] hasFilters:', hasFilters);
   console.log('[Ikigai Search] ============================================');
 
   // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación
-  if (hasSearchQuery) {
+  if (hasSearchQuery || hasFilters) {
     console.log('[Ikigai Search] Usando búsqueda por URL con paginación...');
     
     try {
@@ -1512,6 +1519,7 @@ async function tryDirectAPI(query, filters, page) {
 async function performURLSearchWithPagination(query, filters, page) {
   console.log('[Ikigai URL Pagination] Iniciando búsqueda con paginación...');
   console.log(`[Ikigai URL Pagination] Query: "${query}", Página: ${page}`);
+  console.log(`[Ikigai URL Pagination] Filters:`, JSON.stringify(filters, null, 2));
   
   let browser = null;
 
@@ -1569,40 +1577,135 @@ async function performURLSearchWithPagination(query, filters, page) {
     // Esperar a que se establezca la sesión
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // PASO 2: Construir URL de búsqueda con paginación
-    let searchUrl = `https://viralikigai.foodib.net/series/?buscar=${encodeURIComponent(query)}`;
-    
-    // Agregar paginación si es página > 1
-    if (page > 1) {
-      searchUrl += `&pagina=${page}`;
-    }
-    
-    console.log(`[Ikigai URL Pagination] URL de búsqueda: ${searchUrl}`);
-
-    // PASO 3: Navegar a la URL de búsqueda
-    console.log('[Ikigai URL Pagination] Navegando a URL de búsqueda...');
-    const response = await puppeteerPage.goto(searchUrl, {
+    // PASO 2: Navegar a la página de series primero
+    console.log('[Ikigai URL Pagination] Navegando a página de series...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
       waitUntil: 'networkidle0',
-      timeout: 60000 // Más tiempo para Cloudflare
+      timeout: 30000
     });
+    
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-    console.log(`[Ikigai URL Pagination] Respuesta: ${response.status()}`);
+    // PASO 3: Aplicar filtros interactivamente si existen
+    const hasTextSearch = query && query.trim();
+    const hasGenreFilters = filters.genres && filters.genres.length > 0;
+    const hasTypeFilters = filters.types && filters.types.length > 0;
+    const hasStatusFilters = filters.statuses && filters.statuses.length > 0;
+    
+    if (hasTextSearch || hasGenreFilters || hasTypeFilters || hasStatusFilters) {
+      console.log('[Ikigai URL Pagination] Aplicando filtros interactivamente...');
+      
+      // Aplicar búsqueda por texto si existe
+      if (hasTextSearch) {
+        console.log(`[Ikigai URL Pagination] Aplicando búsqueda de texto: "${query}"`);
+        
+        const searchSelectors = [
+          'input[type="search"]',
+          'input[placeholder*="buscar"]',
+          'input[placeholder*="Buscar"]',
+          'input[name*="search"]',
+          'input[name*="buscar"]'
+        ];
 
-    if (response.status() === 403) {
-      console.log('[Ikigai URL Pagination] ❌ Bloqueado por Cloudflare (403)');
-      await browser.close();
-      return null;
+        let searchInput = null;
+        for (const selector of searchSelectors) {
+          try {
+            searchInput = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
+            if (searchInput) {
+              console.log(`[Ikigai URL Pagination] Campo de búsqueda encontrado: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            // Continuar con el siguiente selector
+          }
+        }
+
+        if (searchInput) {
+          await searchInput.click();
+          await puppeteerPage.keyboard.down('Control');
+          await puppeteerPage.keyboard.press('KeyA');
+          await puppeteerPage.keyboard.up('Control');
+          await searchInput.type(query, { delay: 100 });
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await puppeteerPage.keyboard.press('Enter');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+      
+      // Aplicar filtros de género si existen
+      if (hasGenreFilters) {
+        console.log(`[Ikigai URL Pagination] Aplicando ${filters.genres.length} filtros de género...`);
+        
+        for (const genreValue of filters.genres) {
+          try {
+            // Buscar checkbox o botón con el valor del género
+            const genreSelectors = [
+              `input[value="${genreValue}"]`,
+              `button[data-genre="${genreValue}"]`,
+              `[data-value="${genreValue}"]`,
+              `label:has(input[value="${genreValue}"])`
+            ];
+            
+            for (const selector of genreSelectors) {
+              try {
+                const genreElement = await puppeteerPage.waitForSelector(selector, { timeout: 1000 });
+                if (genreElement) {
+                  console.log(`[Ikigai URL Pagination] Clickeando género: ${genreValue}`);
+                  await genreElement.click();
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  break;
+                }
+              } catch (e) {
+                // Continuar con el siguiente selector
+              }
+            }
+          } catch (error) {
+            console.log(`[Ikigai URL Pagination] No se pudo aplicar género: ${genreValue}`);
+          }
+        }
+        
+        // Esperar a que se apliquen los filtros
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+      
+      // Capturar la URL después de aplicar filtros
+      const currentUrl = puppeteerPage.url();
+      console.log(`[Ikigai URL Pagination] URL después de aplicar filtros: ${currentUrl}`);
+      
+      // Si necesitamos ir a una página específica, modificar la URL
+      if (page > 1) {
+        const urlObj = new URL(currentUrl);
+        urlObj.searchParams.set('pagina', page.toString());
+        const newUrl = urlObj.toString();
+        
+        console.log(`[Ikigai URL Pagination] Navegando a página ${page}: ${newUrl}`);
+        await puppeteerPage.goto(newUrl, {
+          waitUntil: 'networkidle0',
+          timeout: 60000
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    } else {
+      // Sin filtros, solo navegar a la página específica si es necesario
+      if (page > 1) {
+        const pageUrl = `https://viralikigai.foodib.net/series/?pagina=${page}`;
+        console.log(`[Ikigai URL Pagination] Navegando a página ${page}: ${pageUrl}`);
+        
+        await puppeteerPage.goto(pageUrl, {
+          waitUntil: 'networkidle0',
+          timeout: 60000
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
 
-    // PASO 4: Esperar a que se procese la búsqueda y superar Cloudflare
-    console.log('[Ikigai URL Pagination] Esperando procesamiento de búsqueda...');
-    await new Promise(resolve => setTimeout(resolve, 10000));
 
-    // Verificar si Cloudflare está bloqueando
+    // PASO 4: Verificar si Cloudflare está bloqueando
     const pageInfo = await puppeteerPage.evaluate(() => {
       return {
         title: document.title,
-        bodyText: document.body ? document.body.textContent.substring(0, 200) : '',
         bodyLength: document.body ? document.body.textContent.length : 0,
         url: window.location.href,
         hasCloudflareChallenge: document.body ? document.body.textContent.includes('Just a moment') : false,
@@ -1614,9 +1717,8 @@ async function performURLSearchWithPagination(query, filters, page) {
     
     if (pageInfo.hasCloudflareChallenge) {
       console.log('[Ikigai URL Pagination] ⚠️ Cloudflare challenge detectado, esperando más tiempo...');
-      await new Promise(resolve => setTimeout(resolve, 30000)); // Esperar 30s más
+      await new Promise(resolve => setTimeout(resolve, 30000));
       
-      // Verificar de nuevo
       const pageInfo2 = await puppeteerPage.evaluate(() => {
         return {
           title: document.title,
@@ -1626,7 +1728,7 @@ async function performURLSearchWithPagination(query, filters, page) {
       });
       
       if (pageInfo2.hasCloudflareChallenge || pageInfo2.hasAccessDenied) {
-        console.log('[Ikigai URL Pagination] ❌ Cloudflare sigue bloqueando después de 40s');
+        console.log('[Ikigai URL Pagination] ❌ Cloudflare sigue bloqueando después de 30s');
         await browser.close();
         return null;
       }
