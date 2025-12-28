@@ -543,18 +543,57 @@ async function tryAlternativeEntry(puppeteerPage, query) {
         return allSeries.slice(0, 20); // Limitar resultados si no hay búsqueda
       }
       
+      console.log(`[Ikigai Alternative] Buscando: "${searchQuery}"`);
+      console.log('[Ikigai Alternative] TODAS LAS SERIES DISPONIBLES (primeras 30):');
+      allSeries.slice(0, 30).forEach((series, i) => {
+        console.log(`  ${i + 1}. "${series.title}" (${series.slug})`);
+      });
+      
       const queryWords = searchQuery.toLowerCase().split(' ');
+      console.log(`[Ikigai Alternative] Palabras de búsqueda: ${JSON.stringify(queryWords)}`);
       
       const filteredResults = allSeries.filter(series => {
         const titleLower = series.title.toLowerCase();
         const slugLower = series.slug.toLowerCase();
         
-        // Debe coincidir al menos una palabra
-        return queryWords.some(word => 
-          titleLower.includes(word) || 
-          slugLower.includes(word) ||
-          word.length >= 3 && (titleLower.includes(word.substring(0, 3)) || slugLower.includes(word.substring(0, 3)))
+        // Búsqueda exacta completa
+        if (titleLower.includes(searchQuery.toLowerCase())) {
+          console.log(`[Ikigai Alternative] ✅ Coincidencia exacta: "${series.title}"`);
+          return true;
+        }
+        
+        // Debe coincidir TODAS las palabras para búsquedas específicas como "Amor Maldito"
+        const allWordsMatch = queryWords.every(word => 
+          word.length >= 2 && (
+            titleLower.includes(word) || 
+            slugLower.includes(word)
+          )
         );
+        
+        if (allWordsMatch) {
+          console.log(`[Ikigai Alternative] ✅ Todas las palabras coinciden: "${series.title}"`);
+          return true;
+        }
+        
+        // Para búsquedas de una sola palabra, coincidencia parcial
+        if (queryWords.length === 1) {
+          const word = queryWords[0];
+          if (word.length >= 3 && (
+            titleLower.includes(word) || 
+            slugLower.includes(word) ||
+            titleLower.includes(word.substring(0, 3)) || 
+            slugLower.includes(word.substring(0, 3))
+          )) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      console.log(`[Ikigai Alternative] Series que coinciden: ${filteredResults.length}`);
+      filteredResults.forEach((series, i) => {
+        console.log(`  ${i + 1}. "${series.title}" (${series.slug})`);
       });
       
       // Calcular relevancia y ordenar
@@ -629,33 +668,85 @@ async function performURLSearch(puppeteerPage, query, apiRequests) {
     const currentUrl = puppeteerPage.url();
     console.log('[Ikigai URL Search] URL actual:', currentUrl);
 
-    // Hacer scroll para activar lazy loading
-    console.log('[Ikigai URL Search] Activando lazy loading con scroll...');
-    await puppeteerPage.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight / 3);
-    });
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    await puppeteerPage.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight * 2 / 3);
-    });
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
+    // Hacer scroll más extensivo para cargar TODO el contenido
+    console.log('[Ikigai URL Search] Activando lazy loading con scroll extensivo...');
+    
+    // Scroll más agresivo para cargar todo el contenido
+    for (let i = 0; i < 5; i++) {
+      await puppeteerPage.evaluate((step) => {
+        window.scrollTo(0, document.body.scrollHeight * step / 5);
+      }, i + 1);
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Más tiempo entre scrolls
+    }
+    
+    // Scroll final hasta el fondo y esperar más tiempo
     await puppeteerPage.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight);
     });
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos al final
 
     // Buscar resultados con múltiples selectores
     console.log('[Ikigai URL Search] Buscando resultados...');
     
+    // Intentar cargar más resultados si hay paginación
+    try {
+      console.log('[Ikigai URL Search] Buscando botón "Cargar más" o paginación...');
+      
+      const loadMoreSelectors = [
+        'button[class*="load"]',
+        'button[class*="more"]',
+        'button[class*="cargar"]',
+        '.load-more',
+        '.cargar-mas',
+        '[class*="load-more"]',
+        '[class*="cargar-mas"]',
+        'button:contains("Cargar")',
+        'button:contains("Más")',
+        'a[class*="next"]',
+        '.pagination a',
+        '[class*="pagination"] a'
+      ];
+      
+      for (const selector of loadMoreSelectors) {
+        try {
+          const loadMoreBtn = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
+          if (loadMoreBtn) {
+            console.log(`[Ikigai URL Search] Encontrado botón de carga: ${selector}`);
+            await loadMoreBtn.click();
+            await new Promise(resolve => setTimeout(resolve, 4000)); // Esperar a que cargue
+            
+            // Hacer scroll adicional después de cargar más
+            await puppeteerPage.evaluate(() => {
+              window.scrollTo(0, document.body.scrollHeight);
+            });
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            break;
+          }
+        } catch (e) {
+          // Continuar con el siguiente selector
+        }
+      }
+    } catch (e) {
+      console.log('[Ikigai URL Search] No se encontró paginación adicional');
+    }
+    
     const results = await puppeteerPage.evaluate((searchQuery) => {
-      // Selectores más amplios para encontrar series
+      // Selectores más amplios y exhaustivos para encontrar series
       const selectors = [
         'a[href*="/series/"]',
         'a[href*="/serie/"]', 
         '[href*="/series/"]',
-        '[href*="/serie/"]'
+        '[href*="/serie/"]',
+        'a[href*="series"]',
+        'a[href*="serie"]',
+        'a[class*="series"]',
+        'a[class*="serie"]',
+        '.series a',
+        '.serie a',
+        '[class*="series"] a',
+        '[class*="serie"] a',
+        '[data-href*="series"]',
+        '[data-href*="serie"]'
       ];
 
       let allLinks = [];
@@ -689,6 +780,44 @@ async function performURLSearch(puppeteerPage, query, apiRequests) {
 
       console.log(`[Ikigai URL Search] Enlaces válidos: ${validLinks.length}`);
 
+      // Log de todos los títulos encontrados para debugging
+      console.log('[Ikigai URL Search] TODOS LOS TÍTULOS ENCONTRADOS:');
+      validLinks.forEach((link, i) => {
+        const href = link.getAttribute('href');
+        let slug = '';
+        if (href.includes('/series/')) {
+          slug = href.split('/series/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        } else if (href.includes('/serie/')) {
+          slug = href.split('/serie/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        }
+        
+        let title = '';
+        const titleSelectors = ['h1', 'h2', 'h3', 'h4', '.title', '.name', '[class*="title"]', '[class*="name"]'];
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent.trim()) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+        
+        if (!title) {
+          title = link.getAttribute('title') || 
+                 link.getAttribute('alt') || 
+                 link.textContent.trim() || '';
+        }
+        
+        if (!title && slug) {
+          title = slug.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+        }
+        
+        if (i < 50) { // Log primeros 50 para ver más títulos
+          console.log(`  ${i + 1}. "${title}" (${slug})`);
+        }
+      });
+
       // Extraer información de cada enlace
       const extractedResults = validLinks.map((link, index) => {
         const href = link.getAttribute('href');
@@ -703,24 +832,41 @@ async function performURLSearch(puppeteerPage, query, apiRequests) {
         
         if (!slug || slug.length < 2) return null;
 
-        // Extraer título
+        // Extraer título con selectores más exhaustivos
         let title = '';
         
-        // Buscar en múltiples elementos
-        const titleSelectors = ['h1', 'h2', 'h3', 'h4', '.title', '.name', '[class*="title"]', '[class*="name"]'];
+        // Buscar en múltiples elementos con prioridad
+        const titleSelectors = [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          '.title', '.name', '.series-title', '.serie-title',
+          '[class*="title"]', '[class*="name"]', '[class*="series"]', '[class*="serie"]',
+          '.card-title', '.item-title', '.manga-title', '.manhwa-title',
+          '[data-title]', '[title]', 'span', 'div', 'p'
+        ];
+        
         for (const selector of titleSelectors) {
           const titleEl = link.querySelector(selector);
-          if (titleEl && titleEl.textContent.trim()) {
+          if (titleEl && titleEl.textContent && titleEl.textContent.trim().length > 1) {
             title = titleEl.textContent.trim();
             break;
           }
         }
         
-        // Fallback: usar atributos o texto del enlace
+        // Fallback: usar atributos del enlace
         if (!title) {
           title = link.getAttribute('title') || 
                  link.getAttribute('alt') || 
-                 link.textContent.trim() || '';
+                 link.getAttribute('data-title') ||
+                 link.getAttribute('aria-label') ||
+                 '';
+        }
+        
+        // Fallback: usar todo el texto del enlace
+        if (!title) {
+          const linkText = link.textContent.trim();
+          if (linkText && linkText.length > 1 && linkText.length < 200) {
+            title = linkText;
+          }
         }
         
         // Último fallback: generar desde slug
@@ -737,21 +883,50 @@ async function performURLSearch(puppeteerPage, query, apiRequests) {
                      imgElement?.getAttribute('data-src') || 
                      imgElement?.getAttribute('data-original') || '';
 
-        // Calcular relevancia
+      // Calcular relevancia
         let relevance = 0;
         if (searchQuery && title) {
           const queryWords = searchQuery.toLowerCase().split(' ');
           const titleLower = title.toLowerCase();
+          const slugLower = slug.toLowerCase();
           
+          // Búsqueda exacta completa (máxima prioridad)
+          if (titleLower.includes(searchQuery.toLowerCase())) {
+            relevance += 100;
+          }
+          
+          // Búsqueda por palabras individuales
           queryWords.forEach(word => {
+            if (word.length < 2) return; // Ignorar palabras muy cortas
+            
+            // Coincidencia exacta en título
             if (titleLower.includes(word)) {
-              relevance += word.length * 2; // Más peso por coincidencia exacta
+              relevance += word.length * 10;
             }
-            // Coincidencia parcial
-            if (titleLower.includes(word.substring(0, 3))) {
-              relevance += 1;
+            // Coincidencia exacta en slug
+            if (slugLower.includes(word)) {
+              relevance += word.length * 8;
+            }
+            // Coincidencia parcial (primeras 3 letras)
+            if (word.length >= 3) {
+              const partial = word.substring(0, 3);
+              if (titleLower.includes(partial)) {
+                relevance += 2;
+              }
+              if (slugLower.includes(partial)) {
+                relevance += 1;
+              }
             }
           });
+          
+          // Bonus por número de palabras coincidentes
+          const matchingWords = queryWords.filter(word => 
+            titleLower.includes(word) || slugLower.includes(word)
+          ).length;
+          
+          if (matchingWords === queryWords.length) {
+            relevance += 50; // Bonus si todas las palabras coinciden
+          }
         }
 
         return {
@@ -791,6 +966,20 @@ async function performURLSearch(puppeteerPage, query, apiRequests) {
       results.slice(0, 5).forEach((result, i) => {
         console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance}`);
       });
+      
+      // Verificar si encontramos "Amor Maldito" específicamente
+      const amorMalditoFound = results.some(result => 
+        result.title.toLowerCase().includes('amor') && 
+        result.title.toLowerCase().includes('maldito')
+      );
+      
+      console.log(`[Ikigai URL Search] ¿"Amor Maldito" encontrado? ${amorMalditoFound ? 'SÍ' : 'NO'}`);
+      
+      // Si no encontramos "Amor Maldito" específicamente, intentar estrategia alternativa
+      if (!amorMalditoFound && query.toLowerCase().includes('amor') && query.toLowerCase().includes('maldito')) {
+        console.log('[Ikigai URL Search] ⚠️ "Amor Maldito" no encontrado, continuando con estrategia alternativa...');
+        return null; // Esto hará que se ejecute la siguiente estrategia
+      }
     }
 
     return results;
