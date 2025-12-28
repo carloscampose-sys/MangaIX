@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-extra';
 import chromium from '@sparticuz/chromium';
+import { getRotatingUserAgent } from './proxyConfig.js';
 
 /**
  * Espera a que se complete el challenge de Cloudflare
@@ -28,9 +29,9 @@ async function waitForCloudflareChallenge(page, timeout = 60000) {
 
       return !isCloudflare;
     }, { timeout: timeout * 0.6 });
-    
+
     console.log('[Ikigai Search] ✓ Challenge superado');
-    
+
     // Paso 2: Esperar a que aparezcan enlaces de series
     console.log('[Ikigai Search] Esperando contenido...');
     await page.waitForFunction(() => {
@@ -38,16 +39,16 @@ async function waitForCloudflareChallenge(page, timeout = 60000) {
       const bodyText = document.body ? document.body.innerText : '';
       return seriesLinks.length > 5 && bodyText.length > 1000;
     }, { timeout: timeout * 0.4 });
-    
+
     console.log('[Ikigai Search] ✓ Contenido cargado');
-    
+
     // Espera adicional para Qwik
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
     return true;
   } catch (error) {
     console.error('[Ikigai Search] ❌ Timeout esperando contenido:', error.message);
-    
+
     const debugInfo = await page.evaluate(() => {
       const bodyText = document.body ? document.body.innerText : '';
       return {
@@ -68,88 +69,46 @@ async function waitForCloudflareChallenge(page, timeout = 60000) {
       };
     });
     console.log('[Ikigai Search] Estado de la página:', JSON.stringify(debugInfo, null, 2));
-    
+
     // Si hay enlaces de series, considerar exitoso
     if (debugInfo.seriesLinksCount > 5) {
       console.log('[Ikigai Search] ✓ Recuperado: hay suficientes enlaces');
       await new Promise(resolve => setTimeout(resolve, 3000));
       return true;
     }
-    
+
     // Si hay pocos enlaces pero algo de contenido
     if (debugInfo.seriesLinksCount > 0 && debugInfo.bodyLength > 500) {
       console.log('[Ikigai Search] ⚠️ Pocos enlaces pero hay contenido, continuando...');
       await new Promise(resolve => setTimeout(resolve, 5000));
       return true;
     }
-    
+
     // Si definitivamente está bloqueado
     if (debugInfo.hasCloudflareText || debugInfo.bodyLength < 300) {
       console.error('[Ikigai Search] ❌ Cloudflare sigue bloqueando');
       return false;
     }
-    
+
     // Último intento: esperar más
     console.warn('[Ikigai Search] ⚠️ Esperando 8s adicionales...');
     await new Promise(resolve => setTimeout(resolve, 8000));
-    
+
     const finalCheck = await page.evaluate(() => ({
       seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length
     }));
-    
+
     return finalCheck.seriesLinksCount > 0;
   }
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { query = '', filters = {}, page = 1 } = req.body;
-
-  console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] BÚSQUEDA CON ANTI-DETECCIÓN MEJORADO (puppeteer-extra)');
-  console.log('[Ikigai Search] Query:', query);
-  console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
-  console.log('[Ikigai Search] Página:', page);
-  console.log('[Ikigai Search] ============================================');
-
-  let browser = null;
+/**
+ * Intento de scraping individual con retry
+ */
+async function attemptScraping(query, filters, page, attempt) {
+  const puppeteerPage = await browser.newPage();
 
   try {
-    // User agents rotativos más realistas
-    const userAgents = [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    ];
-    const selectedUA = userAgents[page % userAgents.length];
-
-    // Iniciar Puppeteer con plugin stealth activado
-    console.log('[Ikigai Search] Iniciando browser con stealth plugin...');
-    browser = await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        // Nota: El plugin stealth maneja automáticamente --disable-blink-features=AutomationControlled
-        // Removido --disable-web-security porque puede causar detección
-        // Removido --disable-features=IsolateOrigins,site-per-process para mejor compatibilidad
-        '--window-size=1920,1080',
-        `--user-agent=${selectedUA}`
-      ],
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-      defaultViewport: { width: 1920, height: 1080 }
-    });
-
-    const puppeteerPage = await browser.newPage();
-
     // Anti-detección completa
     await puppeteerPage.evaluateOnNewDocument(() => {
       // Ocultar webdriver
@@ -239,46 +198,46 @@ export default async function handler(req, res) {
     // PASO 2: Construir URL con parámetros
     const baseUrl = 'https://viralikigai.foodib.net/series/';
     const urlParams = new URLSearchParams();
-    
+
     if (query && query.trim()) {
       urlParams.append('buscar', query);
     }
-    
+
     if (filters.genres && filters.genres.length > 0) {
       filters.genres.forEach(genreId => {
         urlParams.append('generos[]', genreId);
       });
     }
-    
+
     if (filters.types && filters.types.length > 0) {
       filters.types.forEach(typeId => {
         urlParams.append('tipos[]', typeId);
       });
     }
-    
+
     if (filters.statuses && filters.statuses.length > 0) {
       filters.statuses.forEach(statusId => {
         urlParams.append('estados[]', statusId);
       });
     }
-    
+
     if (filters.sortBy) {
       urlParams.append('ordenar', filters.sortBy);
     }
-    
+
     if (page > 1) {
       urlParams.append('pagina', page.toString());
     }
-    
+
     const queryString = urlParams.toString();
     const targetUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
-    
+
     console.log(`[Ikigai Search] URL construida: ${targetUrl}`);
 
     // PASO 3: Navegar a la URL con filtros
     console.log('[Ikigai Search] Navegando a URL con filtros...');
     console.log('[Ikigai Search] URL:', targetUrl);
-    
+
     try {
       await puppeteerPage.goto(targetUrl, {
         waitUntil: 'domcontentloaded',
@@ -292,11 +251,11 @@ export default async function handler(req, res) {
     // PASO 4: Esperar challenge de Cloudflare con timeout muy generoso
     console.log('[Ikigai Search] Esperando challenge de Cloudflare (60s timeout)...');
     const challengeSuccess = await waitForCloudflareChallenge(puppeteerPage, 60000);  // Aumentado de 35s a 60s
-    
+
     if (!challengeSuccess) {
       // Último intento: verificar si realmente está bloqueado o solo lento
       console.log('[Ikigai Search] Challenge falló, verificando estado real...');
-      
+
       const finalCheck = await puppeteerPage.evaluate(() => {
         const bodyText = document.body ? document.body.innerText : '';
         return {
@@ -312,33 +271,19 @@ export default async function handler(req, res) {
           )
         };
       });
-      
+
       console.log('[Ikigai Search] Verificación final:', JSON.stringify(finalCheck, null, 2));
-      
+
       // Si definitivamente está bloqueado por Cloudflare
       if (finalCheck.hasCloudflareText || finalCheck.bodyLength < 300) {
-        await browser.close();
-        return res.status(200).json({
-          results: [],
-          page,
-          hasMore: false,
-          error: 'Cloudflare bloqueó la solicitud. La búsqueda por filtros en Ikigai está temporalmente no disponible.',
-          searchMethod: 'cloudflare-blocked'
-        });
+        return { success: false, blockedByCloudflare: true };
       }
-      
+
       // Si hay algo de contenido, intentar extraer de todos modos
       if (finalCheck.seriesLinksCount > 0) {
         console.log('[Ikigai Search] Hay algunos enlaces, continuando extracción...');
       } else {
-        await browser.close();
-        return res.status(200).json({
-          results: [],
-          page,
-          hasMore: false,
-          error: 'No se pudieron cargar los resultados',
-          searchMethod: 'timeout'
-        });
+        return { success: false, noContent: true };
       }
     }
 
@@ -356,7 +301,7 @@ export default async function handler(req, res) {
       const paginationLinks = document.querySelectorAll('a[href*="pagina="]');
       let nextPageExists = false;
       let maxPageFound = currentPage;
-      
+
       paginationLinks.forEach(link => {
         const href = link.getAttribute('href') || '';
         const pageMatch = href.match(/pagina=(\d+)/);
@@ -370,10 +315,10 @@ export default async function handler(req, res) {
           }
         }
       });
-      
+
       return { nextPageExists, maxPageFound, currentPage };
     }, page);
-    
+
     console.log('[Ikigai Search] Paginación:', paginationInfo);
 
     // PASO 7: Extraer resultados
@@ -384,30 +329,30 @@ export default async function handler(req, res) {
         'a[href*="/serie/"]',
         '[href*="/series/"]'
       ];
-      
+
       let allLinks = [];
       for (const selector of selectors) {
         const links = document.querySelectorAll(selector);
         allLinks.push(...Array.from(links));
       }
-      
+
       const validLinks = Array.from(allLinks).filter(link => {
         const href = link.getAttribute('href');
         if (!href || href === '/series/' || href === '/series') return false;
-        
+
         const excludePatterns = ['/clasificacion', '/lists/', '/grupos/', '/generos/', '/tags/'];
         if (excludePatterns.some(pattern => href.includes(pattern))) return false;
-        
+
         const hasImage = link.querySelector('img') !== null;
         const hasTitle = link.querySelector('h3, h2, h1, .title, [class*="title"]') !== null;
         const hasText = link.textContent && link.textContent.trim().length > 2;
-        
+
         return (hasImage || hasTitle || hasText) && href.split('/series/')[1]?.length > 1;
       });
 
       const extractedResults = validLinks.map((link, index) => {
         const href = link.getAttribute('href');
-        
+
         let title = '';
         const titleSelectors = ['h3', 'h2', 'h1', '.title', '[class*="title"]', 'span', 'div'];
         for (const selector of titleSelectors) {
@@ -417,23 +362,23 @@ export default async function handler(req, res) {
             break;
           }
         }
-        
+
         if (!title) {
           title = link.getAttribute('title') || link.getAttribute('alt') || '';
         }
-        
+
         const imgElement = link.querySelector('img');
         const cover = imgElement?.src || imgElement?.getAttribute('src') || imgElement?.getAttribute('data-src') || '';
-        
+
         let slug = '';
         if (href.includes('/series/')) {
           const slugPart = href.split('/series/')[1];
           slug = slugPart?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
         }
-        
+
         if (!slug) return null;
-        
-        const finalTitle = title || slug.split('-').map(word => 
+
+        const finalTitle = title || slug.split('-').map(word =>
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
 
@@ -445,52 +390,156 @@ export default async function handler(req, res) {
           source: 'ikigai'
         };
       }).filter(item => item !== null);
-      
+
       const uniqueResults = [];
       const seenSlugs = new Set();
-      
+
       extractedResults.forEach(result => {
         if (!seenSlugs.has(result.slug)) {
           seenSlugs.add(result.slug);
           uniqueResults.push(result);
         }
       });
-      
+
       return uniqueResults;
     });
 
-    await browser.close();
-
-    console.log(`[Ikigai Search] ✅ ${results.length} resultados encontrados`);
-    
-    if (results.length > 0) {
-      console.log('[Ikigai Search] Primeros 3 resultados:');
-      results.slice(0, 3).forEach((result, i) => {
-        console.log(`  ${i + 1}. "${result.title}" (${result.slug})`);
-      });
-    }
-
-    return res.status(200).json({
-      results,
-      page,
-      hasMore: paginationInfo.nextPageExists,
-      searchMethod: 'manual-stealth-max'
-    });
+    return { success: true, results, paginationInfo };
 
   } catch (error) {
-    console.error('[Ikigai Search] ❌ Error:', error);
+    console.error('[Ikigai Search] Error en intento:', error.message);
+    return { success: false, error };
+  }
+}
 
-    if (browser) {
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { query = '', filters = {}, page = 1 } = req.body;
+
+  console.log('[Ikigai Search] ============================================');
+  console.log('[Ikigai Search] BÚSQUEDA CON PROXY ROTATORIO Y SIMULACIÓN HUMANA');
+  console.log('[Ikigai Search] Query:', query);
+  console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
+  console.log('[Ikigai Search] Página:', page);
+  console.log('[Ikigai Search] ============================================');
+
+  const maxRetries = 3;  // Máximo de reintentos
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Ikigai Search] Intento ${attempt}/${maxRetries}...`);
+
+      // User-Agent rotatorio basado en página + intento
+      const selectedUA = getRotatingUserAgent(page + attempt);
+
+      // Iniciar Puppeteer con configuración mejorada
+      console.log('[Ikigai Search] Iniciando browser con configuración anti-detección...');
+      const browser = await puppeteer.launch({
+        args: [
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--window-size=1920,1080',
+          `--user-agent=${selectedUA}`
+        ],
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
+        defaultViewport: { width: 1920, height: 1080 }
+      });
+
+      // Intentar scraping
+      const result = await attemptScraping(query, filters, page, attempt);
+
+      // Cerrar browser siempre
+      await browser.close();
+
+      if (result.success) {
+        console.log(`[Ikigai Search] ✅ Intento ${attempt} exitoso`);
+        console.log(`[Ikigai Search] ✅ ${result.results.length} resultados encontrados`);
+
+        if (result.results.length > 0) {
+          console.log('[Ikigai Search] Primeros 3 resultados:');
+          result.results.slice(0, 3).forEach((r, i) => {
+            console.log(`  ${i + 1}. "${r.title}" (${r.slug})`);
+          });
+        }
+
+        return res.status(200).json({
+          results: result.results,
+          page,
+          hasMore: result.paginationInfo.nextPageExists,
+          searchMethod: 'proxy-rotator-retry'
+        });
+      } else if (result.blockedByCloudflare) {
+        console.log(`[Ikigai Search] ❌ Intento ${attempt} bloqueado por Cloudflare`);
+
+        // Si es el último intento, retornar error
+        if (attempt === maxRetries) {
+          return res.status(200).json({
+            results: [],
+            page,
+            hasMore: false,
+            error: 'Cloudflare bloqueó la solicitud tras 3 intentos. La búsqueda por filtros en Ikigai está temporalmente no disponible.',
+            searchMethod: 'cloudflare-blocked-all-retries'
+          });
+        }
+
+        // Si no es el último intento, continuar al siguiente
+        console.log(`[Ikigai Search] Reintentando con User-Agent diferente...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));  // Esperar 2s entre intentos
+      } else if (result.noContent) {
+        console.log(`[Ikigai Search] ❌ Intento ${attempt} sin contenido`);
+
+        if (attempt === maxRetries) {
+          return res.status(200).json({
+            results: [],
+            page,
+            hasMore: false,
+            error: 'No se pudieron cargar los resultados tras 3 intentos.',
+            searchMethod: 'no-content-all-retries'
+          });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        console.log(`[Ikigai Search] ❌ Intento ${attempt} error:`, result.error?.message);
+
+        if (attempt === maxRetries) {
+          return res.status(500).json({
+            error: 'Error en la búsqueda tras 3 intentos',
+            details: result.error?.message
+          });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+    } catch (error) {
+      console.error('[Ikigai Search] Error crítico en intento:', error);
+
+      // Asegurar cerrar browser si existe
       try {
-        await browser.close();
+        if (browser) {
+          await browser.close();
+        }
       } catch (e) {
         console.error('[Ikigai Search] Error cerrando browser:', e);
       }
-    }
 
-    return res.status(500).json({
-      error: 'Error en la búsqueda',
-      details: error.message
-    });
+      if (attempt === maxRetries) {
+        return res.status(500).json({
+          error: 'Error crítico en la búsqueda',
+          details: error.message
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 3000));  // Esperar más entre reintentos
+    }
   }
 }

@@ -8,27 +8,28 @@ import { useChristmasTheme } from '../context/ChristmasThemeContext';
  */
 const PARTICLE_CONFIG = {
   count: {
-    desktop: 30,      // Reducido de 50 a 30 para mejor rendimiento
-    mobile: 15        // Reducido de 30 a 15
+    desktop: 60,      // Aumentado para más densidad visual
+    mobile: 35        // Aumentado para mobile también
   },
   size: {
-    min: 4,           // Minimum particle size in pixels
-    max: 12           // Maximum particle size in pixels
+    min: 6,           // Partículas más grandes
+    max: 16           // Partículas más grandes
   },
   duration: {
     min: 6,           // Aumentado para animaciones más suaves
     max: 12           // Aumentado para animaciones más suaves
   },
   opacity: {
-    min: 0.3,         // Minimum opacity for visibility
-    max: 0.7          // Maximum opacity for better visibility
+    min: 0.4,         // Más opacas para mejor visibilidad
+    max: 0.85         // Más opacas para mejor visibilidad
   },
   colors: [
-    'rgba(190, 227, 176, 0.8)',  // potaxie-green-pastel - más opaco
-    'rgba(255, 204, 128, 0.7)',  // potaxie-cream-dark - más opaco
-    'rgba(201, 235, 179, 0.6)',  // potaxie-light-green - más opaco
-    'rgba(230, 167, 0, 0.5)',    // potaxie-yellow - más opaco
-    'rgba(163, 230, 53, 0.6)'    // verde brillante adicional
+    'rgba(190, 227, 176, 0.9)',  // potaxie-green-pastel - muy visible
+    'rgba(255, 204, 128, 0.85)', // potaxie-cream-dark - muy visible
+    'rgba(201, 235, 179, 0.8)',  // potaxie-light-green - muy visible
+    'rgba(230, 167, 0, 0.7)',    // potaxie-yellow - muy visible
+    'rgba(163, 230, 53, 0.75)',  // verde brillante
+    'rgba(255, 215, 0, 0.6)'     // dorado suave adicional
   ]
 };
 

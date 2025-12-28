@@ -489,8 +489,8 @@ body.christmas-mode {
   animation: 
     float-particle 8s ease-in-out infinite,
     fade-in-particle 0.8s ease-out;
-  /* Sombra más sutil para mejor rendimiento */
-  filter: blur(1px);
+  /* Efecto de brillo sutil */
+  box-shadow: 0 0 8px rgba(190, 227, 176, 0.4);
 }
 
 /* Respect user's motion preferences - slower but still visible */

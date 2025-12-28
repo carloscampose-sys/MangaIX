@@ -32,7 +32,7 @@ export const StarAnimation = () => {
   });
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
       {stars.map((star) => (
         <motion.div
           key={star.id}

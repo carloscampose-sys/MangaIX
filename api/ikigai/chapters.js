@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-extra';
 import chromium from '@sparticuz/chromium';
+import { getRotatingUserAgent } from './proxyConfig.js';
 
 // ========================================
 // HELPER FUNCTIONS
@@ -432,7 +433,7 @@ async function scrapeSinglePage(baseUrl, pageNum) {
   let browser = null;
 
   try {
-    console.log(`[ScrapePage${pageNum}] Iniciando sesión independiente con stealth plugin...`);
+    console.log(`[ScrapePage${pageNum}] Iniciando sesión con User-Agent rotatorio...`);
 
     browser = await puppeteer.launch({
       args: [
@@ -450,15 +451,9 @@ async function scrapeSinglePage(baseUrl, pageNum) {
 
     const page = await browser.newPage();
 
-    // User Agent único por sesión
-    const userAgents = [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    ];
-    
-    await page.setUserAgent(userAgents[pageNum % userAgents.length]);
+    // User Agent rotatorio usando proxyConfig
+    const selectedUA = getRotatingUserAgent(pageNum);
+    await page.setUserAgent(selectedUA);
 
     // Anti-detección
     await page.evaluateOnNewDocument(() => {

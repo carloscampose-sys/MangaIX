@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-extra';
 import chromium from '@sparticuz/chromium';
+import { getRotatingUserAgent } from './proxyConfig.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -47,10 +48,9 @@ export default async function handler(req, res) {
 
     const page = await browser.newPage();
 
-    // User Agent real
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    );
+    // User Agent rotatorio usando proxyConfig
+    const selectedUA = getRotatingUserAgent(Date.now());
+    await page.setUserAgent(selectedUA);
 
     // Anti-detección
     await page.evaluateOnNewDocument(() => {

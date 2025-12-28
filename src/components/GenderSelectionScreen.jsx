@@ -56,16 +56,17 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center
-                    bg-gradient-to-br from-potaxie-mint to-potaxie-cream-white
-                    p-4 z-50 transition-opacity duration-1000"
-         style={{ animation: 'fadeIn 1s ease-out forwards' }}>
+    <>
       {/* Animación de estrellas en el fondo */}
       <StarAnimation />
       
-      <div className="glass-modal p-8 rounded-lg shadow-xl max-w-md w-full text-center
-                      transform transition-all duration-500 scale-95 opacity-0 relative z-10"
-           style={{ animation: 'scaleIn 0.5s ease-out forwards 0.5s' }}>
+      <div className="fixed inset-0 flex items-center justify-center
+                      bg-gradient-to-br from-potaxie-mint/90 to-potaxie-cream-white/90
+                      p-4 z-50 transition-opacity duration-1000"
+           style={{ animation: 'fadeIn 1s ease-out forwards' }}>
+        <div className="glass-modal p-8 rounded-lg shadow-xl max-w-md w-full text-center
+                        transform transition-all duration-500 scale-95 opacity-0 relative z-10"
+             style={{ animation: 'scaleIn 0.5s ease-out forwards 0.5s' }}>
         <h2 className="text-3xl font-bold text-potaxie-text-light mb-2">
           ¿Cuál es tu género, Potaxina?
         </h2>
@@ -127,6 +128,7 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
         </button>
       </div>
     </div>
+    </>
   );
 };
 
