@@ -176,9 +176,9 @@ export const LightParticles = () => {
             height: `${particle.size}px`,
             left: particle.left,
             top: particle.top,
+            opacity: particle.opacity,
             backgroundColor: particle.color,
-            '--particle-opacity': particle.opacity,
-            '--particle-duration': `${particle.duration}s`,
+            animationDuration: `${particle.duration}s`,
             animationDelay: `${particle.delay}s`
           }}
         />

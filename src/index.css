@@ -450,27 +450,22 @@ body.christmas-mode {
 @keyframes float-particle {
   0% {
     transform: translate(0, 0) rotate(0deg) scale(1);
-    opacity: var(--particle-opacity);
   }
   
   25% {
     transform: translate(20px, -25px) rotate(90deg) scale(1.2);
-    opacity: calc(var(--particle-opacity) * 1.2);
   }
   
   50% {
     transform: translate(-10px, -50px) rotate(180deg) scale(0.8);
-    opacity: var(--particle-opacity);
   }
   
   75% {
     transform: translate(-25px, -25px) rotate(270deg) scale(1.1);
-    opacity: calc(var(--particle-opacity) * 1.1);
   }
   
   100% {
     transform: translate(0, 0) rotate(360deg) scale(1);
-    opacity: var(--particle-opacity);
   }
 }
 
@@ -481,7 +476,7 @@ body.christmas-mode {
     transform: scale(0);
   }
   to {
-    opacity: var(--particle-opacity);
+    opacity: 1;
     transform: scale(1);
   }
 }
@@ -501,10 +496,16 @@ body.christmas-mode {
   border-radius: 50%;
   will-change: transform, opacity;
   animation: 
-    float-particle var(--particle-duration, 5s) ease-in-out infinite,
+    float-particle 5s ease-in-out infinite,
     fade-in-particle 0.8s ease-out;
-  --particle-opacity: 0.5;
   box-shadow: 0 0 10px currentColor;
+}
+
+/* Respect user's motion preferences - slower but still visible */
+@media (prefers-reduced-motion: reduce) {
+  .light-particles .particle {
+    animation: float-particle 15s linear infinite !important;
+  }
 }
 
 /* Hide particles in dark mode (extra safety) */
@@ -515,23 +516,4 @@ body.christmas-mode {
 /* Hide particles in christmas mode (extra safety) */
 .christmas-mode .light-particles {
   display: none;
-}
-
-/* Respect user's motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  .light-particles .particle {
-    animation-duration: 20s !important; /* Much slower */
-    animation-timing-function: linear !important;
-  }
-  
-  @keyframes float-particle {
-    0%, 100% {
-      transform: translate(0, 0) rotate(0deg) scale(1);
-      opacity: var(--particle-opacity);
-    }
-    50% {
-      transform: translate(5px, -10px) rotate(10deg) scale(1);
-      opacity: calc(var(--particle-opacity) * 0.8);
-    }
-  }
 }
