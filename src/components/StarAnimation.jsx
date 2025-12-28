@@ -2,13 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 export const StarAnimation = () => {
-  // Generar 60 estrellas con propiedades aleatorias
-  const stars = [...Array(60)].map((_, i) => {
+  // Generar 100 estrellas con propiedades aleatorias
+  const stars = [...Array(100)].map((_, i) => {
     const size = Math.random() * 6 + 3; // 3-9px
     const x = Math.random() * 100; // Posición X aleatoria (0-100%)
     const y = Math.random() * 100; // Posición Y aleatoria (0-100%)
-    const duration = Math.random() * 3 + 2; // Duración del parpadeo (2-5s)
-    const delay = Math.random() * 4; // Delay inicial (0-4s)
+    const duration = Math.random() * 1.5 + 1; // Duración del parpadeo (1-2.5s) - más rápido
+    const delay = Math.random() * 3; // Delay inicial (0-3s)
     const opacity = Math.random() * 0.6 + 0.4; // Opacidad base (0.4-1.0)
     
     // Colores variados: blanco, amarillo, dorado, azul claro
@@ -24,9 +24,9 @@ export const StarAnimation = () => {
     // Tipo de estrella: círculo o estrella de 4 puntas
     const isCircle = Math.random() > 0.3; // 70% círculos, 30% estrellas
     
-    // Movimiento sutil
-    const moveX = (Math.random() - 0.5) * 20; // -10 a 10
-    const moveY = (Math.random() - 0.5) * 20; // -10 a 10
+    // Movimiento más pronunciado
+    const moveX = (Math.random() - 0.5) * 40; // -20 a 20 (más movimiento)
+    const moveY = (Math.random() - 0.5) * 40; // -20 a 20 (más movimiento)
     
     return {
       id: i,

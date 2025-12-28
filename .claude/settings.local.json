@@ -7,7 +7,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "WebSearch",
+      "WebFetch(domain:www.scrapingbee.com)",
+      "WebFetch(domain:www.zenrows.com)",
+      "Bash(curl:*)"
     ]
   }
 }
