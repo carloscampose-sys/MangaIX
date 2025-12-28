@@ -120,9 +120,17 @@ if (selectedSource === 'ikigai' && (selectedGenres.length > 0 || selectedIkigaiT
 
 ## Estado Actual
 
-- ✅ Código actualizado con mejor manejo de Cloudflare
-- ⏳ Esperando testing del usuario
-- 📊 Si sigue fallando, proceder con Opción A o C
+- ✅ Código actualizado con puppeteer-extra-plugin-stealth
+- ✅ Dependencias instaladas (puppeteer-extra@3.3.6, stealth@2.11.2)
+- ✅ Bloqueo de recursos optimizado (imágenes, CSS, fuentes)
+- ⏳ Listo para testing en producción
+
+## Próximos Pasos
+
+1. **Deploy a Vercel** y probar búsqueda con filtros
+2. Verificar logs: `[Ikigai Search] BÚSQUEDA CON PUPPETEER-EXTRA-STEALTH`
+3. Si funciona → Aplicar stealth a otros endpoints (chapters, details, pages)
+4. Si falla → Evaluar Opción B (servicio pagado) o C (deshabilitar)
 
 ## Notas Técnicas
 

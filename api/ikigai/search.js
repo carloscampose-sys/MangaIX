@@ -1,5 +1,9 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
+
+// Activar plugin stealth para evadir detección de Cloudflare
+puppeteer.use(StealthPlugin());
 
 /**
  * Espera a que se complete el challenge de Cloudflare
@@ -78,7 +82,7 @@ export default async function handler(req, res) {
   const { query = '', filters = {}, page = 1 } = req.body;
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] BÚSQUEDA CON ANTI-CLOUDFLARE');
+  console.log('[Ikigai Search] BÚSQUEDA CON PUPPETEER-EXTRA-STEALTH');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
@@ -95,17 +99,16 @@ export default async function handler(req, res) {
     ];
     const selectedUA = userAgents[page % userAgents.length];
 
-    // Iniciar Puppeteer con anti-detección
+    // Iniciar Puppeteer con stealth plugin
+    console.log('[Ikigai Search] Iniciando browser con stealth plugin...');
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--window-size=1920x1080',
-        `--user-agent=${selectedUA}`
+        '--window-size=1920x1080'
       ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -113,23 +116,20 @@ export default async function handler(req, res) {
     });
 
     const puppeteerPage = await browser.newPage();
+    
+    // Configurar viewport y user agent
+    await puppeteerPage.setViewport({ width: 1920, height: 1080 });
     await puppeteerPage.setUserAgent(selectedUA);
 
-    // Anti-detección
-    await puppeteerPage.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      window.navigator.chrome = { runtime: {} };
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en', 'es'] });
-    });
-
-    // Bloquear recursos innecesarios
+    // Bloquear recursos innecesarios para mejorar velocidad
     await puppeteerPage.setRequestInterception(true);
     puppeteerPage.on('request', (request) => {
-      const blockedResources = ['ads', 'analytics', 'doubleclick', 'tracking', 'facebook', 'twitter'];
+      const blockedResources = ['image', 'stylesheet', 'font', 'media'];
+      const blockedDomains = ['ads', 'analytics', 'doubleclick', 'tracking', 'facebook', 'twitter'];
       const url = request.url().toLowerCase();
 
-      if (blockedResources.some(resource => url.includes(resource))) {
+      if (blockedResources.includes(request.resourceType()) || 
+          blockedDomains.some(domain => url.includes(domain))) {
         request.abort();
       } else {
         request.continue();
@@ -148,8 +148,8 @@ export default async function handler(req, res) {
     }
     
     // Esperar a que pase el challenge de Cloudflare en la primera carga
-    console.log('[Ikigai Search] Esperando challenge inicial...');
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    console.log('[Ikigai Search] Esperando challenge inicial (stealth activo)...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     // PASO 2: Construir URL con parámetros
     const baseUrl = 'https://viralikigai.foodib.net/series/';
@@ -383,7 +383,7 @@ export default async function handler(req, res) {
       results,
       page,
       hasMore: paginationInfo.nextPageExists,
-      searchMethod: 'anti-cloudflare'
+      searchMethod: 'puppeteer-extra-stealth'
     });
 
   } catch (error) {
