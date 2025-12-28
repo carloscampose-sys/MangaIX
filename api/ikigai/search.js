@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    // Iniciar Puppeteer con configuración anti-detección
+    // Iniciar Puppeteer con configuración anti-detección AVANZADA
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
@@ -56,7 +56,12 @@ export default async function handler(req, res) {
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1920x1080',
-        '--disable-blink-features=AutomationControlled'
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-web-security',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
       ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -65,17 +70,61 @@ export default async function handler(req, res) {
 
     const puppeteerPage = await browser.newPage();
 
-    // Configurar User Agent real
+    // Configuración anti-detección AVANZADA
     await puppeteerPage.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     );
 
-    // Anti-detección
+    // Headers adicionales para parecer más humano
+    await puppeteerPage.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
+    });
+
+    // Anti-detección JavaScript AVANZADA
     await puppeteerPage.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      window.navigator.chrome = { runtime: {} };
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      // Eliminar rastros de webdriver
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      
+      // Simular Chrome real
+      window.navigator.chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+      
+      // Plugins falsos
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5]
+      });
+      
+      // Idiomas
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['es-ES', 'es', 'en-US', 'en']
+      });
+      
+      // Permisos
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Cypress.env('NOTIFICATION_PERMISSION') || 'granted' }) :
+          originalQuery(parameters)
+      );
+      
+      // Eliminar _phantom, __nightmare, callPhantom
+      delete window._phantom;
+      delete window.__nightmare;
+      delete window.callPhantom;
     });
 
     // INTERCEPTAR TODAS LAS PETICIONES DE RED
@@ -454,18 +503,89 @@ async function performInteractiveSearchReal(puppeteerPage, query) {
   console.log(`[Ikigai Interactive Real] Término de búsqueda: "${query}"`);
   
   try {
-    // PASO 1: Navegar a la página de series
+    // PASO 1: Navegar a la página de series CON ESPERA EXTENDIDA PARA CLOUDFLARE
+    console.log('[Ikigai Interactive Real] Navegando a página de series...');
+    
+    // Primero ir a la página principal para establecer sesión
+    console.log('[Ikigai Interactive Real] Estableciendo sesión en página principal...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/', {
+      waitUntil: 'networkidle0',
+      timeout: 60000 // 60 segundos para Cloudflare
+    });
+    
+    // Esperar MUCHO más tiempo para Cloudflare
+    console.log('[Ikigai Interactive Real] Esperando challenge de Cloudflare (30s)...');
+    await new Promise(resolve => setTimeout(resolve, 30000));
+    
+    // Simular actividad humana en la página principal
+    console.log('[Ikigai Interactive Real] Simulando actividad humana...');
+    await puppeteerPage.evaluate(() => {
+      // Simular movimiento de mouse
+      document.dispatchEvent(new MouseEvent('mousemove', {
+        clientX: Math.random() * window.innerWidth,
+        clientY: Math.random() * window.innerHeight
+      }));
+    });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Hacer scroll suave en la página principal
+    await puppeteerPage.evaluate(() => {
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+    });
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Ahora navegar a la página de series
     console.log('[Ikigai Interactive Real] Navegando a página de series...');
     await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
       waitUntil: 'networkidle0',
-      timeout: 30000
+      timeout: 60000 // 60 segundos para Cloudflare
     });
 
-    // PASO 2: Esperar a que la página se cargue completamente
-    console.log('[Ikigai Interactive Real] Esperando carga completa de la página...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // PASO 2: Esperar MUCHO más tiempo para que la página se cargue completamente
+    console.log('[Ikigai Interactive Real] Esperando carga completa de la página (20s)...');
+    await new Promise(resolve => setTimeout(resolve, 20000));
 
-    // PASO 3: Encontrar el campo de búsqueda real
+    // PASO 3: Verificar si Cloudflare está bloqueando
+    console.log('[Ikigai Interactive Real] Verificando estado de la página...');
+    
+    const pageInfo = await puppeteerPage.evaluate(() => {
+      return {
+        title: document.title,
+        bodyText: document.body ? document.body.textContent.substring(0, 200) : '',
+        bodyLength: document.body ? document.body.textContent.length : 0,
+        url: window.location.href,
+        hasCloudflareChallenge: document.body ? document.body.textContent.includes('Just a moment') : false,
+        hasAccessDenied: document.body ? document.body.textContent.includes('Access denied') : false
+      };
+    });
+    
+    console.log('[Ikigai Interactive Real] Estado de la página:', JSON.stringify(pageInfo, null, 2));
+    
+    if (pageInfo.hasCloudflareChallenge) {
+      console.log('[Ikigai Interactive Real] ⚠️ Cloudflare challenge detectado, esperando más tiempo...');
+      await new Promise(resolve => setTimeout(resolve, 30000)); // Esperar 30s más
+      
+      // Verificar de nuevo
+      const pageInfo2 = await puppeteerPage.evaluate(() => {
+        return {
+          title: document.title,
+          hasCloudflareChallenge: document.body ? document.body.textContent.includes('Just a moment') : false,
+          hasAccessDenied: document.body ? document.body.textContent.includes('Access denied') : false
+        };
+      });
+      
+      if (pageInfo2.hasCloudflareChallenge || pageInfo2.hasAccessDenied) {
+        console.log('[Ikigai Interactive Real] ❌ Cloudflare sigue bloqueando después de 50s');
+        return null;
+      }
+    }
+    
+    if (pageInfo.hasAccessDenied) {
+      console.log('[Ikigai Interactive Real] ❌ Acceso denegado por Cloudflare');
+      return null;
+    }
+
+    // PASO 4: Encontrar el campo de búsqueda real
     console.log('[Ikigai Interactive Real] Buscando campo de búsqueda...');
     
     const searchSelectors = [
