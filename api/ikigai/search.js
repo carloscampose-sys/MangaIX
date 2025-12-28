@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   );
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] ESTRATEGIA SIMPLIFICADA');
+  console.log('[Ikigai Search] NUEVA ESTRATEGIA: URL + Paginación Mejorada');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
@@ -31,21 +31,8 @@ export default async function handler(req, res) {
   console.log('[Ikigai Search] hasFilters:', hasFilters);
   console.log('[Ikigai Search] ============================================');
 
-  // ESTRATEGIA: Búsqueda por texto funciona, filtros NO
-  // Para filtros, devolver mensaje al usuario
-  if (hasFilters && !hasSearchQuery) {
-    console.log('[Ikigai Search] ⚠️ Filtros sin búsqueda de texto no soportados en Ikigai');
-    return res.status(200).json({
-      results: [],
-      page,
-      hasMore: false,
-      message: 'Ikigai requiere búsqueda por texto. Los filtros de género no están disponibles actualmente.',
-      searchMethod: 'unsupported'
-    });
-  }
-
-  // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación (solo para búsqueda por texto)
-  if (hasSearchQuery) {
+  // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación
+  if (hasSearchQuery || hasFilters) {
     console.log('[Ikigai Search] Usando búsqueda por URL con paginación...');
     
     try {
@@ -1597,7 +1584,9 @@ async function performURLSearchWithPagination(query, filters, page) {
       timeout: 30000
     });
     
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // CRÍTICO: Esperar MUCHO más tiempo para que Qwik cargue completamente
+    console.log('[Ikigai URL Pagination] Esperando carga completa de Qwik (15s)...');
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     // PASO 3: Aplicar filtros interactivamente si existen
     const hasTextSearch = query && query.trim();
@@ -1678,7 +1667,8 @@ async function performURLSearchWithPagination(query, filters, page) {
         }
         
         // Esperar a que se apliquen los filtros
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('[Ikigai URL Pagination] Esperando a que se apliquen los filtros (10s)...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
       
       // Capturar la URL después de aplicar filtros
