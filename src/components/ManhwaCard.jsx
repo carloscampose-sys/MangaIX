@@ -5,6 +5,8 @@ import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, BookOpen, MoreVertical } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import anime from 'animejs';
+import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
@@ -27,6 +29,11 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef(null);
+    
+    // Referencias para animaciones
+    const cardRef = useRef(null);
+    const coverRef = useRef(null);
+    const buttonRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -37,6 +44,51 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+    
+    // Animación de hover en la card
+    const handleCardHover = () => {
+        if (cardRef.current) {
+            anime({
+                targets: cardRef.current,
+                translateY: -8,
+                scale: 1.02,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                duration: ANIME_DURATIONS.fast,
+                easing: ANIME_EASINGS.easeOutQuad,
+            });
+        }
+        
+        if (coverRef.current) {
+            anime({
+                targets: coverRef.current.querySelector('img'),
+                scale: 1.1,
+                duration: ANIME_DURATIONS.medium,
+                easing: ANIME_EASINGS.easeOutQuad,
+            });
+        }
+    };
+    
+    const handleCardLeave = () => {
+        if (cardRef.current) {
+            anime({
+                targets: cardRef.current,
+                translateY: 0,
+                scale: 1,
+                boxShadow: '0 10px 15px rgba(0,0,0,0.1)',
+                duration: ANIME_DURATIONS.fast,
+                easing: ANIME_EASINGS.easeOutQuad,
+            });
+        }
+        
+        if (coverRef.current) {
+            anime({
+                targets: coverRef.current.querySelector('img'),
+                scale: 1,
+                duration: ANIME_DURATIONS.medium,
+                easing: ANIME_EASINGS.easeOutQuad,
+            });
+        }
+    };
 
     const handleStatusChange = (statusId) => {
         setMangaStatus(manga.id, statusId);
@@ -74,6 +126,17 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                 colors: ['#A7D08C', '#FFD700', '#FFFFFF'],
                 zIndex: 3000
             });
+            
+            // Animación del botón al añadir
+            if (buttonRef.current) {
+                anime({
+                    targets: buttonRef.current,
+                    scale: [1, 1.2, 0.9, 1],
+                    rotate: [0, 10, -10, 0],
+                    duration: 600,
+                    easing: ANIME_EASINGS.easeOutElastic,
+                });
+            }
         }
     };
 
@@ -100,9 +163,12 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
     return (
         <motion.div
+            ref={cardRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`group manhwa-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col h-full relative transition-all hover:shadow-2xl ${manga?.status === 'tiesa' ? 'opacity-70 grayscale-[40%]' : ''}`}
+            onMouseEnter={handleCardHover}
+            onMouseLeave={handleCardLeave}
+            className={`group manhwa-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col h-full relative transition-all ${manga?.status === 'tiesa' ? 'opacity-70 grayscale-[40%]' : ''}`}
         >
             {/* Badge de Fuente */}
             {source && (
@@ -156,6 +222,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
             {/* Cover */}
             <div
+                ref={coverRef}
                 className="relative h-40 sm:h-52 md:h-64 overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer"
                 onClick={() => setIsModalOpen(true)}
             >
@@ -281,8 +348,9 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                     </div>
                 ) : (
                     <button
+                        ref={buttonRef}
                         onClick={handleAdd}
-                        className="mt-auto w-full py-2 sm:py-2.5 bg-potaxie-green hover:bg-green-600 text-white rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold transition-all shadow-md active:scale-95"
+                        className="mt-auto w-full py-2 sm:py-2.5 bg-potaxie-green hover:bg-green-600 text-white rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-bold transition-colors shadow-md active:scale-95"
                     >
                         <Plus size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Añadir a Biblioteca</span><span className="sm:hidden">Añadir</span>
                     </button>

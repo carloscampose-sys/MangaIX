@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import anime from 'animejs';
+import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 export const SearchLoader = ({ isLoading }) => {
     const [progress, setProgress] = useState(0);
     const [dots, setDots] = useState('');
+    
+    // Referencias para animaciones
+    const imageRef = useRef(null);
+    const progressBarRef = useRef(null);
+    const glowRef = useRef(null);
 
     // Simular progreso de carga
     useEffect(() => {
@@ -40,6 +47,46 @@ export const SearchLoader = ({ isLoading }) => {
             setDots('');
         }
     }, [isLoading]);
+    
+    // Animación de la imagen con anime.js
+    useEffect(() => {
+        if (isLoading && imageRef.current) {
+            anime({
+                targets: imageRef.current,
+                rotate: [0, 10, -10, 0],
+                scale: [1, 1.1, 1],
+                duration: 2000,
+                easing: ANIME_EASINGS.easeInOutQuad,
+                loop: true,
+            });
+        }
+    }, [isLoading]);
+    
+    // Animación del glow
+    useEffect(() => {
+        if (isLoading && glowRef.current) {
+            anime({
+                targets: glowRef.current,
+                scale: [1, 1.3, 1],
+                opacity: [0.2, 0.4, 0.2],
+                duration: 2000,
+                easing: ANIME_EASINGS.easeInOutQuad,
+                loop: true,
+            });
+        }
+    }, [isLoading]);
+    
+    // Animar la barra de progreso con anime.js
+    useEffect(() => {
+        if (progressBarRef.current) {
+            anime({
+                targets: progressBarRef.current,
+                width: `${progress}%`,
+                duration: 300,
+                easing: ANIME_EASINGS.easeOutQuad,
+            });
+        }
+    }, [progress]);
 
     return (
         <AnimatePresence>
@@ -59,19 +106,9 @@ export const SearchLoader = ({ isLoading }) => {
                         className="flex flex-col items-center gap-6 p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border-2 border-potaxie-green/20 dark:border-potaxie-green/30"
                     >
                         {/* Imagen de búsqueda animada */}
-                        <motion.div
-                            animate={{
-                                rotate: [0, 15, -15, 0],
-                                scale: [1, 1.1, 1]
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            className="relative"
-                        >
+                        <div className="relative">
                             <img
+                                ref={imageRef}
                                 src="/search loading.png"
                                 alt="Searching"
                                 className="w-32 h-32 object-contain"
@@ -80,8 +117,11 @@ export const SearchLoader = ({ isLoading }) => {
                                 }}
                             />
                             {/* Glow effect */}
-                            <div className="absolute inset-0 bg-potaxie-green/20 rounded-full blur-2xl -z-10"></div>
-                        </motion.div>
+                            <div 
+                                ref={glowRef}
+                                className="absolute inset-0 bg-potaxie-green/20 rounded-full blur-2xl -z-10"
+                            />
+                        </div>
 
                         {/* Texto animado */}
                         <div className="text-center">
@@ -96,11 +136,10 @@ export const SearchLoader = ({ isLoading }) => {
                         {/* Barra de progreso */}
                         <div className="w-80 max-w-full">
                             <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${progress}%` }}
-                                    transition={{ duration: 0.3, ease: "easeOut" }}
+                                <div
+                                    ref={progressBarRef}
                                     className="h-full bg-gradient-to-r from-potaxie-green via-teal-500 to-potaxie-green rounded-full relative"
+                                    style={{ width: '0%' }}
                                 >
                                     {/* Shine effect */}
                                     <motion.div
@@ -114,7 +153,7 @@ export const SearchLoader = ({ isLoading }) => {
                                         }}
                                         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
                                     />
-                                </motion.div>
+                                </div>
                             </div>
                             <div className="mt-2 flex justify-between items-center">
                                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
