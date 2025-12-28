@@ -146,16 +146,17 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] URL target:', targetUrl);
 
     // Hacer petición a través de ScrapingBee
-    const response = await axios.post('https://app.scrapingbee.com/api/v1/', {
-      api_key: SCRAPINGBEE_KEY,
-      url: targetUrl,
-      render_js: false,  // NO renderizar JS, la API directa es suficiente
-      country_code: 'us',  // IP de Estados Unidos
-      extract_rules: '',  // NO usar reglas de extracción, la API ya devuelve JSON
-    }, {
+    // IMPORTANTE: ScrapingBee espera los parámetros en la query string, NO en el body
+    const scrapingbeeUrl = new URL('https://app.scrapingbee.com/api/v1/');
+    scrapingbeeUrl.searchParams.append('api_key', SCRAPINGBEE_KEY);
+    scrapingbeeUrl.searchParams.append('url', targetUrl);
+    scrapingbeeUrl.searchParams.append('render_js', 'false');  // NO renderizar JS, la API directa es suficiente
+    scrapingbeeUrl.searchParams.append('country_code', 'us');  // IP de Estados Unidos
+
+    const response = await axios.get(scrapingbeeUrl.toString(), {
       timeout: 30000,  // 30 segundos de timeout
       headers: {
-        'Content-Type': 'application/json'
+        'Accept': 'application/json'
       }
     });
 
