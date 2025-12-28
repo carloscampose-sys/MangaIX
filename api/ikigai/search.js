@@ -164,22 +164,22 @@ export default async function handler(req, res) {
       }
     });
 
-    // PASO 3: Implementar búsqueda interactiva (ESTRATEGIA 1)
+    // PASO 3: Estrategia URL con parámetros (más simple y efectiva)
     if (hasSearchQuery) {
-      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda Interactiva');
+      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda por URL con parámetros');
       
       try {
-        const interactiveResult = await performInteractiveSearch(puppeteerPage, query, apiRequests);
+        const urlSearchResult = await performURLSearch(puppeteerPage, query, apiRequests);
         
-        if (interactiveResult && interactiveResult.length > 0) {
+        if (urlSearchResult && urlSearchResult.length > 0) {
           await browser.close();
-          console.log(`[Ikigai Search] ✅ Búsqueda interactiva exitosa: ${interactiveResult.length} resultados`);
+          console.log(`[Ikigai Search] ✅ Búsqueda por URL exitosa: ${urlSearchResult.length} resultados`);
           
           return res.status(200).json({
-            results: interactiveResult,
+            results: urlSearchResult,
             page,
             hasMore: false,
-            searchMethod: 'interactive',
+            searchMethod: 'url-search',
             apiDiscovery: {
               foundAPI: !!discoveredAPIs.searchEndpoint,
               endpoint: discoveredAPIs.searchEndpoint,
@@ -187,10 +187,10 @@ export default async function handler(req, res) {
             }
           });
         } else {
-          console.log('[Ikigai Search] ❌ Búsqueda interactiva no retornó resultados');
+          console.log('[Ikigai Search] ❌ Búsqueda por URL no retornó resultados');
         }
       } catch (error) {
-        console.log('[Ikigai Search] ❌ Error en búsqueda interactiva:', error.message);
+        console.log('[Ikigai Search] ❌ Error en búsqueda por URL:', error.message);
       }
     }
 
@@ -296,6 +296,34 @@ export default async function handler(req, res) {
     }
 
     // PASO 5: Fallback - probar múltiples variaciones de slug
+    if (hasSearchQuery) {
+      console.log('[Ikigai Search] ESTRATEGIA 2: Entrada alternativa');
+      
+      try {
+        const alternativeResult = await tryAlternativeEntry(puppeteerPage, query);
+        
+        if (alternativeResult && alternativeResult.length > 0) {
+          await browser.close();
+          console.log(`[Ikigai Search] ✅ Entrada alternativa exitosa: ${alternativeResult.length} resultados`);
+          
+          return res.status(200).json({
+            results: alternativeResult,
+            page,
+            hasMore: false,
+            searchMethod: 'alternative-entry',
+            apiDiscovery: {
+              foundAPI: !!discoveredAPIs.searchEndpoint,
+              endpoint: discoveredAPIs.searchEndpoint,
+              requestsCaptured: apiRequests.length
+            }
+          });
+        } else {
+          console.log('[Ikigai Search] ❌ Entrada alternativa no retornó resultados');
+        }
+      } catch (error) {
+        console.log('[Ikigai Search] ❌ Error en entrada alternativa:', error.message);
+      }
+    }
     if (hasSearchQuery) {
       console.log('[Ikigai Search] ESTRATEGIA 2: Múltiples variaciones de slug');
       
@@ -415,6 +443,361 @@ export default async function handler(req, res) {
       error: 'Error en la búsqueda',
       details: error.message
     });
+  }
+}
+
+/**
+ * Intenta entrada alternativa para evitar Cloudflare
+ */
+async function tryAlternativeEntry(puppeteerPage, query) {
+  console.log('[Ikigai Alternative] Probando entrada alternativa...');
+  
+  // Estrategia: Ir primero a la página principal, establecer sesión, luego buscar
+  try {
+    // Paso 1: Ir a página principal para establecer sesión
+    console.log('[Ikigai Alternative] Estableciendo sesión en página principal...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+    
+    // Esperar a que se establezca la sesión
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Paso 2: Navegar a la página de series (sin búsqueda)
+    console.log('[Ikigai Alternative] Navegando a página de series...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Paso 3: Obtener todas las series disponibles y filtrar localmente
+    console.log('[Ikigai Alternative] Obteniendo todas las series disponibles...');
+    
+    // Hacer scroll para cargar más contenido
+    for (let i = 0; i < 3; i++) {
+      await puppeteerPage.evaluate((scrollStep) => {
+        window.scrollTo(0, document.body.scrollHeight * scrollStep / 3);
+      }, i + 1);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    // Extraer todas las series y filtrar por búsqueda
+    const results = await puppeteerPage.evaluate((searchQuery) => {
+      const seriesLinks = document.querySelectorAll('a[href*="/series/"], a[href*="/serie/"]');
+      
+      console.log(`[Ikigai Alternative] Enlaces de series encontrados: ${seriesLinks.length}`);
+      
+      const allSeries = Array.from(seriesLinks).map((link, index) => {
+        const href = link.getAttribute('href');
+        if (!href) return null;
+        
+        // Extraer slug
+        let slug = '';
+        if (href.includes('/series/')) {
+          slug = href.split('/series/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        } else if (href.includes('/serie/')) {
+          slug = href.split('/serie/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        }
+        
+        if (!slug || slug.length < 2) return null;
+        
+        // Extraer título
+        let title = '';
+        const titleSelectors = ['h1', 'h2', 'h3', '.title', '[class*="title"]'];
+        
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent.trim()) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+        
+        if (!title) {
+          title = link.getAttribute('title') || 
+                 link.textContent.trim() || 
+                 slug.split('-').map(word => 
+                   word.charAt(0).toUpperCase() + word.slice(1)
+                 ).join(' ');
+        }
+        
+        // Extraer imagen
+        const imgElement = link.querySelector('img');
+        const cover = imgElement?.src || imgElement?.getAttribute('data-src') || '';
+        
+        return {
+          id: `ikigai-${slug}-${Date.now()}-${index}`,
+          slug,
+          title: title.substring(0, 100),
+          cover,
+          source: 'ikigai',
+          searchMethod: 'alternative-entry'
+        };
+      }).filter(item => item !== null);
+      
+      // Filtrar por búsqueda si se proporciona
+      if (!searchQuery || searchQuery.trim() === '') {
+        return allSeries.slice(0, 20); // Limitar resultados si no hay búsqueda
+      }
+      
+      const queryWords = searchQuery.toLowerCase().split(' ');
+      
+      const filteredResults = allSeries.filter(series => {
+        const titleLower = series.title.toLowerCase();
+        const slugLower = series.slug.toLowerCase();
+        
+        // Debe coincidir al menos una palabra
+        return queryWords.some(word => 
+          titleLower.includes(word) || 
+          slugLower.includes(word) ||
+          word.length >= 3 && (titleLower.includes(word.substring(0, 3)) || slugLower.includes(word.substring(0, 3)))
+        );
+      });
+      
+      // Calcular relevancia y ordenar
+      filteredResults.forEach(series => {
+        let relevance = 0;
+        const titleLower = series.title.toLowerCase();
+        
+        queryWords.forEach(word => {
+          if (titleLower.includes(word)) {
+            relevance += word.length * 3; // Más peso por coincidencia completa
+          } else if (titleLower.includes(word.substring(0, 3))) {
+            relevance += 1; // Menos peso por coincidencia parcial
+          }
+        });
+        
+        series.relevance = relevance;
+      });
+      
+      return filteredResults
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 15); // Limitar a 15 resultados más relevantes
+        
+    }, query);
+    
+    console.log(`[Ikigai Alternative] Series filtradas: ${results.length}`);
+    
+    if (results.length > 0) {
+      console.log('[Ikigai Alternative] Primeros 3 resultados:');
+      results.slice(0, 3).forEach((result, i) => {
+        console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance || 0}`);
+      });
+    }
+    
+    return results;
+    
+  } catch (error) {
+    console.log('[Ikigai Alternative] ❌ Error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Realiza búsqueda usando parámetros URL (método más simple)
+ */
+async function performURLSearch(puppeteerPage, query, apiRequests) {
+  console.log('[Ikigai URL Search] Iniciando búsqueda por URL...');
+  
+  // Construir URL de búsqueda
+  const searchUrl = `https://viralikigai.foodib.net/series/?buscar=${encodeURIComponent(query)}`;
+  console.log('[Ikigai URL Search] URL de búsqueda:', searchUrl);
+
+  try {
+    // Navegar directamente a la URL de búsqueda
+    console.log('[Ikigai URL Search] Navegando a URL de búsqueda...');
+    const response = await puppeteerPage.goto(searchUrl, {
+      waitUntil: 'networkidle0',
+      timeout: 45000 // Más tiempo para Cloudflare
+    });
+
+    console.log(`[Ikigai URL Search] Respuesta: ${response.status()}`);
+
+    if (response.status() === 403) {
+      console.log('[Ikigai URL Search] ❌ Bloqueado por Cloudflare (403)');
+      return null;
+    }
+
+    // Esperar más tiempo para que se procese la búsqueda
+    console.log('[Ikigai URL Search] Esperando procesamiento de búsqueda...');
+    await new Promise(resolve => setTimeout(resolve, 8000));
+
+    // Verificar URL actual
+    const currentUrl = puppeteerPage.url();
+    console.log('[Ikigai URL Search] URL actual:', currentUrl);
+
+    // Hacer scroll para activar lazy loading
+    console.log('[Ikigai URL Search] Activando lazy loading con scroll...');
+    await puppeteerPage.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight / 3);
+    });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    await puppeteerPage.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight * 2 / 3);
+    });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    await puppeteerPage.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Buscar resultados con múltiples selectores
+    console.log('[Ikigai URL Search] Buscando resultados...');
+    
+    const results = await puppeteerPage.evaluate((searchQuery) => {
+      // Selectores más amplios para encontrar series
+      const selectors = [
+        'a[href*="/series/"]',
+        'a[href*="/serie/"]', 
+        '[href*="/series/"]',
+        '[href*="/serie/"]'
+      ];
+
+      let allLinks = [];
+      
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector);
+        allLinks.push(...Array.from(links));
+      }
+
+      console.log(`[Ikigai URL Search] Enlaces encontrados: ${allLinks.length}`);
+
+      // Filtrar enlaces válidos
+      const validLinks = allLinks.filter(link => {
+        const href = link.getAttribute('href');
+        if (!href) return false;
+        
+        // Excluir patrones no deseados
+        const excludePatterns = [
+          '/clasificacion', '/lists/', '/grupos/', '/generos/', 
+          '/tags/', '/autores/', '/usuarios/', '/perfil/'
+        ];
+        
+        if (excludePatterns.some(pattern => href.includes(pattern))) return false;
+        
+        // Debe tener contenido útil
+        const hasImage = link.querySelector('img') !== null;
+        const hasTitle = link.textContent && link.textContent.trim().length > 2;
+        
+        return hasImage || hasTitle;
+      });
+
+      console.log(`[Ikigai URL Search] Enlaces válidos: ${validLinks.length}`);
+
+      // Extraer información de cada enlace
+      const extractedResults = validLinks.map((link, index) => {
+        const href = link.getAttribute('href');
+        
+        // Extraer slug
+        let slug = '';
+        if (href.includes('/series/')) {
+          slug = href.split('/series/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        } else if (href.includes('/serie/')) {
+          slug = href.split('/serie/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        }
+        
+        if (!slug || slug.length < 2) return null;
+
+        // Extraer título
+        let title = '';
+        
+        // Buscar en múltiples elementos
+        const titleSelectors = ['h1', 'h2', 'h3', 'h4', '.title', '.name', '[class*="title"]', '[class*="name"]'];
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent.trim()) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+        
+        // Fallback: usar atributos o texto del enlace
+        if (!title) {
+          title = link.getAttribute('title') || 
+                 link.getAttribute('alt') || 
+                 link.textContent.trim() || '';
+        }
+        
+        // Último fallback: generar desde slug
+        if (!title) {
+          title = slug.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+        }
+
+        // Extraer imagen
+        const imgElement = link.querySelector('img');
+        const cover = imgElement?.src || 
+                     imgElement?.getAttribute('src') || 
+                     imgElement?.getAttribute('data-src') || 
+                     imgElement?.getAttribute('data-original') || '';
+
+        // Calcular relevancia
+        let relevance = 0;
+        if (searchQuery && title) {
+          const queryWords = searchQuery.toLowerCase().split(' ');
+          const titleLower = title.toLowerCase();
+          
+          queryWords.forEach(word => {
+            if (titleLower.includes(word)) {
+              relevance += word.length * 2; // Más peso por coincidencia exacta
+            }
+            // Coincidencia parcial
+            if (titleLower.includes(word.substring(0, 3))) {
+              relevance += 1;
+            }
+          });
+        }
+
+        return {
+          id: `ikigai-${slug}-${Date.now()}-${index}`,
+          slug,
+          title: title.substring(0, 100), // Limitar longitud
+          cover,
+          source: 'ikigai',
+          relevance,
+          searchMethod: 'url-search'
+        };
+      }).filter(item => item !== null);
+
+      // Ordenar por relevancia y eliminar duplicados
+      const uniqueResults = [];
+      const seenSlugs = new Set();
+      
+      extractedResults
+        .sort((a, b) => b.relevance - a.relevance)
+        .forEach(result => {
+          if (!seenSlugs.has(result.slug)) {
+            seenSlugs.add(result.slug);
+            uniqueResults.push(result);
+          }
+        });
+
+      console.log(`[Ikigai URL Search] Resultados únicos: ${uniqueResults.length}`);
+      
+      return uniqueResults;
+    }, query);
+
+    console.log(`[Ikigai URL Search] Resultados procesados: ${results.length}`);
+    
+    // Log de los primeros resultados
+    if (results.length > 0) {
+      console.log('[Ikigai URL Search] Primeros 5 resultados:');
+      results.slice(0, 5).forEach((result, i) => {
+        console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance}`);
+      });
+    }
+
+    return results;
+
+  } catch (error) {
+    console.log('[Ikigai URL Search] ❌ Error:', error.message);
+    return null;
   }
 }
 
