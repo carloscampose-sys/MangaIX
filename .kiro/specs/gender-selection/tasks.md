@@ -6,7 +6,7 @@ Este plan implementa la funcionalidad de selección de género que aparece despu
 
 ## Tasks
 
-- [ ] 1. Preparar assets de figuras ilustradas
+- [x] 1. Preparar assets de figuras ilustradas
   - Extraer las tres figuras de la imagen de referencia usando remove.bg o herramienta similar
   - Remover fondo y texto de cada figura
   - Recortar y optimizar cada figura (300-400px de altura)
@@ -14,7 +14,7 @@ Este plan implementa la funcionalidad de selección de género que aparece despu
   - Guardar en `public/` con nombres: `gender-masculino.png`, `gender-femenino.png`, `gender-otro.png`
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 2. Crear componente de animación de estrellas
+- [x] 2. Crear componente de animación de estrellas
   - Crear archivo `src/components/StarAnimation.jsx`
   - Implementar animación de estrellas usando CSS puro (similar a SnowEffect.jsx)
   - Configurar 30-50 estrellas con tamaños y opacidades variables
@@ -40,7 +40,7 @@ Este plan implementa la funcionalidad de selección de género que aparece despu
   - Verificar que las rutas de imágenes son correctas
   - _Requirements: 7.5_
 
-- [ ] 4. Implementar animaciones hover y selección para figuras
+- [x] 4. Implementar animaciones hover y selección para figuras
   - Agregar animación de escala en hover (`hover:scale-110`)
   - Agregar efecto de brillo en hover (`hover:brightness-110`)
   - Implementar efecto visual de selección (ring, shadow, glow)
@@ -53,7 +53,7 @@ Este plan implementa la funcionalidad de selección de género que aparece despu
   - Verificar que la selección cambia el estilo visual
   - _Requirements: 2.2, 7.7_
 
-- [ ] 5. Integrar StarAnimation en GenderSelectionScreen
+- [x] 5. Integrar StarAnimation en GenderSelectionScreen
   - Importar StarAnimation en GenderSelectionScreen
   - Agregar StarAnimation como fondo detrás del modal
   - Asegurar que las estrellas no interfieren con la interacción

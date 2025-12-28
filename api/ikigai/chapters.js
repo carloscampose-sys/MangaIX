@@ -1,9 +1,5 @@
 import puppeteer from 'puppeteer-extra';
-import puppeteerPluginStealth from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
-
-// Aplicar plugin stealth para evadir detección de Cloudflare
-puppeteer.use(puppeteerPluginStealth());
 
 // ========================================
 // HELPER FUNCTIONS

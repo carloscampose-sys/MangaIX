@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import StarAnimation from './StarAnimation';
 
 const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
   const [selectedGender, setSelectedGender] = useState(null);
@@ -8,20 +9,26 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
     {
       id: 'masculino',
       label: 'Masculino',
-      emoji: '👨',
-      color: 'bg-blue-500'
+      image: '/gender-masculino.png',
+      color: 'ring-blue-500',
+      shadowColor: 'shadow-blue-500/50',
+      bgColor: 'bg-blue-500'
     },
     {
       id: 'femenino',
       label: 'Femenino',
-      emoji: '👩',
-      color: 'bg-pink-500'
+      image: '/gender-femenino.png',
+      color: 'ring-pink-500',
+      shadowColor: 'shadow-pink-500/50',
+      bgColor: 'bg-pink-500'
     },
     {
       id: 'otro',
       label: 'Otro',
-      emoji: '🌈',
-      color: 'bg-purple-500'
+      image: '/gender-otro.png',
+      color: 'ring-purple-500',
+      shadowColor: 'shadow-purple-500/50',
+      bgColor: 'bg-purple-500'
     }
   ];
 
@@ -53,8 +60,11 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
                     bg-gradient-to-br from-potaxie-mint to-potaxie-cream-white
                     p-4 z-50 transition-opacity duration-1000"
          style={{ animation: 'fadeIn 1s ease-out forwards' }}>
+      {/* Animación de estrellas en el fondo */}
+      <StarAnimation />
+      
       <div className="glass-modal p-8 rounded-lg shadow-xl max-w-md w-full text-center
-                      transform transition-all duration-500 scale-95 opacity-0"
+                      transform transition-all duration-500 scale-95 opacity-0 relative z-10"
            style={{ animation: 'scaleIn 0.5s ease-out forwards 0.5s' }}>
         <h2 className="text-3xl font-bold text-potaxie-text-light mb-2">
           ¿Cuál es tu género, Potaxina?
@@ -70,15 +80,24 @@ const GenderSelectionScreen = ({ userName, onGenderSelect }) => {
               key={option.id}
               onClick={() => handleGenderSelect(option.id)}
               className={`
-                flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300
-                transform hover:scale-105 active:scale-95
+                flex flex-col items-center gap-2 p-4 rounded-xl 
+                transition-all duration-300 ease-out
+                transform hover:scale-110 hover:brightness-110 active:scale-95
                 ${selectedGender === option.id
-                  ? `${option.color} text-white shadow-lg ring-2 ring-offset-2 ring-offset-potaxie-cream-white`
-                  : 'bg-white/40 text-potaxie-text-light hover:bg-white/60 border-2 border-transparent'
+                  ? `${option.bgColor} text-white shadow-xl ${option.shadowColor} scale-105 ring-4 ring-offset-2 ring-offset-potaxie-cream-white ${option.color}`
+                  : 'bg-white/40 text-potaxie-text-light hover:bg-white/60 hover:shadow-lg border-2 border-transparent'
                 }
               `}
             >
-              <span className="text-3xl">{option.emoji}</span>
+              <img 
+                src={option.image} 
+                alt={option.label}
+                className={`
+                  w-20 h-20 object-contain
+                  transition-all duration-300
+                  ${selectedGender === option.id ? 'drop-shadow-lg' : ''}
+                `}
+              />
               <span className="text-xs font-bold uppercase tracking-wider">
                 {option.label}
               </span>

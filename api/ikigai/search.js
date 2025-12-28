@@ -1,9 +1,5 @@
 import puppeteer from 'puppeteer-extra';
-import puppeteerPluginStealth from 'puppeteer-extra-plugin-stealth';
 import chromium from '@sparticuz/chromium';
-
-// Aplicar plugin stealth para evadir detección de Cloudflare
-puppeteer.use(puppeteerPluginStealth());
 
 /**
  * Espera a que se complete el challenge de Cloudflare
@@ -113,7 +109,7 @@ export default async function handler(req, res) {
   const { query = '', filters = {}, page = 1 } = req.body;
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] BÚSQUEDA CON ANTI-DETECCIÓN MÁXIMA');
+  console.log('[Ikigai Search] BÚSQUEDA CON ANTI-DETECCIÓN MEJORADO (puppeteer-extra)');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
