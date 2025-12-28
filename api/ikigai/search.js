@@ -1,37 +1,38 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-
-// Activar plugin stealth para evadir detección de Cloudflare
-puppeteer.use(StealthPlugin());
 
 /**
  * Espera a que se complete el challenge de Cloudflare
  */
-async function waitForCloudflareChallenge(page, timeout = 30000) {
+async function waitForCloudflareChallenge(page, timeout = 35000) {
   try {
+    console.log('[Ikigai Search] Esperando que desaparezca challenge...');
+    
     // Paso 1: Esperar a que desaparezca el challenge
     await page.waitForFunction(() => {
       const title = document.title;
       const bodyText = document.body ? document.body.innerText : '';
       
-      return !title.includes('500') &&
-        !title.includes('Just a moment') &&
-        !title.includes('Un momento') &&
-        !title.includes('Error') &&
-        !bodyText.includes('Checking your browser') &&
-        !bodyText.includes('Verifying you are human') &&
-        !bodyText.includes('Enable JavaScript and cookies to continue');
-    }, { timeout: timeout / 2 });
+      const isCloudflare = title.includes('500') ||
+        title.includes('Just a moment') ||
+        title.includes('Un momento') ||
+        title.includes('Error') ||
+        bodyText.includes('Checking your browser') ||
+        bodyText.includes('Verifying you are human') ||
+        bodyText.includes('Enable JavaScript and cookies to continue');
+      
+      return !isCloudflare;
+    }, { timeout: timeout * 0.6 });
     
-    console.log('[Ikigai Search] ✓ Challenge de Cloudflare superado');
+    console.log('[Ikigai Search] ✓ Challenge superado');
     
     // Paso 2: Esperar a que aparezcan enlaces de series
+    console.log('[Ikigai Search] Esperando contenido...');
     await page.waitForFunction(() => {
       const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
       const bodyText = document.body ? document.body.innerText : '';
       return seriesLinks.length > 5 && bodyText.length > 1000;
-    }, { timeout: timeout / 2 });
+    }, { timeout: timeout * 0.4 });
     
     console.log('[Ikigai Search] ✓ Contenido cargado');
     
@@ -40,7 +41,7 @@ async function waitForCloudflareChallenge(page, timeout = 30000) {
     
     return true;
   } catch (error) {
-    console.error('[Ikigai Search] ❌ Challenge timeout:', error.message);
+    console.error('[Ikigai Search] ❌ Timeout esperando contenido:', error.message);
     
     const debugInfo = await page.evaluate(() => {
       return {
@@ -49,28 +50,44 @@ async function waitForCloudflareChallenge(page, timeout = 30000) {
         seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length,
         allLinksCount: document.querySelectorAll('a').length,
         url: window.location.href,
-        bodyPreview: document.body ? document.body.innerText.substring(0, 300) : ''
+        bodyPreview: document.body ? document.body.innerText.substring(0, 400) : '',
+        hasCloudflareText: document.body ? (
+          document.body.innerText.includes('Just a moment') ||
+          document.body.innerText.includes('Checking your browser')
+        ) : false
       };
     });
     console.log('[Ikigai Search] Estado de la página:', JSON.stringify(debugInfo, null, 2));
     
     // Si hay enlaces de series, considerar exitoso
     if (debugInfo.seriesLinksCount > 5) {
-      console.log('[Ikigai Search] ✓ Recuperado: hay enlaces de series');
+      console.log('[Ikigai Search] ✓ Recuperado: hay suficientes enlaces');
       await new Promise(resolve => setTimeout(resolve, 3000));
       return true;
     }
     
-    // Si hay muy poco contenido, Cloudflare sigue bloqueando
-    if (debugInfo.bodyLength < 500) {
-      console.error('[Ikigai Search] ❌ Página bloqueada por Cloudflare');
+    // Si hay pocos enlaces pero algo de contenido
+    if (debugInfo.seriesLinksCount > 0 && debugInfo.bodyLength > 500) {
+      console.log('[Ikigai Search] ⚠️ Pocos enlaces pero hay contenido, continuando...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return true;
+    }
+    
+    // Si definitivamente está bloqueado
+    if (debugInfo.hasCloudflareText || debugInfo.bodyLength < 300) {
+      console.error('[Ikigai Search] ❌ Cloudflare sigue bloqueando');
       return false;
     }
     
-    // Si hay contenido pero pocos enlaces, esperar más
-    console.warn('[Ikigai Search] ⚠️ Contenido cargado pero pocos enlaces, esperando más...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    return true;
+    // Último intento: esperar más
+    console.warn('[Ikigai Search] ⚠️ Esperando 8s adicionales...');
+    await new Promise(resolve => setTimeout(resolve, 8000));
+    
+    const finalCheck = await page.evaluate(() => ({
+      seriesLinksCount: document.querySelectorAll('a[href*="/series/"]').length
+    }));
+    
+    return finalCheck.seriesLinksCount > 0;
   }
 }
 
@@ -82,7 +99,7 @@ export default async function handler(req, res) {
   const { query = '', filters = {}, page = 1 } = req.body;
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] BÚSQUEDA CON PUPPETEER-EXTRA-STEALTH');
+  console.log('[Ikigai Search] BÚSQUEDA CON ANTI-DETECCIÓN MÁXIMA');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
@@ -91,65 +108,119 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    // User agents rotativos
+    // User agents rotativos más realistas
     const userAgents = [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     ];
     const selectedUA = userAgents[page % userAgents.length];
 
-    // Iniciar Puppeteer con stealth plugin
-    console.log('[Ikigai Search] Iniciando browser con stealth plugin...');
+    // Iniciar Puppeteer con máxima anti-detección
+    console.log('[Ikigai Search] Iniciando browser...');
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--window-size=1920x1080'
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--window-size=1920,1080',
+        `--user-agent=${selectedUA}`
       ],
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
-      ignoreHTTPSErrors: true
+      ignoreHTTPSErrors: true,
+      defaultViewport: { width: 1920, height: 1080 }
     });
 
     const puppeteerPage = await browser.newPage();
-    
-    // Configurar viewport y user agent
-    await puppeteerPage.setViewport({ width: 1920, height: 1080 });
-    await puppeteerPage.setUserAgent(selectedUA);
 
-    // Bloquear recursos innecesarios para mejorar velocidad
+    // Anti-detección completa
+    await puppeteerPage.evaluateOnNewDocument(() => {
+      // Ocultar webdriver
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false
+      });
+
+      // Simular Chrome real
+      window.navigator.chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+
+      // Plugins realistas
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+          { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+        ]
+      });
+
+      // Languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en', 'es']
+      });
+
+      // Permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      );
+
+      // WebGL vendor
+      const getParameter = WebGLRenderingContext.prototype.getParameter;
+      WebGLRenderingContext.prototype.getParameter = function(parameter) {
+        if (parameter === 37445) {
+          return 'Intel Inc.';
+        }
+        if (parameter === 37446) {
+          return 'Intel Iris OpenGL Engine';
+        }
+        return getParameter.apply(this, [parameter]);
+      };
+    });
+
+    // Bloquear solo recursos pesados, mantener scripts
     await puppeteerPage.setRequestInterception(true);
     puppeteerPage.on('request', (request) => {
-      const blockedResources = ['image', 'stylesheet', 'font', 'media'];
-      const blockedDomains = ['ads', 'analytics', 'doubleclick', 'tracking', 'facebook', 'twitter'];
+      const blockedResources = ['image', 'stylesheet', 'font'];
       const url = request.url().toLowerCase();
-
-      if (blockedResources.includes(request.resourceType()) || 
-          blockedDomains.some(domain => url.includes(domain))) {
+      
+      // Bloquear ads y analytics
+      if (url.includes('ads') || url.includes('analytics') || url.includes('tracking')) {
+        request.abort();
+      } else if (blockedResources.includes(request.resourceType())) {
         request.abort();
       } else {
         request.continue();
       }
     });
 
-    // PASO 1: Establecer sesión navegando a /series/ primero (sin filtros)
-    console.log('[Ikigai Search] Estableciendo sesión en /series/...');
+    // PASO 1: Establecer sesión navegando a home primero
+    console.log('[Ikigai Search] Estableciendo sesión en home...');
     try {
-      await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+      await puppeteerPage.goto('https://viralikigai.foodib.net/', {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });
+      console.log('[Ikigai Search] Home cargada');
     } catch (navError) {
-      console.log('[Ikigai Search] Error en navegación inicial:', navError.message);
+      console.log('[Ikigai Search] Error en home:', navError.message);
     }
     
-    // Esperar a que pase el challenge de Cloudflare en la primera carga
-    console.log('[Ikigai Search] Esperando challenge inicial (stealth activo)...');
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // Esperar generosamente para que Cloudflare nos "conozca"
+    console.log('[Ikigai Search] Esperando establecer sesión (12s)...');
+    await new Promise(resolve => setTimeout(resolve, 12000));
 
     // PASO 2: Construir URL con parámetros
     const baseUrl = 'https://viralikigai.foodib.net/series/';
@@ -192,18 +263,21 @@ export default async function handler(req, res) {
 
     // PASO 3: Navegar a la URL con filtros
     console.log('[Ikigai Search] Navegando a URL con filtros...');
+    console.log('[Ikigai Search] URL:', targetUrl);
+    
     try {
       await puppeteerPage.goto(targetUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 45000
       });
+      console.log('[Ikigai Search] Navegación completada');
     } catch (navError) {
-      console.log('[Ikigai Search] Error navegando con filtros:', navError.message);
+      console.log('[Ikigai Search] Error navegando:', navError.message);
     }
 
-    // PASO 4: Esperar challenge de Cloudflare con timeout extendido
-    console.log('[Ikigai Search] Esperando challenge de Cloudflare...');
-    const challengeSuccess = await waitForCloudflareChallenge(puppeteerPage, 30000);
+    // PASO 4: Esperar challenge de Cloudflare con timeout muy generoso
+    console.log('[Ikigai Search] Esperando challenge de Cloudflare (35s timeout)...');
+    const challengeSuccess = await waitForCloudflareChallenge(puppeteerPage, 35000);
     
     if (!challengeSuccess) {
       // Último intento: verificar si realmente está bloqueado o solo lento
@@ -383,7 +457,7 @@ export default async function handler(req, res) {
       results,
       page,
       hasMore: paginationInfo.nextPageExists,
-      searchMethod: 'puppeteer-extra-stealth'
+      searchMethod: 'manual-stealth-max'
     });
 
   } catch (error) {
