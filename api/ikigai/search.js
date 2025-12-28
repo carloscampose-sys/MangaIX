@@ -1,30 +1,51 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
+// Cache para almacenar APIs descubiertas
+let discoveredAPIs = {
+  searchEndpoint: null,
+  searchMethod: 'POST',
+  searchHeaders: {},
+  lastDiscovery: null
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { query = '', filters = {}, page = 1 } = req.body;
+  const hasSearchQuery = query && query.trim();
 
+  console.log('[Ikigai Search] ============================================');
+  console.log('[Ikigai Search] ESTRATEGIA HÍBRIDA: Interactiva + API Discovery');
+  console.log('[Ikigai Search] Query:', query);
+  console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
+  console.log('[Ikigai Search] Página:', page);
+  console.log('[Ikigai Search] ============================================');
+
+  // PASO 1: Intentar usar API directa si ya la conocemos
+  if (hasSearchQuery && discoveredAPIs.searchEndpoint) {
+    console.log('[Ikigai Search] Intentando API directa conocida...');
+    
+    try {
+      const apiResult = await tryDirectAPI(query, filters, page);
+      if (apiResult && apiResult.results && apiResult.results.length > 0) {
+        console.log(`[Ikigai Search] ✅ API directa exitosa: ${apiResult.results.length} resultados`);
+        return res.status(200).json(apiResult);
+      } else {
+        console.log('[Ikigai Search] ❌ API directa no retornó resultados, usando búsqueda interactiva...');
+      }
+    } catch (error) {
+      console.log('[Ikigai Search] ❌ API directa falló:', error.message);
+      console.log('[Ikigai Search] Continuando con búsqueda interactiva...');
+    }
+  }
+
+  // PASO 2: Usar Puppeteer para descubrir/usar API
   let browser = null;
 
   try {
-    // Construir URL con filtros
-    const searchUrl = buildSearchUrl(query, filters, page);
-    
-    // Determinar si hay búsqueda por texto
-    const hasSearchQuery = query && query.trim();
-
-    console.log('[Ikigai Search] ============================================');
-    console.log('[Ikigai Search] Página solicitada:', page);
-    console.log('[Ikigai Search] Query:', query);
-    console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
-    console.log('[Ikigai Search] URL completa:', searchUrl);
-    console.log('[Ikigai Search] Base URL debe ser foodib.net');
-    console.log('[Ikigai Search] ============================================');
-
     // Iniciar Puppeteer con configuración anti-detección
     browser = await puppeteer.launch({
       args: [
@@ -44,81 +65,54 @@ export default async function handler(req, res) {
 
     const puppeteerPage = await browser.newPage();
 
-    // Capturar logs del navegador para debugging
-    puppeteerPage.on('console', msg => {
-      const text = msg.text();
-      if (text.includes('[Ikigai Eval]')) {
-        console.log(text);
-      }
-    });
-
-    // Configurar User Agent real (Chrome reciente)
+    // Configurar User Agent real
     await puppeteerPage.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     );
 
-    // Configurar viewport
-    await puppeteerPage.setViewport({
-      width: 1920,
-      height: 1080
-    });
-
-    // Inyectar código anti-detección ANTES de navegar
+    // Anti-detección
     await puppeteerPage.evaluateOnNewDocument(() => {
-      // Eliminar webdriver property
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => false,
-      });
-
-      // Sobrescribir chrome runtime
-      window.navigator.chrome = {
-        runtime: {},
-      };
-
-      // Sobrescribir plugins
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => [1, 2, 3, 4, 5],
-      });
-
-      // Sobrescribir languages
-      Object.defineProperty(navigator, 'languages', {
-        get: () => ['en-US', 'en'],
-      });
-
-      // Permisos
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) =>
-        parameters.name === 'notifications'
-          ? Promise.resolve({ state: Notification.permission })
-          : originalQuery(parameters);
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      window.navigator.chrome = { runtime: {} };
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
     });
 
-    // Bloquear ads y recursos innecesarios
+    // INTERCEPTAR TODAS LAS PETICIONES DE RED
+    const networkRequests = [];
+    const apiRequests = [];
+
     await puppeteerPage.setRequestInterception(true);
     
-    // Capturar peticiones de red para debugging
-    const networkRequests = [];
-    
     puppeteerPage.on('request', (request) => {
-      const blockedResources = [
-        'ads',
-        'analytics',
-        'facebook',
-        'google-analytics',
-        'doubleclick',
-        'tracking'
-      ];
       const url = request.url().toLowerCase();
+      const method = request.method();
+      const postData = request.postData();
 
-      // Guardar peticiones de API para debugging
-      if (url.includes('/api/') || url.includes('/search') || url.includes('/series')) {
-        networkRequests.push({
-          method: request.method(),
+      // Capturar peticiones que podrían ser APIs
+      if (url.includes('/api/') || 
+          url.includes('/search') || 
+          url.includes('/buscar') ||
+          url.includes('/series') ||
+          (method === 'POST' && postData)) {
+        
+        const apiRequest = {
+          method,
           url: request.url(),
-          postData: request.postData()
-        });
+          headers: request.headers(),
+          postData,
+          timestamp: Date.now()
+        };
+        
+        apiRequests.push(apiRequest);
+        console.log(`[Ikigai API Discovery] ${method} ${request.url()}`);
+        if (postData) {
+          console.log(`[Ikigai API Discovery] Body:`, postData.substring(0, 200));
+        }
       }
 
+      // Bloquear ads pero permitir todo lo demás
+      const blockedResources = ['ads', 'analytics', 'doubleclick', 'tracking'];
       if (blockedResources.some(resource => url.includes(resource))) {
         request.abort();
       } else {
@@ -126,317 +120,259 @@ export default async function handler(req, res) {
       }
     });
 
-    // ESTRATEGIA ESPECIAL PARA IKIGAI: Búsqueda directa por slug
-    // Si el usuario proporciona un título, intentamos convertirlo a slug y acceder directamente
-    // Ejemplo: "Amor Maldito" → "amor-maldito" → /series/amor-maldito/
+    // Capturar respuestas también
+    puppeteerPage.on('response', async (response) => {
+      const url = response.url().toLowerCase();
+      const status = response.status();
+      
+      if ((url.includes('/api/') || 
+           url.includes('/search') || 
+           url.includes('/buscar')) && 
+          status === 200) {
+        
+        try {
+          const responseText = await response.text();
+          console.log(`[Ikigai API Discovery] Response ${status} from ${response.url()}`);
+          console.log(`[Ikigai API Discovery] Response preview:`, responseText.substring(0, 300));
+          
+          // Intentar parsear como JSON
+          try {
+            const jsonData = JSON.parse(responseText);
+            if (jsonData && (jsonData.results || jsonData.data || Array.isArray(jsonData))) {
+              console.log(`[Ikigai API Discovery] ✅ JSON válido encontrado en ${response.url()}`);
+              
+              // Guardar API descubierta
+              const matchingRequest = apiRequests.find(req => req.url === response.url());
+              if (matchingRequest) {
+                discoveredAPIs = {
+                  searchEndpoint: response.url(),
+                  searchMethod: matchingRequest.method,
+                  searchHeaders: matchingRequest.headers,
+                  lastDiscovery: Date.now(),
+                  sampleRequest: matchingRequest,
+                  sampleResponse: jsonData
+                };
+                console.log(`[Ikigai API Discovery] 🎯 API guardada: ${response.url()}`);
+              }
+            }
+          } catch (e) {
+            // No es JSON válido
+          }
+        } catch (e) {
+          console.log(`[Ikigai API Discovery] Error leyendo respuesta:`, e.message);
+        }
+      }
+    });
+
+    // PASO 3: Implementar búsqueda interactiva (ESTRATEGIA 1)
     if (hasSearchQuery) {
-      console.log('[Ikigai Search] Intentando búsqueda directa por slug...');
-      
-      // Convertir título a slug
-      const slug = query.trim()
-        .toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remover acentos
-        .replace(/[¡!¿?]/g, "") // Remover signos de exclamación/interrogación
-        .replace(/\s+/g, '-') // Espacios → guiones
-        .replace(/[^a-z0-9-]/g, '') // Remover caracteres especiales
-        .replace(/-+/g, '-') // Múltiples guiones → uno solo
-        .replace(/^-|-$/g, ''); // Remover guiones al inicio/final
-      
-      console.log('[Ikigai Search] Slug generado:', slug);
-      
-      const directUrl = `https://viralikigai.foodib.net/series/${slug}/`;
-      console.log('[Ikigai Search] Intentando acceso directo:', directUrl);
+      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda Interactiva');
       
       try {
-        // Intentar navegar directamente a la página de la obra
-        const response = await puppeteerPage.goto(directUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 15000
-        });
+        const interactiveResult = await performInteractiveSearch(puppeteerPage, query, apiRequests);
         
-        const statusCode = response.status();
-        console.log('[Ikigai Search] Status code:', statusCode);
-        
-        if (statusCode === 200) {
-          // ¡Éxito! La obra existe
-          console.log('[Ikigai Search] ✓ Obra encontrada directamente');
-          
-          // Esperar a que cargue el contenido
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Extraer información de la obra
-          const seriesInfo = await puppeteerPage.evaluate((slugParam) => {
-            // Extraer título
-            const titleEl = document.querySelector('h1, h2, .title, [class*="title"]');
-            const title = titleEl?.textContent?.trim() || '';
-            
-            // Extraer imagen
-            const imgEl = document.querySelector('img[src*="ikigai"], img[alt*="cover"], .cover img, [class*="cover"] img');
-            const cover = imgEl?.src || imgEl?.getAttribute('src') || '';
-            
-            console.log('[Ikigai Eval] Título encontrado:', title);
-            console.log('[Ikigai Eval] Cover encontrado:', cover ? 'yes' : 'no');
-            
-            return {
-              id: `ikigai-${slugParam}-${Date.now()}`,
-              slug: slugParam,
-              title: title || slugParam.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-              cover: cover,
-              source: 'ikigai'
-            };
-          }, slug);
-          
+        if (interactiveResult && interactiveResult.length > 0) {
           await browser.close();
+          console.log(`[Ikigai Search] ✅ Búsqueda interactiva exitosa: ${interactiveResult.length} resultados`);
           
-          console.log('[Ikigai Search] Retornando 1 resultado (acceso directo)');
           return res.status(200).json({
-            results: [seriesInfo],
-            page: 1,
+            results: interactiveResult,
+            page,
             hasMore: false,
-            directAccess: true
+            searchMethod: 'interactive',
+            apiDiscovery: {
+              foundAPI: !!discoveredAPIs.searchEndpoint,
+              endpoint: discoveredAPIs.searchEndpoint,
+              requestsCaptured: apiRequests.length
+            }
           });
         } else {
-          console.log('[Ikigai Search] ✗ Obra no encontrada (status:', statusCode + '), intentando búsqueda normal...');
+          console.log('[Ikigai Search] ❌ Búsqueda interactiva no retornó resultados');
         }
       } catch (error) {
-        console.log('[Ikigai Search] ✗ Error en acceso directo:', error.message);
-        console.log('[Ikigai Search] Continuando con búsqueda normal...');
+        console.log('[Ikigai Search] ❌ Error en búsqueda interactiva:', error.message);
       }
     }
-    
-    // Si el acceso directo falló o no hay query, continuar con búsqueda normal
-    console.log('[Ikigai Search] Navegando a URL de búsqueda...');
-    
-    // Navegar a la URL con estrategia flexible
-    console.log('[Ikigai Search] Navegando a URL...');
-    
-    // NUEVA ESTRATEGIA: Usar el parámetro URL directamente
-    // Ikigai procesa la búsqueda en el cliente con JavaScript (Qwik)
-    // Necesitamos navegar a la URL con ?buscar= y esperar a que Qwik procese
-    const finalSearchUrl = hasSearchQuery 
-      ? `${searchUrl}${searchUrl.includes('?') ? '&' : '?'}buscar=${encodeURIComponent(query.trim())}`
-      : searchUrl;
-    
-    console.log('[Ikigai Search] URL final con búsqueda:', finalSearchUrl);
-    
-    try {
-      await puppeteerPage.goto(finalSearchUrl, {
-        waitUntil: 'networkidle0', // Esperar a que no haya más peticiones de red
-        timeout: 45000 // 45 segundos de timeout
-      });
-    } catch (e) {
-      console.log('[Ikigai Search] Timeout en navegación, continuando...');
-    }
 
-    console.log('[Ikigai Search] Página cargada, esperando procesamiento de Qwik...');
-
-    // Esperar MUCHO más tiempo para que Qwik procese la búsqueda
-    // Qwik es un framework que hace lazy loading y procesamiento diferido
-    if (hasSearchQuery) {
-      console.log('[Ikigai Search] Esperando 20 segundos para procesamiento de búsqueda...');
-      await new Promise(resolve => setTimeout(resolve, 20000)); // 20 segundos
-      
-      // Verificar si hay resultados de búsqueda
-      const hasResults = await puppeteerPage.evaluate(() => {
-        const links = document.querySelectorAll('a[href*="/series/"]');
-        return links.length > 0;
-      });
-      
-      console.log('[Ikigai Search] ¿Hay resultados después de esperar?:', hasResults);
-      
-      if (!hasResults) {
-        console.log('[Ikigai Search] No hay resultados, esperando 10 segundos más...');
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      }
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
+    // PASO 4: Fallback - navegar con parámetro URL y descubrir API
+    console.log('[Ikigai Search] Navegando para descubrir API...');
     
-    // Debug: Listar todos los inputs en la página
-    const inputsDebug = await puppeteerPage.evaluate(() => {
-      const inputs = Array.from(document.querySelectorAll('input'));
-      return inputs.map(input => ({
-        type: input.type,
-        name: input.name,
-        placeholder: input.placeholder,
-        id: input.id,
-        className: input.className,
-        value: input.value
-      }));
+    // Navegar a la página principal de series
+    await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
     });
-    console.log('[Ikigai Search] Inputs encontrados en la página:', JSON.stringify(inputsDebug, null, 2));
-    
-    // Si hay búsqueda por texto, verificar que se aplicó
+
+    console.log('[Ikigai Search] Página cargada, esperando contenido...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Si hay búsqueda, intentar realizarla para capturar la API
     if (hasSearchQuery) {
-      // Verificar si la URL tiene el parámetro de búsqueda
-      const currentUrl = puppeteerPage.url();
-      console.log('[Ikigai Search] URL actual:', currentUrl);
+      console.log('[Ikigai Search] Realizando búsqueda para descubrir API...');
       
-      if (currentUrl.includes('buscar=')) {
-        console.log('[Ikigai Search] ✓ Parámetro de búsqueda presente en URL');
-      } else {
-        console.log('[Ikigai Search] ✗ Parámetro de búsqueda NO presente en URL');
-      }
-    }
-
-    // Verificar si hay contenido en la página
-    const pageContent = await puppeteerPage.content();
-    console.log('[Ikigai Search] Tamaño de HTML:', pageContent.length);
-
-    // Contar enlaces totales primero
-    const linkCount = await puppeteerPage.evaluate(() => {
-      return document.querySelectorAll('a').length;
-    });
-    console.log(`[Ikigai Search] Total de enlaces en página: ${linkCount}`);
-
-    // Intentar múltiples estrategias para encontrar series
-    let seriesFound = false;
-    let seriesLinkCount = 0;
-
-    // Estrategia 1: Esperar por enlaces /series/
-    try {
-      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 5000 });
-      seriesFound = true;
-      console.log('[Ikigai Search] ✓ Estrategia 1: Enlaces encontrados');
-    } catch (e) {
-      console.log('[Ikigai Search] ✗ Estrategia 1 falló');
-    }
-
-    // Estrategia 2: Esperar a que haya imágenes (las series tienen portadas)
-    if (!seriesFound) {
       try {
-        await puppeteerPage.waitForSelector('img', { timeout: 5000 });
-        seriesFound = true;
-        console.log('[Ikigai Search] ✓ Estrategia 2: Imágenes encontradas');
-      } catch (e) {
-        console.log('[Ikigai Search] ✗ Estrategia 2 falló');
+        // Buscar campo de búsqueda
+        const searchSelectors = [
+          'input[type="search"]',
+          'input[placeholder*="buscar"]',
+          'input[placeholder*="search"]',
+          'input[name*="search"]',
+          'input[name*="buscar"]',
+          'input[id*="search"]',
+          'input[id*="buscar"]',
+          '.search input',
+          '[class*="search"] input'
+        ];
+
+        let searchInput = null;
+        for (const selector of searchSelectors) {
+          try {
+            searchInput = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
+            if (searchInput) {
+              console.log(`[Ikigai Search] Campo encontrado con selector: ${selector}`);
+              break;
+            }
+          } catch (e) {
+            // Continuar con el siguiente selector
+          }
+        }
+
+        if (searchInput) {
+          console.log('[Ikigai Search] Escribiendo en campo de búsqueda...');
+          
+          // Limpiar campo y escribir
+          await searchInput.click({ clickCount: 3 }); // Seleccionar todo
+          await searchInput.type(query, { delay: 100 });
+          
+          // Esperar un momento para que se registren las peticiones
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Presionar Enter
+          await puppeteerPage.keyboard.press('Enter');
+          
+          // Esperar respuestas de API
+          console.log('[Ikigai Search] Esperando respuestas de API...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+        } else {
+          console.log('[Ikigai Search] ❌ No se encontró campo de búsqueda');
+        }
+      } catch (error) {
+        console.log('[Ikigai Search] Error en búsqueda interactiva:', error.message);
       }
     }
 
-    // Contar enlaces que contienen /series/
-    seriesLinkCount = await puppeteerPage.evaluate(() => {
-      return document.querySelectorAll('a[href*="/series/"]').length;
-    });
-    console.log(`[Ikigai Search] Enlaces de series encontrados: ${seriesLinkCount}`);
-
-    // Hacer scroll para cargar MÁS resultados (lazy loading)
-    // Similar a manhwaweb, Ikigai carga más contenido mientras haces scroll
-    console.log('[Ikigai Search] Haciendo scroll para cargar más resultados...');
-    let previousCount = seriesLinkCount;
-    let currentCount = seriesLinkCount;
-    let scrollAttempts = 0;
-    const maxScrollAttempts = 8; // Limitar a 8 intentos
-
-    do {
-      previousCount = currentCount;
-
-      // Scroll hacia abajo hasta el final de la página
-      await puppeteerPage.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-
-      // Esperar 1 segundo a que se carguen nuevos elementos
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Contar elementos actuales
-      currentCount = await puppeteerPage.evaluate(() => {
-        return document.querySelectorAll('a[href*="/series/"]').length;
-      });
-
-      scrollAttempts++;
-      console.log(`[Ikigai Search] Scroll ${scrollAttempts}/${maxScrollAttempts}: ${currentCount} resultados`);
-
-      // Salir si no hay más elementos nuevos o alcanzamos el límite de scrolls
-    } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
-
-    console.log(`[Ikigai Search] Scroll completado. Total: ${currentCount} resultados`);
-    seriesLinkCount = currentCount;
-
-    if (seriesLinkCount === 0) {
-      console.warn('[Ikigai Search] No se encontraron series después de todas las estrategias');
-      await browser.close();
-      return res.status(200).json({
-        results: [],
-        page,
-        hasMore: false
+    // PASO 4: Analizar APIs descubiertas
+    console.log(`[Ikigai Search] APIs capturadas: ${apiRequests.length}`);
+    
+    if (apiRequests.length > 0) {
+      console.log('[Ikigai Search] Peticiones API encontradas:');
+      apiRequests.forEach((req, i) => {
+        console.log(`  ${i + 1}. ${req.method} ${req.url}`);
+        if (req.postData) {
+          console.log(`     Body: ${req.postData.substring(0, 100)}...`);
+        }
       });
     }
 
-    // Extraer resultados
+    // PASO 5: Si descubrimos API, intentar usarla directamente
+    if (discoveredAPIs.searchEndpoint && hasSearchQuery) {
+      console.log('[Ikigai Search] Intentando usar API recién descubierta...');
+      
+      try {
+        const apiResult = await tryDirectAPI(query, filters, page);
+        if (apiResult && apiResult.results && apiResult.results.length > 0) {
+          await browser.close();
+          console.log(`[Ikigai Search] ✅ API recién descubierta exitosa: ${apiResult.results.length} resultados`);
+          return res.status(200).json({
+            ...apiResult,
+            discoveredAPI: true,
+            apiEndpoint: discoveredAPIs.searchEndpoint
+          });
+        }
+      } catch (error) {
+        console.log('[Ikigai Search] ❌ API recién descubierta falló:', error.message);
+      }
+    }
+
+    // PASO 5: Fallback - probar múltiples variaciones de slug
+    if (hasSearchQuery) {
+      console.log('[Ikigai Search] ESTRATEGIA 2: Múltiples variaciones de slug');
+      
+      try {
+        const slugResult = await tryMultipleSlugVariations(puppeteerPage, query);
+        
+        if (slugResult && slugResult.length > 0) {
+          await browser.close();
+          console.log(`[Ikigai Search] ✅ Variación de slug exitosa: ${slugResult.length} resultados`);
+          
+          return res.status(200).json({
+            results: slugResult,
+            page,
+            hasMore: false,
+            searchMethod: 'slug-variation',
+            apiDiscovery: {
+              foundAPI: !!discoveredAPIs.searchEndpoint,
+              endpoint: discoveredAPIs.searchEndpoint,
+              requestsCaptured: apiRequests.length
+            }
+          });
+        } else {
+          console.log('[Ikigai Search] ❌ Variaciones de slug no encontraron resultados');
+        }
+      } catch (error) {
+        console.log('[Ikigai Search] ❌ Error en variaciones de slug:', error.message);
+      }
+    }
+
+    // PASO 6: Fallback final - extraer resultados de la página actual
+    console.log('[Ikigai Search] Fallback: extrayendo resultados de página...');
+    
+    // Esperar a que aparezcan resultados
+    try {
+      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 10000 });
+    } catch (e) {
+      console.log('[Ikigai Search] No se encontraron enlaces de series');
+    }
+
+    // Extraer resultados usando el método original
     const results = await puppeteerPage.evaluate(() => {
-      // Buscar todos los enlaces que apuntan a /series/
       const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
-
-      console.log('[Ikigai Eval] Total enlaces encontrados:', seriesLinks.length);
-
-      // Filtrar solo los enlaces principales (no los de navegación)
-      // Un enlace válido debe tener al menos una imagen o un h3 dentro
+      
       const validLinks = Array.from(seriesLinks).filter(link => {
         const href = link.getAttribute('href');
-
-        // Debe tener href válido
         if (!href || href === '/series/' || href === '/series') return false;
-
-        // Excluir enlaces de navegación (inicio, biblioteca, etc)
+        
         const excludePatterns = ['/clasificacion', '/lists/', '/grupos/'];
         if (excludePatterns.some(pattern => href.includes(pattern))) return false;
-
-        // Excluir enlaces de paginación que NO son de series
-        // Los enlaces de series pueden tener query strings (ej: /series/amor-maldito?buscar=...)
-        // Solo excluir si es SOLO paginación sin /series/ en la ruta
-        if (href.includes('?pagina=') && !href.includes('/series/')) return false;
-        if (href.includes('&pagina=') && !href.includes('/series/')) return false;
-
-        // Debe tener contenido (imagen o título)
+        
         const hasImage = link.querySelector('img') !== null;
         const hasTitle = link.querySelector('h3, h2, h1') !== null;
         const hasText = link.textContent && link.textContent.trim().length > 2;
-
+        
         return (hasImage || hasTitle || hasText) && href.split('/series/')[1]?.length > 1;
       });
 
-      console.log('[Ikigai Eval] Enlaces válidos después de filtrar:', validLinks.length);
-
-      // Extraer datos de cada enlace
-      const extractedData = validLinks.map((link, index) => {
+      return validLinks.map((link, index) => {
         const href = link.getAttribute('href');
-
-        // Extraer título (buscar h3, h2, h1 dentro del enlace)
-        const titleElement = link.querySelector('h3') ||
-                            link.querySelector('h2') ||
-                            link.querySelector('h1');
-        const title = titleElement?.textContent?.trim() ||
-                     link.getAttribute('title') ||
-                     link.getAttribute('alt') || '';
-
-        // Extraer imagen
+        
+        const titleElement = link.querySelector('h3') || link.querySelector('h2') || link.querySelector('h1');
+        const title = titleElement?.textContent?.trim() || link.getAttribute('title') || '';
+        
         const imgElement = link.querySelector('img');
-        const cover = imgElement?.src ||
-                     imgElement?.getAttribute('src') ||
-                     imgElement?.srcset?.split(' ')[0] || '';
-
-        // Extraer slug de la URL
+        const cover = imgElement?.src || imgElement?.getAttribute('src') || '';
+        
         let slug = '';
         if (href.includes('/series/')) {
           const slugPart = href.split('/series/')[1];
-          // Remover trailing slash y query strings (ej: ?buscar=..., ?pagina=...)
           slug = slugPart?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
         }
-
-        console.log(`[Ikigai Eval ${index}] href: ${href}, slug: ${slug}, title: ${title}, cover: ${cover ? 'yes' : 'no'}`);
-
-        // Solo retornar si tenemos slug (obligatorio)
-        if (!slug) {
-          console.log(`[Ikigai Eval ${index}] ✗ DESCARTADO: sin slug`);
-          return null;
-        }
-
-        // Si no tenemos título, usar el slug formateado
+        
+        if (!slug) return null;
+        
         const finalTitle = title || slug.split('-').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
-
-        console.log(`[Ikigai Eval ${index}] ✓ VÁLIDO: ${slug} (título: ${finalTitle})`);
 
         return {
           id: `ikigai-${slug}-${Date.now()}-${index}`,
@@ -445,202 +381,23 @@ export default async function handler(req, res) {
           cover,
           source: 'ikigai'
         };
-      });
-
-      // Filtrar resultados nulos y eliminar duplicados por slug
-      const filtered = extractedData.filter(item => item !== null);
-      console.log('[Ikigai Eval] Después de filtrar nulos:', filtered.length);
-
-      // Eliminar duplicados por slug
-      const uniqueBySlug = [];
-      const seenSlugs = new Set();
-
-      for (const item of filtered) {
-        if (!seenSlugs.has(item.slug)) {
-          seenSlugs.add(item.slug);
-          uniqueBySlug.push(item);
-        } else {
-          console.log(`[Ikigai Eval] ✗ DUPLICADO removido: ${item.slug}`);
-        }
-      }
-
-      console.log('[Ikigai Eval] Total resultados únicos finales:', uniqueBySlug.length);
-      
-      // Log de los primeros 5 títulos para debugging
-      console.log('[Ikigai Eval] Primeros 5 títulos encontrados:');
-      uniqueBySlug.slice(0, 5).forEach((item, i) => {
-        console.log(`  ${i + 1}. ${item.title} (slug: ${item.slug})`);
-      });
-      
-      return uniqueBySlug;
+      }).filter(item => item !== null);
     });
-
-    // Verificar si hay página siguiente para paginación
-    // NOTA: Ikigai usa paginación numérica (1, 2, 3, ...)
-    const paginationInfo = await puppeteerPage.evaluate((currentPage) => {
-      // Estrategia 1: Buscar indicadores de carga (spinner, loading, etc)
-      const loadingIndicators = document.querySelectorAll(
-        '[class*="loading"], [class*="spinner"], [class*="loader"], [aria-busy="true"]'
-      );
-      const hasLoadingIndicator = loadingIndicators.length > 0;
-
-      // Estrategia 2: Buscar botón "Cargar más" o similar
-      const loadMoreButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
-        const text = el.textContent.toLowerCase();
-        return text.includes('cargar más') || 
-               text.includes('load more') || 
-               text.includes('ver más') ||
-               text.includes('show more');
-      });
-      const hasLoadMoreButton = loadMoreButtons.length > 0;
-
-      // Estrategia 3: Buscar botones de paginación tradicional (siguiente/next)
-      const nextSelectors = [
-        'button.next-page:not(.disabled)',
-        'a.next-page:not(.disabled)',
-        'button.siguiente:not(.disabled)',
-        'a.siguiente:not(.disabled)',
-        '.pagination .next:not(.disabled)',
-        '.pagination a[rel="next"]',
-        'a[aria-label="Next"]:not(.disabled)',
-        'button[aria-label="Next"]:not(.disabled)',
-        'button[aria-label="siguiente"]:not(.disabled)',
-        '[class*="pagination"] button:not(.disabled):last-child',
-        '[class*="pagination"] a:not(.disabled):last-child'
-      ];
-
-      let hasNextButton = false;
-      let foundBy = null;
-
-      for (const selector of nextSelectors) {
-        const btn = document.querySelector(selector);
-        if (btn && !btn.disabled && !btn.classList.contains('disabled')) {
-          hasNextButton = true;
-          foundBy = selector;
-          break;
-        }
-      }
-
-      // Estrategia 4: Buscar texto de "siguiente" en botones
-      if (!hasNextButton) {
-        const allButtons = Array.from(document.querySelectorAll('button, a'));
-        const nextButton = allButtons.find(btn => {
-          const text = btn.textContent.toLowerCase();
-          const ariaLabel = btn.getAttribute('aria-label')?.toLowerCase() || '';
-          return (
-            (text.includes('siguiente') ||
-             text.includes('next') ||
-             text === '>' ||
-             text === '→' ||
-             ariaLabel.includes('siguiente') ||
-             ariaLabel.includes('next')) &&
-            !btn.disabled &&
-            !btn.classList.contains('disabled')
-          );
-        });
-        if (nextButton) {
-          hasNextButton = true;
-          foundBy = 'text search';
-        }
-      }
-
-      // Estrategia 5: NUEVA - Buscar botones numéricos (1, 2, 3, ...)
-      // Ikigai usa paginación numérica, buscar si existe un número mayor a la página actual
-      let hasNumericNext = false;
-      const allButtons = Array.from(document.querySelectorAll('button, a'));
-      const numericButtons = allButtons.filter(btn => {
-        const text = btn.textContent.trim();
-        return /^\d+$/.test(text); // Solo números
-      });
-
-      // Buscar si hay un botón con número mayor a currentPage
-      const nextPageNumber = currentPage + 1;
-      const hasNextPageButton = numericButtons.some(btn => {
-        const pageNum = parseInt(btn.textContent.trim());
-        return pageNum === nextPageNumber && 
-               !btn.disabled && 
-               !btn.classList.contains('disabled');
-      });
-
-      if (hasNextPageButton) {
-        hasNumericNext = true;
-        foundBy = foundBy || 'numeric pagination';
-      }
-
-      // Debug: Listar TODOS los botones y enlaces relacionados con paginación
-      const paginationButtons = Array.from(document.querySelectorAll('button, a')).filter(el => {
-        const text = el.textContent.toLowerCase();
-        return text.includes('siguiente') || 
-               text.includes('next') || 
-               text.includes('página') || 
-               text.includes('page') ||
-               text.includes('cargar') ||
-               text.includes('load') ||
-               text.includes('más') ||
-               text.includes('more') ||
-               /^\d+$/.test(text.trim()) ||
-               text === '>' ||
-               text === '→';
-      });
-
-      const paginationDebug = paginationButtons.map(el => ({
-        tag: el.tagName,
-        text: el.textContent.trim(),
-        classes: el.className,
-        disabled: el.disabled || el.classList.contains('disabled'),
-        href: el.href || null,
-        ariaLabel: el.getAttribute('aria-label')
-      }));
-
-      console.log('[Ikigai Eval] Página actual:', currentPage);
-      console.log('[Ikigai Eval] Indicadores de carga encontrados:', loadingIndicators.length);
-      console.log('[Ikigai Eval] Botones "Cargar más" encontrados:', loadMoreButtons.length);
-      console.log('[Ikigai Eval] Botones numéricos encontrados:', numericButtons.length);
-      console.log('[Ikigai Eval] ¿Existe botón página', nextPageNumber + '?:', hasNextPageButton);
-      console.log('[Ikigai Eval] Botones de paginación encontrados:', paginationDebug.length);
-
-      // Determinar si hay más contenido
-      const hasMore = hasLoadingIndicator || hasLoadMoreButton || hasNextButton || hasNumericNext;
-      const detectionMethod = hasLoadingIndicator ? 'loading indicator' :
-                             hasLoadMoreButton ? 'load more button' :
-                             hasNumericNext ? 'numeric pagination' :
-                             hasNextButton ? foundBy || 'next button' :
-                             'none';
-
-      return {
-        hasMore,
-        foundBy: detectionMethod,
-        paginationDebug,
-        hasLoadingIndicator,
-        hasLoadMoreButton,
-        hasNextButton,
-        hasNumericNext,
-        currentPage,
-        nextPageNumber
-      };
-    }, page);
 
     await browser.close();
 
-    console.log(`[Ikigai Search] ${results.length} resultados encontrados (después de ${scrollAttempts} scrolls)`);
-    console.log(`[Ikigai Search] ¿Hay más páginas?: ${paginationInfo.hasMore}`);
-    console.log(`[Ikigai Search] Método de detección: ${paginationInfo.foundBy}`);
-    console.log(`[Ikigai Search] - Loading indicator: ${paginationInfo.hasLoadingIndicator}`);
-    console.log(`[Ikigai Search] - Load more button: ${paginationInfo.hasLoadMoreButton}`);
-    console.log(`[Ikigai Search] - Next button: ${paginationInfo.hasNextButton}`);
-    console.log(`[Ikigai Search] - Numeric next (página ${paginationInfo.nextPageNumber}): ${paginationInfo.hasNumericNext}`);
-    console.log(`[Ikigai Search] Elementos de paginación encontrados:`, paginationInfo.paginationDebug.length);
-    if (paginationInfo.paginationDebug.length > 0) {
-      console.log(`[Ikigai Search] Detalles:`, JSON.stringify(paginationInfo.paginationDebug, null, 2));
-    }
+    console.log(`[Ikigai Search] Resultados extraídos: ${results.length}`);
+    console.log(`[Ikigai Search] API descubierta: ${discoveredAPIs.searchEndpoint ? 'SÍ' : 'NO'}`);
 
     return res.status(200).json({
       results,
       page,
-      hasMore: paginationInfo.hasMore,
-      scrollAttempts,
-      paginationDebug: paginationInfo.paginationDebug,
-      detectionMethod: paginationInfo.foundBy
+      hasMore: false, // Por simplicidad en esta implementación
+      apiDiscovery: {
+        foundAPI: !!discoveredAPIs.searchEndpoint,
+        endpoint: discoveredAPIs.searchEndpoint,
+        requestsCaptured: apiRequests.length
+      }
     });
 
   } catch (error) {
@@ -661,39 +418,450 @@ export default async function handler(req, res) {
   }
 }
 
-// Función helper para construir URL (sin parámetro buscar, se agrega después)
-function buildSearchUrl(query, filters, page) {
-  const baseUrl = 'https://viralikigai.foodib.net/series/';
-  const params = new URLSearchParams();
+/**
+ * Genera múltiples variaciones de slug para una búsqueda
+ */
+function generateSlugVariations(query) {
+  const baseSlug = query.toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Solo letras, números, espacios y guiones
+    .replace(/\s+/g, '-') // Espacios a guiones
+    .replace(/-+/g, '-') // Múltiples guiones a uno
+    .replace(/^-|-$/g, ''); // Remover guiones al inicio/final
 
-  // Tipos
-  if (filters.types?.length) {
-    filters.types.forEach(type => params.append('tipos[]', type));
+  const variations = [
+    baseSlug,
+    `${baseSlug}-manhwa`,
+    `${baseSlug}-manga`,
+    `${baseSlug}-webtoon`,
+    `el-${baseSlug}`,
+    `la-${baseSlug}`,
+    `un-${baseSlug}`,
+    `una-${baseSlug}`,
+    baseSlug.replace(/-/g, ''), // Sin guiones
+    baseSlug.replace(/-/g, '_'), // Guiones bajos
+  ];
+
+  // Agregar variaciones con palabras intercambiadas si hay múltiples palabras
+  const words = baseSlug.split('-');
+  if (words.length > 1) {
+    variations.push(words.reverse().join('-')); // Palabras invertidas
   }
 
-  // Estados
-  if (filters.statuses?.length) {
-    filters.statuses.forEach(status => params.append('estados[]', status));
+  // Remover duplicados y vacíos
+  return [...new Set(variations)].filter(v => v.length > 0);
+}
+
+/**
+ * Intenta acceder directamente usando múltiples variaciones de slug
+ */
+async function tryMultipleSlugVariations(puppeteerPage, query) {
+  console.log('[Ikigai Slug] Generando variaciones de slug...');
+  
+  const variations = generateSlugVariations(query);
+  console.log('[Ikigai Slug] Variaciones generadas:', variations);
+
+  for (const slug of variations) {
+    try {
+      console.log(`[Ikigai Slug] Probando: ${slug}`);
+      
+      const url = `https://viralikigai.foodib.net/series/${slug}`;
+      const response = await puppeteerPage.goto(url, {
+        waitUntil: 'networkidle0',
+        timeout: 15000
+      });
+
+      // Verificar si la página existe (no es 404)
+      if (response.status() === 200) {
+        console.log(`[Ikigai Slug] ✅ Encontrado: ${slug}`);
+        
+        // Esperar a que se cargue el contenido
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Extraer información de la serie
+        const seriesInfo = await puppeteerPage.evaluate((currentSlug) => {
+          // Buscar título
+          const titleSelectors = ['h1', 'h2', '.title', '.series-title', '[class*="title"]'];
+          let title = '';
+          
+          for (const selector of titleSelectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.trim()) {
+              title = element.textContent.trim();
+              break;
+            }
+          }
+
+          // Buscar imagen de portada
+          const imgSelectors = ['img[class*="cover"]', 'img[class*="poster"]', '.cover img', '.poster img', 'img'];
+          let cover = '';
+          
+          for (const selector of imgSelectors) {
+            const img = document.querySelector(selector);
+            if (img && img.src && !img.src.includes('icon') && !img.src.includes('logo')) {
+              cover = img.src;
+              break;
+            }
+          }
+
+          return {
+            title: title || currentSlug.split('-').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' '),
+            cover,
+            slug: currentSlug
+          };
+        }, slug);
+
+        if (seriesInfo.title) {
+          return [{
+            id: `ikigai-${slug}-${Date.now()}`,
+            slug: slug,
+            title: seriesInfo.title,
+            cover: seriesInfo.cover,
+            source: 'ikigai',
+            searchMethod: 'slug-variation',
+            directMatch: true
+          }];
+        }
+      } else {
+        console.log(`[Ikigai Slug] ❌ ${slug} - Status: ${response.status()}`);
+      }
+    } catch (error) {
+      console.log(`[Ikigai Slug] ❌ Error con ${slug}:`, error.message);
+    }
   }
 
-  // Géneros
-  if (filters.genres?.length) {
-    filters.genres.forEach(genre => params.append('generos[]', genre));
+  console.log('[Ikigai Slug] ❌ Ninguna variación de slug funcionó');
+  return null;
+}
+
+/**
+ * Realiza búsqueda interactiva simulando comportamiento humano
+ */
+async function performInteractiveSearch(puppeteerPage, query, apiRequests) {
+  console.log('[Ikigai Interactive] Iniciando búsqueda interactiva...');
+  
+  // Navegar a la página principal de series
+  console.log('[Ikigai Interactive] Navegando a página de series...');
+  await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+    waitUntil: 'networkidle0',
+    timeout: 30000
+  });
+
+  // Esperar a que la página se cargue completamente
+  console.log('[Ikigai Interactive] Esperando carga completa...');
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  // Buscar campo de búsqueda con múltiples selectores
+  const searchSelectors = [
+    'input[type="search"]',
+    'input[placeholder*="buscar"]',
+    'input[placeholder*="search"]',
+    'input[placeholder*="Buscar"]',
+    'input[placeholder*="Search"]',
+    'input[name*="search"]',
+    'input[name*="buscar"]',
+    'input[name*="query"]',
+    'input[id*="search"]',
+    'input[id*="buscar"]',
+    'input[class*="search"]',
+    'input[class*="buscar"]',
+    '.search input',
+    '.buscar input',
+    '[class*="search"] input',
+    '[class*="buscar"] input',
+    'input[type="text"]' // Último recurso
+  ];
+
+  let searchInput = null;
+  let usedSelector = null;
+
+  // Listar todos los inputs para debugging
+  const allInputs = await puppeteerPage.evaluate(() => {
+    const inputs = document.querySelectorAll('input');
+    return Array.from(inputs).map(input => ({
+      type: input.type,
+      name: input.name,
+      placeholder: input.placeholder,
+      id: input.id,
+      className: input.className,
+      value: input.value
+    }));
+  });
+  
+  console.log('[Ikigai Interactive] Inputs encontrados en la página:', JSON.stringify(allInputs, null, 2));
+
+  // Intentar cada selector
+  for (const selector of searchSelectors) {
+    try {
+      searchInput = await puppeteerPage.waitForSelector(selector, { timeout: 2000 });
+      if (searchInput) {
+        usedSelector = selector;
+        console.log(`[Ikigai Interactive] ✓ Campo encontrado con selector: ${selector}`);
+        break;
+      }
+    } catch (e) {
+      // Continuar con el siguiente selector
+    }
   }
 
-  // Ordenar
-  if (filters.sortBy) {
-    params.append('ordenar', filters.sortBy);
+  if (!searchInput) {
+    console.log('[Ikigai Interactive] ❌ No se encontró campo de búsqueda');
+    return null;
   }
 
-  // Página
-  if (page > 1) {
-    params.append('pagina', page);
+  // Limpiar campo y escribir término de búsqueda
+  console.log(`[Ikigai Interactive] Escribiendo "${query}" en campo de búsqueda...`);
+  
+  // Hacer clic en el campo para enfocarlo
+  await searchInput.click();
+  
+  // Seleccionar todo el texto existente y borrarlo
+  await puppeteerPage.keyboard.down('Control');
+  await puppeteerPage.keyboard.press('KeyA');
+  await puppeteerPage.keyboard.up('Control');
+  
+  // Escribir el nuevo término letra por letra (simular humano)
+  await searchInput.type(query, { delay: 150 });
+  
+  // Esperar un momento después de escribir
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Intentar múltiples formas de activar la búsqueda
+  console.log('[Ikigai Interactive] Activando búsqueda...');
+  
+  // Método 1: Presionar Enter
+  try {
+    await puppeteerPage.keyboard.press('Enter');
+    console.log('[Ikigai Interactive] ✓ Enter presionado');
+  } catch (e) {
+    console.log('[Ikigai Interactive] ❌ Error presionando Enter:', e.message);
   }
 
-  // NOTA: El parámetro 'buscar' se agrega manualmente en el código principal
-  // para tener más control sobre cuándo y cómo se aplica
+  // Método 2: Buscar y hacer clic en botón de búsqueda
+  const searchButtonSelectors = [
+    'button[type="submit"]',
+    'button[class*="search"]',
+    'button[class*="buscar"]',
+    '.search-button',
+    '.buscar-button',
+    '[class*="search"] button',
+    '[class*="buscar"] button'
+  ];
 
-  const queryString = params.toString();
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  for (const buttonSelector of searchButtonSelectors) {
+    try {
+      const searchButton = await puppeteerPage.waitForSelector(buttonSelector, { timeout: 1000 });
+      if (searchButton) {
+        await searchButton.click();
+        console.log(`[Ikigai Interactive] ✓ Botón clickeado: ${buttonSelector}`);
+        break;
+      }
+    } catch (e) {
+      // Continuar con el siguiente selector
+    }
+  }
+
+  // Esperar resultados de búsqueda
+  console.log('[Ikigai Interactive] Esperando resultados...');
+  await new Promise(resolve => setTimeout(resolve, 8000));
+
+  // Verificar si la URL cambió (indica que la búsqueda se activó)
+  const currentUrl = puppeteerPage.url();
+  console.log('[Ikigai Interactive] URL actual después de buscar:', currentUrl);
+
+  // Intentar hacer scroll para activar lazy loading
+  console.log('[Ikigai Interactive] Haciendo scroll para activar lazy loading...');
+  await puppeteerPage.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight / 2);
+  });
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  await puppeteerPage.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  // Extraer resultados
+  console.log('[Ikigai Interactive] Extrayendo resultados...');
+  
+  // Esperar a que aparezcan enlaces de series
+  try {
+    await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 5000 });
+  } catch (e) {
+    console.log('[Ikigai Interactive] No se encontraron enlaces de series inmediatamente');
+  }
+
+  const results = await puppeteerPage.evaluate((searchQuery) => {
+    const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
+    
+    const validLinks = Array.from(seriesLinks).filter(link => {
+      const href = link.getAttribute('href');
+      if (!href || href === '/series/' || href === '/series') return false;
+      
+      const excludePatterns = ['/clasificacion', '/lists/', '/grupos/', '/generos/'];
+      if (excludePatterns.some(pattern => href.includes(pattern))) return false;
+      
+      const hasImage = link.querySelector('img') !== null;
+      const hasTitle = link.querySelector('h3, h2, h1, .title') !== null;
+      const hasText = link.textContent && link.textContent.trim().length > 2;
+      
+      return (hasImage || hasTitle || hasText) && href.split('/series/')[1]?.length > 1;
+    });
+
+    console.log(`[Ikigai Interactive] Enlaces válidos encontrados: ${validLinks.length}`);
+
+    return validLinks.map((link, index) => {
+      const href = link.getAttribute('href');
+      
+      // Buscar título en múltiples elementos
+      const titleSelectors = ['h3', 'h2', 'h1', '.title', '.series-title', '[class*="title"]'];
+      let titleElement = null;
+      
+      for (const selector of titleSelectors) {
+        titleElement = link.querySelector(selector);
+        if (titleElement) break;
+      }
+      
+      const title = titleElement?.textContent?.trim() || 
+                   link.getAttribute('title') || 
+                   link.getAttribute('alt') || '';
+      
+      const imgElement = link.querySelector('img');
+      const cover = imgElement?.src || 
+                   imgElement?.getAttribute('src') || 
+                   imgElement?.getAttribute('data-src') || '';
+      
+      let slug = '';
+      if (href.includes('/series/')) {
+        const slugPart = href.split('/series/')[1];
+        slug = slugPart?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+      }
+      
+      if (!slug) return null;
+      
+      const finalTitle = title || slug.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+
+      // Calcular relevancia basada en la búsqueda
+      let relevance = 0;
+      if (searchQuery) {
+        const queryWords = searchQuery.toLowerCase().split(' ');
+        const titleLower = finalTitle.toLowerCase();
+        
+        queryWords.forEach(word => {
+          if (titleLower.includes(word)) {
+            relevance += word.length;
+          }
+        });
+      }
+
+      return {
+        id: `ikigai-${slug}-${Date.now()}-${index}`,
+        slug,
+        title: finalTitle,
+        cover,
+        source: 'ikigai',
+        relevance,
+        searchMethod: 'interactive'
+      };
+    }).filter(item => item !== null)
+      .sort((a, b) => b.relevance - a.relevance); // Ordenar por relevancia
+  }, query);
+
+  console.log(`[Ikigai Interactive] Resultados extraídos: ${results.length}`);
+  
+  // Log de los primeros resultados para debugging
+  if (results.length > 0) {
+    console.log('[Ikigai Interactive] Primeros 3 resultados:');
+    results.slice(0, 3).forEach((result, i) => {
+      console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance}`);
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Intenta usar la API directa de Ikigai
+ */
+async function tryDirectAPI(query, filters, page) {
+  if (!discoveredAPIs.searchEndpoint) {
+    throw new Error('No hay endpoint de API conocido');
+  }
+
+  console.log(`[Ikigai Direct API] Usando: ${discoveredAPIs.searchEndpoint}`);
+  
+  // Construir body basado en la muestra capturada
+  let requestBody;
+  
+  if (discoveredAPIs.sampleRequest && discoveredAPIs.sampleRequest.postData) {
+    try {
+      // Intentar usar el formato de la petición original
+      const sampleData = JSON.parse(discoveredAPIs.sampleRequest.postData);
+      requestBody = {
+        ...sampleData,
+        query: query,
+        buscar: query,
+        search: query,
+        page: page,
+        pagina: page
+      };
+    } catch (e) {
+      // Si no se puede parsear, usar formato genérico
+      requestBody = {
+        query: query,
+        buscar: query,
+        page: page,
+        filters: filters
+      };
+    }
+  } else {
+    requestBody = {
+      query: query,
+      buscar: query,
+      page: page,
+      filters: filters
+    };
+  }
+
+  console.log(`[Ikigai Direct API] Request body:`, JSON.stringify(requestBody, null, 2));
+
+  const response = await fetch(discoveredAPIs.searchEndpoint, {
+    method: discoveredAPIs.searchMethod,
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      ...discoveredAPIs.searchHeaders
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    throw new Error(`API response: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log(`[Ikigai Direct API] Response:`, JSON.stringify(data, null, 2).substring(0, 500));
+
+  // Normalizar respuesta al formato esperado
+  let results = [];
+  
+  if (data.results) {
+    results = data.results;
+  } else if (data.data) {
+    results = data.data;
+  } else if (Array.isArray(data)) {
+    results = data;
+  }
+
+  return {
+    results: results,
+    page: page,
+    hasMore: data.hasMore || false,
+    directAPI: true
+  };
 }
