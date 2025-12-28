@@ -113,9 +113,10 @@ export async function getIkigaiDetails(slug) {
 /**
  * Obtiene todos los capítulos de una obra (con paginación automática)
  * @param {string} slug - Slug de la obra
+ * @param {boolean} progressive - Si usar carga progresiva (por defecto: true)
  * @returns {Promise<Array>} - Array de capítulos
  */
-export async function getIkigaiChapters(slug) {
+export async function getIkigaiChapters(slug, progressive = true) {
   const { isLocal, apiUrl } = detectEnvironment();
 
   if (isLocal) {
@@ -125,11 +126,12 @@ export async function getIkigaiChapters(slug) {
 
   try {
     console.log('[Ikigai] Obteniendo capítulos de:', slug);
+    console.log('[Ikigai] Modo progresivo:', progressive);
 
     const response = await fetch(`${apiUrl}/api/ikigai/chapters`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug })
+      body: JSON.stringify({ slug, progressive })
     });
 
     if (!response.ok) {
@@ -138,13 +140,26 @@ export async function getIkigaiChapters(slug) {
 
     const data = await response.json();
 
-    console.log(`[Ikigai] ${data.total || 0} capítulos obtenidos (${data.pagesProcessed || 0} páginas escaneadas)`);
+    if (progressive && data.loading) {
+      console.log(`[Ikigai] ${data.total || 0} capítulos obtenidos (página 1), ${data.pagesDetected - 1} páginas adicionales cargando en background`);
+    } else {
+      console.log(`[Ikigai] ${data.total || 0} capítulos obtenidos (${data.pagesProcessed || 0} páginas escaneadas)`);
+    }
 
     return data.chapters || [];
   } catch (error) {
     console.error('[Ikigai] Error obteniendo capítulos:', error);
     return [];
   }
+}
+
+/**
+ * Obtiene todos los capítulos de una obra (modo completo, sin carga progresiva)
+ * @param {string} slug - Slug de la obra
+ * @returns {Promise<Array>} - Array de capítulos completo
+ */
+export async function getIkigaiChaptersComplete(slug) {
+  return getIkigaiChapters(slug, false);
 }
 
 // ========================================
@@ -264,6 +279,7 @@ export default {
   searchIkigai,
   getIkigaiDetails,
   getIkigaiChapters,
+  getIkigaiChaptersComplete,
   getIkigaiPages,
   getRandomIkigai
 };
