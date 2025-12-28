@@ -164,22 +164,22 @@ export default async function handler(req, res) {
       }
     });
 
-    // PASO 3: Estrategia URL con parámetros (más simple y efectiva)
+    // PASO 3: ESTRATEGIA 1 - Búsqueda Interactiva Real (Recomendada)
     if (hasSearchQuery) {
-      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda por URL con parámetros');
+      console.log('[Ikigai Search] ESTRATEGIA 1: Búsqueda Interactiva Real');
       
       try {
-        const urlSearchResult = await performURLSearch(puppeteerPage, query, apiRequests);
+        const interactiveResult = await performInteractiveSearchReal(puppeteerPage, query);
         
-        if (urlSearchResult && urlSearchResult.length > 0) {
+        if (interactiveResult && interactiveResult.length > 0) {
           await browser.close();
-          console.log(`[Ikigai Search] ✅ Búsqueda por URL exitosa: ${urlSearchResult.length} resultados`);
+          console.log(`[Ikigai Search] ✅ Búsqueda interactiva real exitosa: ${interactiveResult.length} resultados`);
           
           return res.status(200).json({
-            results: urlSearchResult,
+            results: interactiveResult,
             page,
             hasMore: false,
-            searchMethod: 'url-search',
+            searchMethod: 'interactive-real',
             apiDiscovery: {
               foundAPI: !!discoveredAPIs.searchEndpoint,
               endpoint: discoveredAPIs.searchEndpoint,
@@ -187,10 +187,10 @@ export default async function handler(req, res) {
             }
           });
         } else {
-          console.log('[Ikigai Search] ❌ Búsqueda por URL no retornó resultados');
+          console.log('[Ikigai Search] ❌ Búsqueda interactiva real no retornó resultados');
         }
       } catch (error) {
-        console.log('[Ikigai Search] ❌ Error en búsqueda por URL:', error.message);
+        console.log('[Ikigai Search] ❌ Error en búsqueda interactiva real:', error.message);
       }
     }
 
@@ -443,6 +443,261 @@ export default async function handler(req, res) {
       error: 'Error en la búsqueda',
       details: error.message
     });
+  }
+}
+
+/**
+ * ESTRATEGIA 1: Búsqueda Interactiva Real - Simula comportamiento humano
+ */
+async function performInteractiveSearchReal(puppeteerPage, query) {
+  console.log('[Ikigai Interactive Real] Iniciando búsqueda interactiva real...');
+  console.log(`[Ikigai Interactive Real] Término de búsqueda: "${query}"`);
+  
+  try {
+    // PASO 1: Navegar a la página de series
+    console.log('[Ikigai Interactive Real] Navegando a página de series...');
+    await puppeteerPage.goto('https://viralikigai.foodib.net/series/', {
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    // PASO 2: Esperar a que la página se cargue completamente
+    console.log('[Ikigai Interactive Real] Esperando carga completa de la página...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // PASO 3: Encontrar el campo de búsqueda real
+    console.log('[Ikigai Interactive Real] Buscando campo de búsqueda...');
+    
+    const searchSelectors = [
+      'input[type="search"]',
+      'input[placeholder*="buscar"]',
+      'input[placeholder*="Buscar"]',
+      'input[placeholder*="search"]',
+      'input[placeholder*="Search"]',
+      'input[name*="search"]',
+      'input[name*="buscar"]',
+      'input[name*="query"]',
+      'input[id*="search"]',
+      'input[id*="buscar"]',
+      '.search input',
+      '.buscar input',
+      '[class*="search"] input',
+      'input[type="text"]' // Último recurso
+    ];
+
+    let searchInput = null;
+    let usedSelector = null;
+
+    // Intentar cada selector hasta encontrar uno que funcione
+    for (const selector of searchSelectors) {
+      try {
+        console.log(`[Ikigai Interactive Real] Probando selector: ${selector}`);
+        
+        // Esperar a que aparezca el elemento
+        await puppeteerPage.waitForSelector(selector, { timeout: 3000 });
+        
+        // Verificar que el elemento sea visible y clickeable
+        const isVisible = await puppeteerPage.evaluate((sel) => {
+          const element = document.querySelector(sel);
+          if (!element) return false;
+          
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          
+          return rect.width > 0 && 
+                 rect.height > 0 && 
+                 style.visibility !== 'hidden' && 
+                 style.display !== 'none' &&
+                 !element.disabled;
+        }, selector);
+
+        if (isVisible) {
+          searchInput = await puppeteerPage.$(selector);
+          usedSelector = selector;
+          console.log(`[Ikigai Interactive Real] ✅ Campo encontrado y visible: ${selector}`);
+          break;
+        } else {
+          console.log(`[Ikigai Interactive Real] ❌ Campo no visible: ${selector}`);
+        }
+      } catch (e) {
+        console.log(`[Ikigai Interactive Real] ❌ Selector falló: ${selector} - ${e.message}`);
+      }
+    }
+
+    if (!searchInput) {
+      console.log('[Ikigai Interactive Real] ❌ No se encontró campo de búsqueda válido');
+      return null;
+    }
+
+    // PASO 4: Hacer clic en el campo para enfocarlo
+    console.log('[Ikigai Interactive Real] Enfocando campo de búsqueda...');
+    try {
+      await searchInput.click();
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (e) {
+      console.log(`[Ikigai Interactive Real] ❌ Error al hacer clic: ${e.message}`);
+      // Intentar enfocar de otra manera
+      await puppeteerPage.focus(usedSelector);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // PASO 5: Limpiar campo existente
+    console.log('[Ikigai Interactive Real] Limpiando campo existente...');
+    await puppeteerPage.keyboard.down('Control');
+    await puppeteerPage.keyboard.press('KeyA');
+    await puppeteerPage.keyboard.up('Control');
+    await puppeteerPage.keyboard.press('Backspace');
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // PASO 6: Escribir letra por letra (simular humano)
+    console.log(`[Ikigai Interactive Real] Escribiendo "${query}" letra por letra...`);
+    for (let i = 0; i < query.length; i++) {
+      const char = query[i];
+      await puppeteerPage.keyboard.type(char);
+      
+      // Delay humano variable entre 100-200ms
+      const humanDelay = 100 + Math.random() * 100;
+      await new Promise(resolve => setTimeout(resolve, humanDelay));
+    }
+
+    // PASO 7: Esperar un momento después de escribir (comportamiento humano)
+    console.log('[Ikigai Interactive Real] Esperando después de escribir...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // PASO 8: Presionar Enter
+    console.log('[Ikigai Interactive Real] Presionando Enter...');
+    await puppeteerPage.keyboard.press('Enter');
+
+    // PASO 9: Esperar resultados dinámicos
+    console.log('[Ikigai Interactive Real] Esperando resultados dinámicos...');
+    await new Promise(resolve => setTimeout(resolve, 8000));
+
+    // PASO 10: Verificar URL actual
+    const currentUrl = puppeteerPage.url();
+    console.log(`[Ikigai Interactive Real] URL actual: ${currentUrl}`);
+
+    // PASO 11: Hacer scroll suave para activar lazy loading
+    console.log('[Ikigai Interactive Real] Activando lazy loading con scroll suave...');
+    for (let i = 1; i <= 3; i++) {
+      await puppeteerPage.evaluate((step) => {
+        window.scrollTo({
+          top: document.body.scrollHeight * step / 3,
+          behavior: 'smooth'
+        });
+      }, i);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    // PASO 12: Extraer resultados
+    console.log('[Ikigai Interactive Real] Extrayendo resultados...');
+    
+    const results = await puppeteerPage.evaluate((searchQuery) => {
+      // Buscar enlaces de series
+      const seriesLinks = document.querySelectorAll('a[href*="/series/"], a[href*="/serie/"]');
+      console.log(`[Ikigai Interactive Real] Enlaces encontrados: ${seriesLinks.length}`);
+
+      const extractedResults = Array.from(seriesLinks).map((link, index) => {
+        const href = link.getAttribute('href');
+        if (!href) return null;
+
+        // Extraer slug
+        let slug = '';
+        if (href.includes('/series/')) {
+          slug = href.split('/series/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        } else if (href.includes('/serie/')) {
+          slug = href.split('/serie/')[1]?.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || '';
+        }
+
+        if (!slug || slug.length < 2) return null;
+
+        // Extraer título
+        let title = '';
+        const titleSelectors = ['h1', 'h2', 'h3', '.title', '[class*="title"]'];
+        
+        for (const selector of titleSelectors) {
+          const titleEl = link.querySelector(selector);
+          if (titleEl && titleEl.textContent.trim()) {
+            title = titleEl.textContent.trim();
+            break;
+          }
+        }
+
+        if (!title) {
+          title = link.getAttribute('title') || 
+                 link.textContent.trim() || 
+                 slug.split('-').map(word => 
+                   word.charAt(0).toUpperCase() + word.slice(1)
+                 ).join(' ');
+        }
+
+        // Extraer imagen
+        const imgElement = link.querySelector('img');
+        const cover = imgElement?.src || imgElement?.getAttribute('data-src') || '';
+
+        // Calcular relevancia específica para la búsqueda
+        let relevance = 0;
+        if (searchQuery && title) {
+          const queryLower = searchQuery.toLowerCase();
+          const titleLower = title.toLowerCase();
+          
+          // Coincidencia exacta completa
+          if (titleLower === queryLower) {
+            relevance += 1000;
+          } else if (titleLower.includes(queryLower)) {
+            relevance += 500;
+          }
+          
+          // Coincidencia por palabras
+          const queryWords = queryLower.split(' ');
+          queryWords.forEach(word => {
+            if (word.length >= 2 && titleLower.includes(word)) {
+              relevance += word.length * 50;
+            }
+          });
+        }
+
+        return {
+          id: `ikigai-${slug}-${Date.now()}-${index}`,
+          slug,
+          title: title.substring(0, 100),
+          cover,
+          source: 'ikigai',
+          relevance,
+          searchMethod: 'interactive-real'
+        };
+      }).filter(item => item !== null);
+
+      // Ordenar por relevancia y eliminar duplicados
+      const uniqueResults = [];
+      const seenSlugs = new Set();
+      
+      extractedResults
+        .sort((a, b) => b.relevance - a.relevance)
+        .forEach(result => {
+          if (!seenSlugs.has(result.slug)) {
+            seenSlugs.add(result.slug);
+            uniqueResults.push(result);
+          }
+        });
+
+      console.log(`[Ikigai Interactive Real] Resultados únicos: ${uniqueResults.length}`);
+      return uniqueResults;
+    }, query);
+
+    console.log(`[Ikigai Interactive Real] Resultados finales: ${results.length}`);
+    
+    if (results.length > 0) {
+      console.log('[Ikigai Interactive Real] Primeros 5 resultados:');
+      results.slice(0, 5).forEach((result, i) => {
+        console.log(`  ${i + 1}. "${result.title}" (${result.slug}) - Relevancia: ${result.relevance}`);
+      });
+    }
+
+    return results;
+
+  } catch (error) {
+    console.log(`[Ikigai Interactive Real] ❌ Error: ${error.message}`);
+    return null;
   }
 }
 
