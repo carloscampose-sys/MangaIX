@@ -235,6 +235,12 @@ const MainApp = ({ userName, userGender }) => {
       console.log('[App] Ejecutando búsqueda con página:', pageToUse);
       const searchResponse = await unifiedSearch(searchTerm, filters, selectedSource, pageToUse);
       
+      // Verificar si hay un mensaje de la API (ej: funcionalidad no soportada)
+      if (searchResponse.message) {
+        console.log('[App] Mensaje de la API:', searchResponse.message);
+        showToast(`ℹ️ ${searchResponse.message}`);
+      }
+      
       // Extraer results y hasMore de la respuesta
       let results = searchResponse.results || [];
       const hasMore = searchResponse.hasMore || false;

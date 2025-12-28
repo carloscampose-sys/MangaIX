@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   );
 
   console.log('[Ikigai Search] ============================================');
-  console.log('[Ikigai Search] NUEVA ESTRATEGIA: URL + Paginación Mejorada');
+  console.log('[Ikigai Search] ESTRATEGIA SIMPLIFICADA');
   console.log('[Ikigai Search] Query:', query);
   console.log('[Ikigai Search] Filters:', JSON.stringify(filters));
   console.log('[Ikigai Search] Página:', page);
@@ -31,8 +31,21 @@ export default async function handler(req, res) {
   console.log('[Ikigai Search] hasFilters:', hasFilters);
   console.log('[Ikigai Search] ============================================');
 
-  // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación
-  if (hasSearchQuery || hasFilters) {
+  // ESTRATEGIA: Búsqueda por texto funciona, filtros NO
+  // Para filtros, devolver mensaje al usuario
+  if (hasFilters && !hasSearchQuery) {
+    console.log('[Ikigai Search] ⚠️ Filtros sin búsqueda de texto no soportados en Ikigai');
+    return res.status(200).json({
+      results: [],
+      page,
+      hasMore: false,
+      message: 'Ikigai requiere búsqueda por texto. Los filtros de género no están disponibles actualmente.',
+      searchMethod: 'unsupported'
+    });
+  }
+
+  // ESTRATEGIA PRINCIPAL: Usar URL con parámetros + paginación (solo para búsqueda por texto)
+  if (hasSearchQuery) {
     console.log('[Ikigai Search] Usando búsqueda por URL con paginación...');
     
     try {
