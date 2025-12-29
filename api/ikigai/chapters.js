@@ -1,11 +1,9 @@
 /**
  * API Route: Ikigai Chapters
- * Usa la API directa de panel.ikigaimangas.com
- * Obtiene TODOS los capítulos iterando la paginación
+ * Usa la API directa con proxy CORS
  */
 
 export default async function handler(req, res) {
-  // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -30,23 +28,21 @@ export default async function handler(req, res) {
     let allChapters = [];
     let currentPage = 1;
     let hasMorePages = true;
-    const maxPages = 50; // Límite de seguridad
+    const maxPages = 50;
 
     while (hasMorePages && currentPage <= maxPages) {
       const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}/chapters?page=${currentPage}`;
-      console.log(`[Ikigai Chapters] Página ${currentPage}: ${apiUrl}`);
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
-      const response = await fetch(apiUrl, {
+      console.log(`[Ikigai Chapters] Página ${currentPage}`);
+
+      const response = await fetch(proxyUrl, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': 'https://viralikigai.eurofiyati.online/'
-        }
+        headers: { 'Accept': 'application/json' }
       });
 
       if (!response.ok) {
-        console.error(`[Ikigai Chapters] API Error en página ${currentPage}:`, response.status);
+        console.error(`[Ikigai Chapters] Error en página ${currentPage}:`, response.status);
         break;
       }
 
@@ -55,8 +51,6 @@ export default async function handler(req, res) {
 
       console.log(`[Ikigai Chapters] Página ${currentPage}: ${chapters.length} capítulos`);
 
-      // Transformar capítulos
-      // IMPORTANTE: La URL de lectura usa el ID del capítulo, no el número
       const transformedChapters = chapters.map(ch => ({
         id: `ikigai-${slug}-ch-${ch.name}-${ch.id}`,
         chapter: ch.name,
@@ -64,13 +58,12 @@ export default async function handler(req, res) {
         url: `https://viralikigai.eurofiyati.online/capitulo/${ch.id}/`,
         publishedAt: ch.published_at,
         likeCount: ch.like_count,
-        chapterId: ch.id,  // ID numérico largo para la URL de lectura
+        chapterId: ch.id,
         source: 'ikigai'
       }));
 
       allChapters.push(...transformedChapters);
 
-      // Verificar si hay más páginas
       const meta = data.meta || {};
       if (currentPage >= (meta.last_page || 1)) {
         hasMorePages = false;
@@ -79,7 +72,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Ordenar capítulos por número (descendente: más reciente primero)
     allChapters.sort((a, b) => {
       const numA = parseFloat(a.chapter) || 0;
       const numB = parseFloat(b.chapter) || 0;
@@ -95,7 +87,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Ikigai Chapters] Error:', error);
-
     return res.status(500).json({
       error: 'Error obteniendo capítulos',
       details: error.message

@@ -1,10 +1,9 @@
 /**
  * API Route: Ikigai Details
- * Usa la API directa de panel.ikigaimangas.com
+ * Usa la API directa con proxy CORS como fallback
  */
 
 export default async function handler(req, res) {
-  // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -27,17 +26,17 @@ export default async function handler(req, res) {
     const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}`;
     console.log('[Ikigai Details] API URL:', apiUrl);
 
-    const response = await fetch(apiUrl, {
+    // Intentar con proxy CORS directamente (más confiable)
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+    console.log('[Ikigai Details] Using proxy');
+
+    const response = await fetch(proxyUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://viralikigai.eurofiyati.online/'
-      }
+      headers: { 'Accept': 'application/json' }
     });
 
     if (!response.ok) {
-      console.error('[Ikigai Details] API Error:', response.status, response.statusText);
+      console.error('[Ikigai Details] Error:', response.status);
       return res.status(response.status).json({
         error: 'Error en la API de Ikigai',
         details: response.statusText
@@ -53,7 +52,6 @@ export default async function handler(req, res) {
 
     console.log('[Ikigai Details] Serie encontrada:', serie.name);
 
-    // Transformar al formato esperado por la app
     const details = {
       title: serie.name,
       slug: serie.slug,
@@ -63,7 +61,6 @@ export default async function handler(req, res) {
       status: serie.status || '',
       type: serie.type || '',
       genres: (serie.genres || []).map(g => g.name),
-      // Datos adicionales
       viewCount: serie.view_count,
       bookmarkCount: serie.bookmark_count,
       rating: serie.rating,
@@ -79,7 +76,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Ikigai Details] Error:', error);
-
     return res.status(500).json({
       error: 'Error obteniendo detalles',
       details: error.message

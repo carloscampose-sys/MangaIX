@@ -1,6 +1,6 @@
 /**
  * API Route: Ikigai Search
- * Usa la API directa de panel.ikigaimangas.com en lugar de scraping
+ * Usa la API directa de panel.ikigaimangas.com con headers de navegador
  */
 
 export default async function handler(req, res) {
@@ -24,50 +24,62 @@ export default async function handler(req, res) {
     const apiUrl = buildApiUrl(query, filters, page);
     console.log('[Ikigai Search] API URL:', apiUrl);
 
+    // Headers completos que simulan un navegador real
+    const browserHeaders = {
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Origin': 'https://viralikigai.eurofiyati.online',
+      'Referer': 'https://viralikigai.eurofiyati.online/',
+      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'cross-site',
+      'Connection': 'keep-alive',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    };
+
     // Llamar a la API de Ikigai
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://viralikigai.eurofiyati.online/'
-      }
+      headers: browserHeaders
     });
 
+    console.log('[Ikigai Search] Response status:', response.status);
+
     if (!response.ok) {
-      console.error('[Ikigai Search] API Error:', response.status, response.statusText);
-      return res.status(response.status).json({
-        error: 'Error en la API de Ikigai',
-        details: response.statusText
+      // Si la API directa falla, intentar con el proxy de Vercel
+      console.log('[Ikigai Search] API directa falló, intentando alternativa...');
+
+      // Intentar con allorigins como proxy CORS
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+      console.log('[Ikigai Search] Proxy URL:', proxyUrl);
+
+      const proxyResponse = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
+
+      if (!proxyResponse.ok) {
+        console.error('[Ikigai Search] Proxy también falló:', proxyResponse.status);
+        return res.status(proxyResponse.status).json({
+          error: 'Error en la API de Ikigai',
+          details: 'Ambos métodos fallaron'
+        });
+      }
+
+      const proxyData = await proxyResponse.json();
+      return processAndReturnResults(proxyData, page, res);
     }
 
     const data = await response.json();
-    console.log('[Ikigai Search] API Response - Total:', data.total, 'Current Page:', data.current_page);
-
-    // Transformar resultados al formato esperado por la app
-    const results = (data.data || []).map(serie => ({
-      id: `ikigai-${serie.slug}-${serie.id}`,
-      slug: serie.slug,
-      title: serie.name,
-      cover: serie.cover || '',
-      source: 'ikigai',
-      // Datos adicionales útiles
-      type: serie.type,
-      status: serie.status,
-      chapterCount: serie.chapter_count,
-      genres: (serie.genres || []).map(g => g.name)
-    }));
-
-    console.log(`[Ikigai Search] ${results.length} resultados transformados`);
-
-    return res.status(200).json({
-      results,
-      page: data.current_page,
-      totalPages: data.last_page,
-      total: data.total,
-      hasMore: data.current_page < data.last_page
-    });
+    return processAndReturnResults(data, page, res);
 
   } catch (error) {
     console.error('[Ikigai Search] Error:', error);
@@ -77,6 +89,37 @@ export default async function handler(req, res) {
       details: error.message
     });
   }
+}
+
+/**
+ * Procesa los datos y retorna la respuesta
+ */
+function processAndReturnResults(data, page, res) {
+  console.log('[Ikigai Search] API Response - Total:', data.total, 'Current Page:', data.current_page);
+
+  // Transformar resultados al formato esperado por la app
+  const results = (data.data || []).map(serie => ({
+    id: `ikigai-${serie.slug}-${serie.id}`,
+    slug: serie.slug,
+    title: serie.name,
+    cover: serie.cover || '',
+    source: 'ikigai',
+    // Datos adicionales útiles
+    type: serie.type,
+    status: serie.status,
+    chapterCount: serie.chapter_count,
+    genres: (serie.genres || []).map(g => g.name)
+  }));
+
+  console.log(`[Ikigai Search] ${results.length} resultados transformados`);
+
+  return res.status(200).json({
+    results,
+    page: data.current_page,
+    totalPages: data.last_page,
+    total: data.total,
+    hasMore: data.current_page < data.last_page
+  });
 }
 
 /**
