@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://viralikigai.eurofiyati.online';
+const BASE_URL = 'https://viralikigai.learnixs.site';
 
 /**
  * Detecta si estamos en localhost

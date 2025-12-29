@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   try {
     // La URL de lectura usa el ID del capítulo, no el número
-    const chapterUrl = `https://viralikigai.eurofiyati.online/capitulo/${chapterId}/`;
+    const chapterUrl = `https://viralikigai.learnixs.site/capitulo/${chapterId}/`;
     console.log('[Ikigai Pages] URL:', chapterUrl);
 
     browser = await puppeteer.launch({

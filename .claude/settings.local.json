@@ -16,7 +16,8 @@
       "Bash(dir /s /b \"C:\\\\Users\\\\Isma\\\\Documents\\\\Proyectos Perosnakes\\\\MangaIX\\\\api\")",
       "Bash(dir:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:panel.ikigaimangas.com)"
+      "WebFetch(domain:panel.ikigaimangas.com)",
+      "WebFetch(domain:viralikigai.learnixs.site)"
     ]
   }
 }

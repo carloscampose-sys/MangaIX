@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         id: `ikigai-${slug}-ch-${ch.name}-${ch.id}`,
         chapter: ch.name,
         title: ch.title ? `Capítulo ${ch.name} - ${ch.title}` : `Capítulo ${ch.name}`,
-        url: `https://viralikigai.eurofiyati.online/capitulo/${ch.id}/`,
+        url: `https://viralikigai.learnixs.site/capitulo/${ch.id}/`,
         publishedAt: ch.published_at,
         likeCount: ch.like_count,
         chapterId: ch.id,
