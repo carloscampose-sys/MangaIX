@@ -32,7 +32,8 @@ export default async function handler(req, res) {
 
     while (hasMorePages && currentPage <= maxPages) {
       const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}/chapters?page=${currentPage}`;
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+      // NO encodear la URL - ya tiene los params correctos
+      const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
 
       console.log(`[Ikigai Chapters] Página ${currentPage}`);
 

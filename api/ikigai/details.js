@@ -26,8 +26,8 @@ export default async function handler(req, res) {
     const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}`;
     console.log('[Ikigai Details] API URL:', apiUrl);
 
-    // Usar corsproxy.io
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+    // Usar corsproxy.io - NO encodear la URL
+    const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
     console.log('[Ikigai Details] Using proxy');
 
     let response = await fetch(proxyUrl, {

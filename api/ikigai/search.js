@@ -55,8 +55,8 @@ export default async function handler(req, res) {
       // Si la API directa falla, intentar con proxy alternativo
       console.log('[Ikigai Search] API directa falló, intentando alternativa...');
 
-      // Usar corsproxy.io que maneja mejor los parámetros
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+      // Usar corsproxy.io - NO encodear la URL (ya tiene los params correctos)
+      const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
       console.log('[Ikigai Search] Proxy URL:', proxyUrl);
 
       const proxyResponse = await fetch(proxyUrl, {
