@@ -27,6 +27,11 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef(null);
+    
+    // Estados para auto-incremento al mantener presionado
+    const [isHoldingIncrement, setIsHoldingIncrement] = useState(false);
+    const incrementIntervalRef = useRef(null);
+    const incrementTimeoutRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -37,6 +42,57 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Limpiar intervalos al desmontar o cuando se suelta el botón
+    useEffect(() => {
+        return () => {
+            if (incrementIntervalRef.current) {
+                clearInterval(incrementIntervalRef.current);
+            }
+            if (incrementTimeoutRef.current) {
+                clearTimeout(incrementTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Función para incrementar capítulo
+    const incrementChapter = () => {
+        const newVal = (parseInt(chaptersInput) || 0) + 1;
+        setChaptersInput(newVal);
+        updateProgress(manga.id, 1);
+    };
+
+    // Handlers para mantener presionado
+    const handleIncrementMouseDown = () => {
+        // Incremento inmediato al presionar
+        incrementChapter();
+        
+        // Esperar 500ms antes de empezar el auto-incremento
+        incrementTimeoutRef.current = setTimeout(() => {
+            setIsHoldingIncrement(true);
+            // Auto-incremento cada 150ms mientras se mantiene presionado
+            incrementIntervalRef.current = setInterval(() => {
+                incrementChapter();
+            }, 150);
+        }, 500);
+    };
+
+    const handleIncrementMouseUp = () => {
+        setIsHoldingIncrement(false);
+        if (incrementTimeoutRef.current) {
+            clearTimeout(incrementTimeoutRef.current);
+        }
+        if (incrementIntervalRef.current) {
+            clearInterval(incrementIntervalRef.current);
+        }
+    };
+
+    // También manejar cuando el mouse sale del botón
+    const handleIncrementMouseLeave = () => {
+        if (isHoldingIncrement) {
+            handleIncrementMouseUp();
+        }
+    };
 
     const handleStatusChange = (statusId) => {
         setMangaStatus(manga.id, statusId);
@@ -232,12 +288,16 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                 <button type="submit" className="text-[8px] sm:text-[10px] bg-potaxie-green text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold">Ok</button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        const newVal = (parseInt(chaptersInput) || 0) + 1;
-                                        setChaptersInput(newVal);
-                                        updateProgress(manga.id, 1);
-                                    }}
-                                    className="text-[8px] sm:text-[10px] bg-cyan-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded hover:bg-cyan-600 font-bold"
+                                    onMouseDown={handleIncrementMouseDown}
+                                    onMouseUp={handleIncrementMouseUp}
+                                    onMouseLeave={handleIncrementMouseLeave}
+                                    onTouchStart={handleIncrementMouseDown}
+                                    onTouchEnd={handleIncrementMouseUp}
+                                    className={`text-[8px] sm:text-[10px] bg-cyan-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold transition-all select-none ${
+                                        isHoldingIncrement 
+                                            ? 'bg-cyan-600 scale-95 shadow-inner' 
+                                            : 'hover:bg-cyan-600 active:scale-95'
+                                    }`}
                                 >
                                     +1
                                 </button>
