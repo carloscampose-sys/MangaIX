@@ -432,7 +432,11 @@ const MainApp = ({ userName, userGender }) => {
       setSelectedGenres([]);
     } else {
       setSelectedMood(mood);
-      setSelectedGenres(mood.genres);
+      // Para Ikigai usar genreValues (IDs de la API), para otras fuentes usar genres
+      const genresToSet = selectedSource === 'ikigai' && mood.genreValues
+        ? mood.genreValues
+        : mood.genres;
+      setSelectedGenres(genresToSet);
       showToast(mood.toast);
     }
   };
