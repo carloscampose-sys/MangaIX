@@ -678,9 +678,9 @@ const MainApp = ({ userName, userGender }) => {
                                       : 'bg-white/40 dark:bg-gray-900/40 text-gray-400 border-transparent hover:bg-white dark:hover:bg-gray-800'}
                                     `}
                                 >
-                                  <span className="text-xl sm:text-2xl">{mood.name.split(' ').pop()}</span>
+                                  <span className="text-xl sm:text-2xl">{mood.name?.split(' ')?.pop()}</span>
                                   <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 text-center leading-tight">
-                                    {mood.name.split(' ').slice(0, -1).join(' ')}
+                                    {mood.name?.split(' ')?.slice(0, -1)?.join(' ')}
                                   </span>
                                 </motion.button>
                               ))}

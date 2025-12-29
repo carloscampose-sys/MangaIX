@@ -90,7 +90,7 @@ export const Navbar = ({ setPage }) => {
                 <div className="flex flex-col items-center flex-shrink min-w-0">
                     <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-potaxie-700 dark:text-potaxie-300 truncate max-w-full">
                         <span className="hidden sm:inline">{level.title}</span>
-                        <span className="sm:hidden">Nv. {level.title.split(' ').pop()}</span>
+                        <span className="sm:hidden">Nv. {level.title?.split(' ')?.pop()}</span>
                     </span>
                     <div className="w-24 sm:w-32 md:w-40 lg:w-48 h-1.5 sm:h-2 bg-gray-200 rounded-full mt-0.5 sm:mt-1 overflow-hidden">
                         <div

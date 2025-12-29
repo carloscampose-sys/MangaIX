@@ -375,9 +375,9 @@ export const Oracle = () => {
                                     : 'bg-white dark:bg-gray-900/40 text-gray-400 border-transparent hover:border-purple-200/50'}
                             `}
                         >
-                            <span className="text-xl sm:text-2xl md:text-3xl">{mood.name.split(' ').pop()}</span>
+                            <span className="text-xl sm:text-2xl md:text-3xl">{mood.name?.split(' ')?.pop()}</span>
                             <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 md:w-20 leading-tight">
-                                {mood.name.split(' ').slice(0, -1).join(' ')}
+                                {mood.name?.split(' ')?.slice(0, -1)?.join(' ')}
                             </span>
                         </motion.button>
                     ))}
