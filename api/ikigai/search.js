@@ -45,59 +45,82 @@ export default async function handler(req, res) {
 
     // 4. Navegar a la URL (timeout mayor para Qwik framework)
     await puppeteerPage.goto(searchUrl, {
-      waitUntil: 'networkidle2',
-      timeout: 30000
+      waitUntil: 'networkidle0',  // Esperar a que no haya conexiones de red
+      timeout: 45000
     });
 
     // 5. Esperar a que carguen los resultados
-    // Ikigai usa estructura: ul > li > a[href*="/series/"]
+    // Qwik framework carga contenido dinámicamente, necesitamos esperar
+    // La estructura es: div > a[href*="/series/"] con h3 dentro
+    console.log('[Ikigai Search] Esperando carga de contenido dinámico...');
+
     try {
-      // Esperar más tiempo porque usa Qwik (framework reactivo)
-      await puppeteerPage.waitForSelector('li a[href*="/series/"]', { timeout: 15000 });
-      console.log('[Ikigai Search] Selector encontrado: li a[href*="/series/"]');
+      // Primero esperar a que exista algún link a series
+      await puppeteerPage.waitForSelector('a[href*="/series/"]', { timeout: 20000 });
+      console.log('[Ikigai Search] Links a series encontrados');
+
+      // Esperar un poco más para asegurar que las imágenes y títulos carguen
+      await puppeteerPage.waitForTimeout(2000);
+
+      // Verificar que hay h3 (títulos) cargados
+      await puppeteerPage.waitForSelector('h3', { timeout: 5000 });
+      console.log('[Ikigai Search] Títulos h3 encontrados');
     } catch (e) {
-      console.log('[Ikigai Search] No se encontraron resultados después de esperar');
-      await browser.close();
-      return res.status(200).json({ results: [], page, hasMore: false });
+      console.log('[Ikigai Search] Timeout esperando contenido:', e.message);
+
+      // Intentar extraer lo que haya de todos modos
+      const pageContent = await puppeteerPage.content();
+      console.log('[Ikigai Search] HTML length:', pageContent.length);
+      console.log('[Ikigai Search] Contiene /series/:', pageContent.includes('/series/'));
     }
 
     // 6. Extraer resultados
-    // Estructura: <li><a href="/series/[slug]/"><img/><h3>Título</h3>...</a></li>
+    // Estructura real: <div><a href="/series/[slug]/"><img/><h3>Título</h3>...</a></div>
     const results = await puppeteerPage.evaluate(() => {
-      // Buscar todos los items de lista que contienen links a series
-      const items = document.querySelectorAll('li');
+      // Buscar todos los links a series
+      const seriesLinks = document.querySelectorAll('a[href*="/series/"]');
+      const seen = new Set(); // Para evitar duplicados
+      const results = [];
 
-      return Array.from(items).map(item => {
-        // Buscar el link a la serie
-        const link = item.querySelector('a[href*="/series/"]');
-        if (!link) return null;
+      seriesLinks.forEach(link => {
+        const href = link.href || link.getAttribute('href');
+        if (!href) return;
 
-        const href = link.href;
         // Extraer slug del href
         const slugMatch = href.match(/\/series\/([^\/]+)/);
         const slug = slugMatch ? slugMatch[1] : '';
 
-        if (!slug) return null;
+        // Ignorar si no tiene slug o ya lo vimos
+        if (!slug || seen.has(slug)) return;
+        seen.add(slug);
+
+        // Encontrar el contenedor padre (puede ser div, li, article, etc)
+        const container = link.closest('div') || link.parentElement;
 
         // Encontrar imagen de portada
-        const img = item.querySelector('img');
-        const cover = img ? (img.src || img.dataset.src) : '';
+        const img = link.querySelector('img') || (container && container.querySelector('img'));
+        let cover = '';
+        if (img) {
+          cover = img.src || img.dataset.src || img.getAttribute('src') || '';
+        }
 
-        // Encontrar título (h3 dentro del link)
-        const titleElement = item.querySelector('h3');
+        // Encontrar título (h3 dentro del link o contenedor)
+        const titleElement = link.querySelector('h3') || (container && container.querySelector('h3'));
         const title = titleElement ? titleElement.textContent.trim() : '';
 
-        // Solo retornar si tiene datos válidos
-        if (!title && !cover) return null;
+        // Solo agregar si tiene al menos título o cover
+        if (title || cover) {
+          results.push({
+            id: `ikigai-${slug}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            slug,
+            title: title || slug.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()),
+            cover,
+            source: 'ikigai'
+          });
+        }
+      });
 
-        return {
-          id: `ikigai-${slug}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          slug,
-          title: title || slug.replace(/-/g, ' '),
-          cover,
-          source: 'ikigai'
-        };
-      }).filter(Boolean); // Filtrar nulls
+      return results;
     });
 
     console.log(`[Ikigai Search] ${results.length} resultados encontrados`);
