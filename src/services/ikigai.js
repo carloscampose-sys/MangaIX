@@ -261,24 +261,61 @@ export const getRandomIkigai = async (genreValues = []) => {
       ? { genres: genreValues }
       : {};
 
-    // Buscar con filtros
-    const results = await searchIkigai('', filters, 1);
+    // Primero obtener info de paginación con página 1
+    const firstPageResponse = await axios.post('/api/ikigai/search', {
+      query: '',
+      filters: {
+        genres: filters.genres || [],
+        types: [],
+        statuses: [],
+        sortBy: ''
+      },
+      page: 1
+    }, { timeout: 30000 });
 
-    if (results.length === 0) {
-      console.log('[Ikigai] No se encontraron resultados con filtros, intentando sin filtros');
-      const allResults = await searchIkigai('', {}, 1);
-      if (allResults.length === 0) return null;
+    const totalPages = firstPageResponse.data.totalPages || 1;
+    const total = firstPageResponse.data.total || 0;
 
-      const randomIndex = Math.floor(Math.random() * allResults.length);
-      const randomWork = allResults[randomIndex];
-      return await getIkigaiDetails(randomWork.slug);
+    console.log(`[Ikigai Random] Total: ${total} obras en ${totalPages} páginas`);
+
+    if (total === 0) {
+      console.log('[Ikigai] No se encontraron resultados con filtros');
+      return null;
     }
 
-    // Seleccionar uno aleatorio
+    // Seleccionar una página aleatoria
+    const randomPage = Math.floor(Math.random() * totalPages) + 1;
+    console.log(`[Ikigai Random] Página aleatoria seleccionada: ${randomPage}/${totalPages}`);
+
+    // Si es la página 1, usar los resultados que ya tenemos
+    let results;
+    if (randomPage === 1) {
+      results = firstPageResponse.data.results || [];
+    } else {
+      // Buscar en la página aleatoria
+      const randomPageResponse = await axios.post('/api/ikigai/search', {
+        query: '',
+        filters: {
+          genres: filters.genres || [],
+          types: [],
+          statuses: [],
+          sortBy: ''
+        },
+        page: randomPage
+      }, { timeout: 30000 });
+      results = randomPageResponse.data.results || [];
+    }
+
+    if (results.length === 0) {
+      console.log('[Ikigai] Página vacía, usando página 1');
+      results = firstPageResponse.data.results || [];
+    }
+
+    // Seleccionar una obra aleatoria de la página
     const randomIndex = Math.floor(Math.random() * results.length);
     const randomWork = results[randomIndex];
 
-    console.log(`[Ikigai] Obra aleatoria seleccionada: ${randomWork.title}`);
+    console.log(`[Ikigai Random] Obra seleccionada: ${randomWork.title} (página ${randomPage}, índice ${randomIndex})`);
     return await getIkigaiDetails(randomWork.slug);
   } catch (error) {
     console.error('[Ikigai] Error obteniendo obra aleatoria:', error);
