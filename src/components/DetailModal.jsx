@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Share2, Sparkles, BookOpen } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
-import { unifiedGetDetails, unifiedGetChapters, unifiedGetPages } from '../services/unified';
+import { unifiedGetDetails, unifiedGetChapters, unifiedGetPages, unifiedGetIkigaiChaptersPage } from '../services/unified';
 import { getSourceById } from '../services/sources';
 import { Reader } from './Reader';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
@@ -38,6 +38,11 @@ export const DetailModal = ({
     const [readerPages, setReaderPages] = useState(null);
     const [isOpeningReader, setIsOpeningReader] = useState(false);
     const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
+
+    // Paginación de capítulos (solo para Ikigai)
+    const [currentChapterPage, setCurrentChapterPage] = useState(1);
+    const [totalChapterPages, setTotalChapterPages] = useState(1);
+    const [isLoadingChapterPage, setIsLoadingChapterPage] = useState(false);
 
     useEffect(() => {
         if (isOpen && manga) {
@@ -99,6 +104,12 @@ export const DetailModal = ({
                 }) : []
             }));
 
+            // Para Ikigai, extraer metadata de paginación
+            if (source === 'ikigai' && chapters && chapters.pagesDetected) {
+                setTotalChapterPages(chapters.pagesDetected);
+                setCurrentChapterPage(1);
+            }
+
             // Establecer la fuente seleccionada
             setSelectedChapterSource(source);
         } catch (error) {
@@ -120,6 +131,30 @@ export const DetailModal = ({
         navigator.clipboard.writeText(shareText).then(() => {
             showToast("¡LINK COPIADO, REINA! 💅✨");
         });
+    };
+
+    const loadChapterPage = async (page) => {
+        // Solo para Ikigai
+        if (selectedChapterSource !== 'ikigai' || isLoadingChapterPage) return;
+
+        setIsLoadingChapterPage(true);
+
+        try {
+            const result = await unifiedGetIkigaiChaptersPage(manga.slug, page);
+
+            setChaptersBySource(prev => ({
+                ...prev,
+                ikigai: result.chapters || []
+            }));
+
+            setCurrentChapterPage(page);
+            console.log(`[DetailModal] Cargada página ${page} de capítulos: ${result.chapters?.length || 0} capítulos`);
+        } catch (error) {
+            console.error('[DetailModal] Error cargando página de capítulos:', error);
+            showToast('Error cargando página de capítulos 💅');
+        } finally {
+            setIsLoadingChapterPage(false);
+        }
     };
 
     const openReader = async (chapter, source) => {
@@ -403,6 +438,41 @@ export const DetailModal = ({
                                                     {getSourceById(selectedChapterSource).icon}
                                                     <span className="hidden sm:inline">{getSourceById(selectedChapterSource).name}</span>
                                                 </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Selector de página de capítulos - Solo para Ikigai */}
+                                    {selectedChapterSource === 'ikigai' && totalChapterPages > 1 && (
+                                        <div className="mb-3">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400">
+                                                        Página de capítulos:
+                                                    </span>
+                                                    <span className="text-[9px] sm:text-[10px] font-bold text-potaxie-green">
+                                                        {currentChapterPage} / {totalChapterPages}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from({ length: totalChapterPages }, (_, i) => i + 1).map(page => (
+                                                        <button
+                                                            key={page}
+                                                            onClick={() => loadChapterPage(page)}
+                                                            disabled={isLoadingChapterPage || currentChapterPage === page}
+                                                            className={`
+                                                                px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all
+                                                                ${currentChapterPage === page
+                                                                    ? 'bg-potaxie-green text-white shadow-md scale-105'
+                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}
+                                                                }
+                                                                ${isLoadingChapterPage ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
+                                                            `}
+                                                        >
+                                                            {page}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     )}

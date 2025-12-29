@@ -99,6 +99,27 @@ export async function unifiedGetChapters(slug, source) {
 }
 
 /**
+ * Obtiene capítulos de una página específica para Ikigai
+ * @param {string} slug - Slug de la obra
+ * @param {number} chapterPage - Número de página de capítulos (default: 1)
+ * @returns {Promise<{chapters: Array, pagesDetected: number, pagesProcessed: number}>}
+ */
+export async function unifiedGetIkigaiChaptersPage(slug, chapterPage = 1) {
+    try {
+        const service = getService('ikigai');
+
+        if (service.getIkigaiChaptersPage) {
+            return await service.getIkigaiChaptersPage(slug, chapterPage);
+        }
+
+        return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
+    } catch (error) {
+        console.error('[Unified] Error obteniendo página de capítulos Ikigai:', error);
+        return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
+    }
+}
+
+/**
  * Obtiene páginas de un capítulo en una fuente específica
  */
 export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) {

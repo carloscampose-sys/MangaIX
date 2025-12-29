@@ -21,12 +21,12 @@ export default async function handler(req, res) {
     const possibleUrls = chapterUrl
       ? [chapterUrl]  // Usar URL directa si está disponible
       : [
-        `https://viralikigai.foodib.net/capitulo/${slug}-${chapter}`,
-        `https://viralikigai.foodib.net/leer/${slug}-${chapter}`,
-        `https://viralikigai.foodib.net/leer/${slug}/${chapter}`,
-        `https://viralikigai.foodib.net/read/${slug}-${chapter}`,
-        `https://viralikigai.foodib.net/read/${slug}/${chapter}`,
-        `https://viralikigai.foodib.net/series/${slug}/${chapter}`
+        `https://viralikigai.eurofiyati.online/capitulo/${slug}-${chapter}`,
+        `https://viralikigai.eurofiyati.online/leer/${slug}-${chapter}`,
+        `https://viralikigai.eurofiyati.online/leer/${slug}/${chapter}`,
+        `https://viralikigai.eurofiyati.online/read/${slug}-${chapter}`,
+        `https://viralikigai.eurofiyati.online/read/${slug}/${chapter}`,
+        `https://viralikigai.eurofiyati.online/series/${slug}/${chapter}`
       ];
 
     console.log('[Ikigai Pages] Intentando cargar capítulo...');

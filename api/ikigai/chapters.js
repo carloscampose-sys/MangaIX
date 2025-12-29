@@ -162,7 +162,7 @@ async function extractChaptersFromPage(page) {
         return {
           chapter,
           title: title.substring(0, 200),
-          url: href.startsWith('http') ? href : `https://viralikigai.foodib.net${href}`
+          url: href.startsWith('http') ? href : `https://viralikigai.eurofiyati.online${href}`
         };
       }).filter(item => item !== null && item.chapter);
     });
@@ -292,18 +292,42 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { slug, progressive = false } = req.body;
+  const { slug, chapterPage = 1, progressive = false } = req.body;
 
   if (!slug) {
     return res.status(400).json({ error: 'Slug is required' });
   }
 
-  const baseUrl = `https://viralikigai.foodib.net/series/${slug}`;
+  const baseUrl = `https://viralikigai.eurofiyati.online/series/${slug}`;
   console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
+  console.log(`[Ikigai Chapters] Página de capítulos solicitada: ${chapterPage}`);
   console.log(`[Ikigai Chapters] Modo progresivo: ${progressive}`);
   console.log(`[Ikigai Chapters] URL base: ${baseUrl}`);
 
   try {
+    // MODO PÁGINA ESPECÍFICA: Si chapterPage > 1, solo scrapear esa página
+    if (chapterPage > 1) {
+      console.log(`[Ikigai Chapters] === MODO PÁGINA ESPECÍFICA: ${chapterPage} ===`);
+
+      const pageResult = await scrapeSinglePage(baseUrl, chapterPage);
+
+      if (!pageResult.success) {
+        return res.status(500).json({
+          error: 'Error en página solicitada',
+          details: pageResult.error
+        });
+      }
+
+      return res.status(200).json({
+        chapters: pageResult.chapters,
+        total: pageResult.chapters.length,
+        pagesDetected: chapterPage,
+        pagesProcessed: 1,
+        loading: false,
+        progressive: false
+      });
+    }
+
     // PASO 1: Obtener página 1 siempre
     console.log(`[Ikigai Chapters] === PASO 1: PÁGINA 1 ===`);
     const page1Result = await scrapeSinglePage(baseUrl, 1);
@@ -318,10 +342,10 @@ export default async function handler(req, res) {
     const totalPages = page1Result.totalPages;
     console.log(`[Ikigai Chapters] Página 1: ${page1Result.chapters.length} capítulos, ${totalPages} páginas totales`);
 
-    // Si es modo progresivo, retornar página 1 inmediatamente
-    if (progressive) {
-      console.log(`[Ikigai Chapters] MODO PROGRESIVO: Retornando página 1 inmediatamente`);
-      
+    // Si es modo progresivo O chapterPage === 1 (valor por defecto), retornar página 1
+    if (progressive || chapterPage === 1) {
+      console.log(`[Ikigai Chapters] MODO PROGRESIVO/DEFAULT: Retornando página 1 inmediatamente`);
+
       // Iniciar carga de páginas restantes en background (sin esperar)
       if (totalPages > 1) {
         setImmediate(() => {

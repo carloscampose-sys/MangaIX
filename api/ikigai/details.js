@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const url = `https://viralikigai.foodib.net/series/${slug}`;
+    const url = `https://viralikigai.eurofiyati.online/series/${slug}`;
 
     console.log('[Ikigai Details] URL:', url);
 
