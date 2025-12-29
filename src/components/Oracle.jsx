@@ -143,15 +143,23 @@ export const Oracle = () => {
         let genreIds;
 
         if (selectedMood) {
-            // Mood seleccionado - usar sus géneros directamente
-            // Para TuManga: mood.genres = [1, 4] (numéricos)
-            // Para ManhwaWeb: mood.genres = ["drama", "tragedia"] (strings)
-            genreIds = selectedMood.genres;
+            // Mood seleccionado - usar sus géneros
+            // Para Ikigai: usar genreValues (IDs numéricos de la API)
+            // Para otras fuentes: usar genres (slugs o IDs numéricos)
+            if (selectedSource === 'ikigai' && selectedMood.genreValues) {
+                genreIds = selectedMood.genreValues;
+            } else {
+                genreIds = selectedMood.genres;
+            }
         } else {
             // Género individual seleccionado
-            genreIds = [selectedGenre];
-            // Para TuManga: selectedGenre = 1 (numérico)
-            // Para ManhwaWeb: selectedGenre = "drama" (string)
+            // Para Ikigai: el id del género es el value (ID numérico)
+            if (selectedSource === 'ikigai') {
+                const genre = currentGenres.find(g => g.id === selectedGenre);
+                genreIds = genre ? [genre.value] : [selectedGenre];
+            } else {
+                genreIds = [selectedGenre];
+            }
         }
 
         console.log('[Oracle] Invocando con géneros:', genreIds, 'Fuente:', selectedSource);
