@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
+import { ColorThemeProvider } from './context/ColorThemeContext';
 import { Navbar } from './components/Navbar';
 import { ManhwaCard } from './components/ManhwaCard';
 import { Oracle } from './components/Oracle';
@@ -1387,42 +1388,44 @@ const App = () => {
 
   return (
     <ThemeProvider>
-      <ChristmasThemeProvider>
-        <ToastProvider>
-          <LibraryProvider>
-            <AnimatePresence mode="wait">
-              {showWelcomeScreen && (
-                <motion.div
-                  key="welcome"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <WelcomeScreen onEnter={handleWelcomeEnter} />
-                </motion.div>
-              )}
-              {showGenderScreen && (
-                <motion.div
-                  key="gender"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <GenderSelectionScreen userName={userName} onGenderSelect={handleGenderSelect} />
-                </motion.div>
-              )}
-              {!showWelcomeScreen && !showGenderScreen && showLoadingScreen && (
-                <LoadingScreen key="loading" />
-              )}
-              {!showWelcomeScreen && !showGenderScreen && !showLoadingScreen && (
-                <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
-              )}
-            </AnimatePresence>
-          </LibraryProvider>
-        </ToastProvider>
-      </ChristmasThemeProvider>
+      <ColorThemeProvider>
+        <ChristmasThemeProvider>
+          <ToastProvider>
+            <LibraryProvider>
+              <AnimatePresence mode="wait">
+                {showWelcomeScreen && (
+                  <motion.div
+                    key="welcome"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <WelcomeScreen onEnter={handleWelcomeEnter} />
+                  </motion.div>
+                )}
+                {showGenderScreen && (
+                  <motion.div
+                    key="gender"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <GenderSelectionScreen userName={userName} onGenderSelect={handleGenderSelect} />
+                  </motion.div>
+                )}
+                {!showWelcomeScreen && !showGenderScreen && showLoadingScreen && (
+                  <LoadingScreen key="loading" />
+                )}
+                {!showWelcomeScreen && !showGenderScreen && !showLoadingScreen && (
+                  <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
+                )}
+              </AnimatePresence>
+            </LibraryProvider>
+          </ToastProvider>
+        </ChristmasThemeProvider>
+      </ColorThemeProvider>
     </ThemeProvider>
   );
 };

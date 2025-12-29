@@ -14,6 +14,25 @@
 
 :root {
   --cursor-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ctext y='28' font-size='26'%3E🥑%3C/text%3E%3C/svg%3E");
+  
+  /* Colores del tema personalizable */
+  --color-primary: #A7D08C;
+  --color-primary-light: #BEE3B0;
+  --color-primary-dark: #8AB870;
+  --color-secondary: #D08CA7;
+  --color-accent: #8CD0A7;
+  --color-background: #ffffff;
+  --color-background-alt: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-border: #e0e0e0;
+  --color-hover: #BEE3B0;
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  
+  /* Transiciones suaves al cambiar tema */
+  --theme-transition: all 0.3s ease;
 }
 
 html {
@@ -24,7 +43,8 @@ html {
 }
 
 body {
-  @apply bg-potaxie-cream text-potaxie-text-light transition-colors duration-300;
+  background-color: var(--color-background, #FDF5E6);
+  color: var(--color-text-primary, #4A574E);
   cursor: var(--cursor-url), auto;
   min-height: 100vh;
   margin: 0;
@@ -33,10 +53,12 @@ body {
   position: relative;
   width: 100vw;
   max-width: 100%;
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 .dark body {
-  @apply bg-gray-900 text-white;
+  background-color: var(--color-background, #1a1a1a);
+  color: var(--color-text-primary, #ffffff);
 }
 
 /* Starry Night Effect */
@@ -80,6 +102,74 @@ body {
   @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10;
 }
 
+/* Theme transitioning class */
+.theme-transitioning * {
+  transition: var(--theme-transition) !important;
+}
+
+/* ========== THEME COLOR OVERRIDES ========== */
+/* Aplicar colores del tema a elementos comunes */
+.bg-potaxie-green {
+  background-color: var(--color-primary) !important;
+}
+
+.text-potaxie-green {
+  color: var(--color-primary) !important;
+}
+
+.border-potaxie-green {
+  border-color: var(--color-primary) !important;
+}
+
+.bg-potaxie-cream {
+  background-color: var(--color-background) !important;
+}
+
+.bg-white {
+  background-color: var(--color-surface) !important;
+}
+
+.dark .bg-white {
+  background-color: var(--color-surface) !important;
+}
+
+.hover\:bg-green-600:hover {
+  background-color: var(--color-primary-dark) !important;
+}
+
+.focus\:ring-potaxie-green\/20:focus {
+  --tw-ring-color: var(--color-primary);
+  --tw-ring-opacity: 0.2;
+}
+
+.focus\:border-potaxie-green:focus {
+  border-color: var(--color-primary) !important;
+}
+
+.ring-potaxie-green {
+  --tw-ring-color: var(--color-primary);
+}
+
+/* Gradientes con tema */
+.from-potaxie-green {
+  --tw-gradient-from: var(--color-primary);
+  --tw-gradient-to: rgb(167 208 140 / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-potaxie-green-pastel {
+  --tw-gradient-to: var(--color-primary-light);
+}
+
+.from-potaxie-cream {
+  --tw-gradient-from: var(--color-background);
+}
+
+/* Sombras con tema */
+.shadow-potaxie {
+  box-shadow: 0 0 15px var(--color-primary);
+}
+
 /* Potaxio Style Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
@@ -90,7 +180,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #BEE3B0;
+  background: var(--color-primary, #BEE3B0);
   /* Pastel Green */
   border-radius: 10px;
   border: 2px solid transparent;
@@ -98,7 +188,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #9ac28a;
+  background-color: var(--color-primary-dark, #9ac28a);
   /* Darker pastel green on hover */
 }
 
@@ -115,7 +205,7 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #BEE3B0;
+  background: var(--color-primary, #BEE3B0);
   border-radius: 9px;
   border: 3px solid transparent;
   background-clip: content-box;
@@ -123,18 +213,18 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #A3E635;
+  background-color: var(--color-hover, #A3E635);
   border: 2px solid transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:active {
-  background-color: #84CC16;
+  background-color: var(--color-primary-dark, #84CC16);
 }
 
 /* Soporte Firefox */
 .custom-scrollbar {
   scrollbar-width: auto;
-  scrollbar-color: #BEE3B0 rgba(0, 0, 0, 0.2);
+  scrollbar-color: var(--color-primary, #BEE3B0) rgba(0, 0, 0, 0.2);
 }
 
 /* Manhwa Card Glow in Dark Mode */
@@ -296,7 +386,11 @@ textarea {
   position: relative;
   overflow: hidden;
   animation: pulse-glow-potaxio 3s ease-in-out infinite;
-  @apply border-potaxie-green-pastel/30 dark:border-[#A3E635]/20;
+  border-color: rgba(190, 227, 176, 0.3);
+}
+
+.dark .btn-premium-potaxie {
+  border-color: rgba(163, 230, 53, 0.2);
 }
 
 .btn-premium-potaxie::after {
