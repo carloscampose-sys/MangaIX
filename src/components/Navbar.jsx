@@ -71,7 +71,7 @@ export const Navbar = ({ setPage }) => {
 
                     <button
                         onClick={() => setPage('oracle')}
-                        className="p-1 xs:p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-purple-600 dark:text-purple-400 hidden xs:flex"
+                        className="p-1 xs:p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-purple-600 dark:text-purple-400"
                         title="El Oráculo Potaxio"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="xs:w-[18px] xs:h-[18px] sm:w-5 sm:h-5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
@@ -81,7 +81,7 @@ export const Navbar = ({ setPage }) => {
 
                     <button
                         onClick={toggleIncognito}
-                        className={`p-1 xs:p-1.5 sm:p-2 rounded-full transition-colors hidden xs:flex ${incognito ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        className={`p-1 xs:p-1.5 sm:p-2 rounded-full transition-colors hidden sm:flex ${incognito ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         title="Modo Incógnito"
                     >
                         {incognito ? <EyeOff size={16} className="xs:w-[18px] xs:h-[18px] sm:w-5 sm:h-5" /> : <Eye size={16} className="xs:w-[18px] xs:h-[18px] sm:w-5 sm:h-5" />}
