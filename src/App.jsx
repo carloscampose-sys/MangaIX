@@ -50,12 +50,6 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
   const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
 
-  // Filtros específicos de Ikigai (Tipos, Estados, Ordenar)
-  // Estos estados solo se usan cuando selectedSource === 'ikigai'
-  const [selectedIkigaiTypes, setSelectedIkigaiTypes] = useState([]);
-  const [selectedIkigaiStatuses, setSelectedIkigaiStatuses] = useState([]);
-  const [selectedIkigaiSortBy, setSelectedIkigaiSortBy] = useState('');
-
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
@@ -89,14 +83,14 @@ const MainApp = ({ userName, userGender }) => {
   }, []);
 
   // Initialize Swapy for source button reordering
-  const handleSourceOrderChange = (newOrder) => {
+  const handleSourceOrderChange = React.useCallback((newOrder) => {
     console.log('[App] Source order changed:', newOrder);
     // Extract source IDs from element IDs (format: "source-{sourceId}")
     const sourceIds = newOrder.map(id => id.replace('source-', ''));
     setSourceOrder(sourceIds);
     saveSourceOrder(sourceIds);
     showToast('✨ Orden de fuentes actualizado');
-  };
+  }, []);
 
   useSwapy('source-buttons-container', handleSourceOrderChange);
 
@@ -229,22 +223,6 @@ const MainApp = ({ userName, userGender }) => {
           sortBy: selectedSortBy,
           sortOrder: selectedSortOrder
         };
-      } else if (selectedSource === 'ikigai') {
-        // Para Ikigai, convertir IDs a values
-        const genreValues = selectedGenres.map(genreId => {
-          const genre = currentFilters.genres.find(g => g.id === genreId);
-          return genre ? genre.value : genreId;
-        });
-
-        console.log('[App] Ikigai - Géneros seleccionados (IDs):', selectedGenres);
-        console.log('[App] Ikigai - Géneros convertidos (values):', genreValues);
-
-        filters = {
-          genres: genreValues,
-          types: selectedIkigaiTypes,
-          statuses: selectedIkigaiStatuses,
-          sortBy: selectedIkigaiSortBy
-        };
       }
       
       // Usar servicio unificado según la fuente seleccionada con página actual
@@ -286,9 +264,6 @@ const MainApp = ({ userName, userGender }) => {
       // Usar hasMore de la respuesta de la API
       console.log('[App] hasMore desde API:', hasMore);
       setHasMorePages(hasMore);
-      
-      // NO aplicar filtrado del lado del cliente para Ikigai
-      // Esto interfiere con la paginación y debe manejarse en el backend
       
       // Sin filtrado del lado del cliente, cargar sinopsis normalmente
       loadDescriptionsInBackground(results);
@@ -564,7 +539,7 @@ const MainApp = ({ userName, userGender }) => {
                       if (!source) return null;
                       
                       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                      const isDisabled = isLocal && (source.id === 'manhwaweb' || source.id === 'ikigai');
+                      const isDisabled = (isLocal && source.id === 'manhwaweb') || source.status === 'disabled';
 
                       return (
                         <button
@@ -574,7 +549,11 @@ const MainApp = ({ userName, userGender }) => {
                           type="button"
                           onClick={() => {
                             if (isDisabled) {
-                              showToast(`⚠️ ${source.name} requiere Vercel. Usa TuManga en local 📚`);
+                              if (source.status === 'disabled') {
+                                showToast(`⚠️ ${source.name} no está disponible 🌸`);
+                              } else {
+                                showToast(`⚠️ ${source.name} requiere Vercel. Usa TuManga en local 📚`);
+                              }
                               return;
                             }
                             
@@ -592,10 +571,6 @@ const MainApp = ({ userName, userGender }) => {
                             // Resetear ordenamiento de TuManga
                             setSelectedTuMangaSortBy('title');
                             setSelectedTuMangaSortOrder('asc');
-                            // Resetear filtros de Ikigai
-                            setSelectedIkigaiTypes([]);
-                            setSelectedIkigaiStatuses([]);
-                            setSelectedIkigaiSortBy('');
                             setCurrentPage(1); // Reset página también
                             
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
@@ -628,11 +603,7 @@ const MainApp = ({ userName, userGender }) => {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={
-                        selectedSource === 'ikigai' 
-                          ? "Escribe el título exacto (ej: Amor Maldito)..." 
-                          : "Busca por título..."
-                      }
+                      placeholder="Busca por título..."
                       className="w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base"
                     />
                     <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">
@@ -940,95 +911,6 @@ const MainApp = ({ userName, userGender }) => {
                                     ))}
                                   </select>
                                 </div>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Filtros Avanzados (solo Ikigai) */}
-                          {selectedSource === 'ikigai' && currentFilters.hasAdvancedFilters && (
-                            <>
-                              {/* Tipos */}
-                              <div>
-                                <div className="flex items-center gap-2 mb-3 ml-2">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
-                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipos</h4>
-                                </div>
-                                <div className="flex gap-2">
-                                  {currentFilters.types.map(type => {
-                                    const isSelected = selectedIkigaiTypes.includes(type.value);
-                                    return (
-                                      <button
-                                        key={type.id}
-                                        onClick={() => {
-                                          if (isSelected) {
-                                            setSelectedIkigaiTypes(selectedIkigaiTypes.filter(t => t !== type.value));
-                                          } else {
-                                            setSelectedIkigaiTypes([...selectedIkigaiTypes, type.value]);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                                          isSelected
-                                            ? 'bg-pink-500 text-white shadow-lg'
-                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-pink-100 dark:hover:bg-gray-800'
-                                        }`}
-                                      >
-                                        {type.name}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              {/* Estados */}
-                              <div>
-                                <div className="flex items-center gap-2 mb-3 ml-2">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Estado</h4>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {currentFilters.status.map(status => {
-                                    const isSelected = selectedIkigaiStatuses.includes(status.value);
-                                    return (
-                                      <button
-                                        key={status.id}
-                                        onClick={() => {
-                                          if (isSelected) {
-                                            setSelectedIkigaiStatuses(selectedIkigaiStatuses.filter(s => s !== status.value));
-                                          } else {
-                                            setSelectedIkigaiStatuses([...selectedIkigaiStatuses, status.value]);
-                                          }
-                                        }}
-                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                                          isSelected
-                                            ? 'bg-purple-500 text-white shadow-lg'
-                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-purple-100 dark:hover:bg-gray-800'
-                                        }`}
-                                      >
-                                        {status.name}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              {/* Ordenar */}
-                              <div>
-                                <div className="flex items-center gap-2 mb-3 ml-2">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Ordenar</h4>
-                                </div>
-                                <select
-                                  value={selectedIkigaiSortBy}
-                                  onChange={(e) => setSelectedIkigaiSortBy(e.target.value)}
-                                  className="w-full px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                >
-                                  <option value="">Por defecto</option>
-                                  {currentFilters.sortOptions.map(sort => (
-                                    <option key={sort.value} value={sort.value}>
-                                      {sort.name}
-                                    </option>
-                                  ))}
-                                </select>
                               </div>
                             </>
                           )}

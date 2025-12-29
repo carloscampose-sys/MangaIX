@@ -35,7 +35,7 @@ export const SOURCES = {
         hoverColor: 'hover:bg-pink-600',
         textColor: 'text-pink-500',
         features: ['search', 'details', 'chapters', 'read', 'random'],
-        status: 'active'
+        status: 'disabled'
     }
 };
 

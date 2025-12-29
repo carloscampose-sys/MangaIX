@@ -5,14 +5,12 @@
 
 import * as tumanga from './tumanga';
 import * as manhwaweb from './manhwaweb';
-import * as ikigai from './ikigai';
 import { getSourceById } from './sources';
 
 // Mapa de servicios por fuente
 const serviceMap = {
     tumanga,
-    manhwaweb,
-    ikigai
+    manhwaweb
 };
 
 /**
@@ -42,9 +40,6 @@ export async function unifiedSearch(query, filters, source, page = 1) {
             const results = await service.searchManhwaWeb(query, filters, page);
             // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
             return { results, hasMore: results.length >= 30 };
-        } else if (source === 'ikigai') {
-            // Ikigai devuelve { results, hasMore }
-            return await service.searchIkigai(query, filters, page);
         }
 
         return { results: [], hasMore: false };
@@ -65,8 +60,6 @@ export async function unifiedGetDetails(slug, source) {
             return await service.getTuMangaDetails(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebDetails(slug);
-        } else if (source === 'ikigai') {
-            return await service.getIkigaiDetails(slug);
         }
 
         return null;
@@ -87,35 +80,12 @@ export async function unifiedGetChapters(slug, source) {
             return await service.getTuMangaChapters(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebChapters(slug);
-        } else if (source === 'ikigai') {
-            return await service.getIkigaiChapters(slug);
         }
 
         return [];
     } catch (error) {
         console.error(`[Unified] Error obteniendo capítulos (${source}):`, error);
         return [];
-    }
-}
-
-/**
- * Obtiene capítulos de una página específica para Ikigai
- * @param {string} slug - Slug de la obra
- * @param {number} chapterPage - Número de página de capítulos (default: 1)
- * @returns {Promise<{chapters: Array, pagesDetected: number, pagesProcessed: number}>}
- */
-export async function unifiedGetIkigaiChaptersPage(slug, chapterPage = 1) {
-    try {
-        const service = getService('ikigai');
-
-        if (service.getIkigaiChaptersPage) {
-            return await service.getIkigaiChaptersPage(slug, chapterPage);
-        }
-
-        return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
-    } catch (error) {
-        console.error('[Unified] Error obteniendo página de capítulos Ikigai:', error);
-        return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
     }
 }
 
@@ -130,8 +100,6 @@ export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) 
             return await service.getTuMangaPages(slug, chapter);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
-        } else if (source === 'ikigai') {
-            return await service.getIkigaiPages(slug, chapter, chapterUrl);
         }
 
         return [];
@@ -152,8 +120,6 @@ export async function unifiedGetRandom(genreIds, source) {
             return await service.getRandomManga(genreIds);
         } else if (source === 'manhwaweb') {
             return await service.getRandomManhwaWeb(genreIds);
-        } else if (source === 'ikigai') {
-            return await service.getRandomIkigai(genreIds);
         }
 
         return null;
@@ -176,10 +142,9 @@ export function unifiedNormalizeTitle(title, source) {
  */
 export async function searchAllSources(query, filters) {
     try {
-        const [tumangaResults, manhwawebResults, ikigaiResults] = await Promise.allSettled([
+        const [tumangaResults, manhwawebResults] = await Promise.allSettled([
             unifiedSearch(query, filters, 'tumanga'),
-            unifiedSearch(query, filters, 'manhwaweb'),
-            unifiedSearch(query, filters, 'ikigai')
+            unifiedSearch(query, filters, 'manhwaweb')
         ]);
 
         const results = [];
@@ -190,10 +155,6 @@ export async function searchAllSources(query, filters) {
 
         if (manhwawebResults.status === 'fulfilled') {
             results.push(...(manhwawebResults.value.results || []));
-        }
-
-        if (ikigaiResults.status === 'fulfilled') {
-            results.push(...(ikigaiResults.value.results || []));
         }
 
         return results;

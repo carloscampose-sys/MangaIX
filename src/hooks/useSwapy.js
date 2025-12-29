@@ -14,20 +14,45 @@ import { createSwapy } from 'swapy';
  */
 export function useSwapy(containerId, onOrderChange) {
   const swapyRef = useRef(null);
+  const callbackRef = useRef(onOrderChange);
+  const initAttemptRef = useRef(0);
+
+  // Update callback ref when it changes, but don't trigger re-initialization
+  useEffect(() => {
+    callbackRef.current = onOrderChange;
+  }, [onOrderChange]);
 
   useEffect(() => {
+    // Skip if already initialized
+    if (swapyRef.current) {
+      console.log('[useSwapy] Already initialized, skipping');
+      return;
+    }
+
     // Wait for DOM to be ready
     const initSwapy = () => {
       const container = document.getElementById(containerId);
       
       if (!container) {
-        console.warn(`[useSwapy] Container with ID "${containerId}" not found`);
+        initAttemptRef.current++;
+        if (initAttemptRef.current < 5) {
+          console.warn(`[useSwapy] Container with ID "${containerId}" not found, retrying...`);
+          // Retry after a longer delay
+          setTimeout(initSwapy, 200);
+        } else {
+          console.error(`[useSwapy] Container with ID "${containerId}" not found after 5 attempts`);
+        }
         return;
       }
 
       try {
         // Get all swapable items and add data-index if not present
         const items = container.querySelectorAll('[data-swapable]');
+        if (items.length === 0) {
+          console.warn('[useSwapy] No swapable items found');
+          return;
+        }
+
         items.forEach((item, index) => {
           if (!item.getAttribute('data-index')) {
             item.setAttribute('data-index', index);
@@ -52,9 +77,9 @@ export function useSwapy(containerId, onOrderChange) {
           
           console.log('[useSwapy] New order:', newOrder);
           
-          // Call the callback with the new order
-          if (onOrderChange && typeof onOrderChange === 'function') {
-            onOrderChange(newOrder);
+          // Call the callback with the new order using the ref
+          if (callbackRef.current && typeof callbackRef.current === 'function') {
+            callbackRef.current(newOrder);
           }
         });
 
@@ -74,13 +99,13 @@ export function useSwapy(containerId, onOrderChange) {
         try {
           swapyRef.current.destroy?.();
           console.log('[useSwapy] Swapy instance destroyed');
+          swapyRef.current = null;
         } catch (error) {
           console.error('[useSwapy] Error destroying Swapy:', error);
         }
-        swapyRef.current = null;
       }
     };
-  }, [containerId, onOrderChange]);
+  }, [containerId]);
 
   return swapyRef.current;
 }
