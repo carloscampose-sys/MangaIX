@@ -1,10 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
-<<<<<<< HEAD
-import anime from 'animejs/lib/anime.es.js';
-=======
->>>>>>> parent of c07bf8e (ff)
 
 /**
  * Configuration for particle generation

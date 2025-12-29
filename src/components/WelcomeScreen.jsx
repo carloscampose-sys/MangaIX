@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
 import Confetti from 'react-confetti';
-<<<<<<< HEAD
-import anime from 'animejs/lib/anime.es.js';
-import { 
-  fadeInUp, 
-  scaleInBounce, 
-  shake,
-  ANIME_DURATIONS,
-  ANIME_EASINGS,
-  createTimeline 
-} from '../utils/animeHelpers';
-=======
->>>>>>> parent of c07bf8e (ff)
 
 const WelcomeScreen = ({ onEnter }) => {
   const [userName, setUserName] = useState('');

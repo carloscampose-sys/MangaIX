@@ -5,11 +5,6 @@ import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, BookOpen, MoreVertical } from 'lucide-react';
 import confetti from 'canvas-confetti';
-<<<<<<< HEAD
-import anime from 'animejs/lib/anime.es.js';
-import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
-=======
->>>>>>> parent of c07bf8e (ff)
 
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';

@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import { useRef, useEffect } from 'react';
-import anime from 'animejs/lib/anime.es.js';
-=======
 import React from 'react';
 import { motion } from 'framer-motion';
->>>>>>> parent of c07bf8e (ff)
 
 export const SnowEffect = () => {
   return (

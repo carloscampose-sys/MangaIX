@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
 import { unifiedGetRandom } from '../services/unified';
-import { DEFAULT_SOURCE, getActiveSources } from '../services/sources';
+import { SOURCES, DEFAULT_SOURCE, getActiveSources } from '../services/sources';
+// Sistema de filtros dinámicos - Oracle adapta moods y géneros según la fuente
 import { getMoodsForSource, getGenresForSource } from '../services/filterService';
 import { useLibrary } from '../context/LibraryContext';
 import { Sparkles, Plus, Loader2, Coffee } from 'lucide-react';
@@ -11,8 +13,6 @@ import confetti from 'canvas-confetti';
 import { DetailModal } from './DetailModal';
 import { TypewriterText } from './TypewriterText';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
-import anime from 'animejs/lib/anime.es.js';
-import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
 
 const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibrary }) => {
     const { showToast } = useToast();
@@ -121,123 +121,30 @@ export const Oracle = () => {
     const { showToast } = useToast();
     const { library, addToLibrary } = useLibrary();
     
-    // Referencias para animaciones
-    const summonButtonRef = useRef(null);
-    const particlesContainerRef = useRef(null);
-    
+    // Obtener moods y géneros dinámicos según fuente seleccionada
+    // Esto permite que Oracle muestre diferentes opciones para TuManga y ManhwaWeb
     const currentMoods = getMoodsForSource(selectedSource);
     const currentGenres = getGenresForSource(selectedSource);
 
-    // Crear partículas místicas al invocar
-    const createMysticParticles = () => {
-        if (!particlesContainerRef.current) return;
-        
-        const container = particlesContainerRef.current;
-        const particleCount = 30;
-        
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'absolute rounded-full pointer-events-none';
-            
-            const size = Math.random() * 8 + 4;
-            const startX = 50 + (Math.random() - 0.5) * 20;
-            const startY = 50 + (Math.random() - 0.5) * 20;
-            const angle = (Math.random() * 360) * (Math.PI / 180);
-            const distance = Math.random() * 200 + 100;
-            
-            particle.style.width = `${size}px`;
-            particle.style.height = `${size}px`;
-            particle.style.left = `${startX}%`;
-            particle.style.top = `${startY}%`;
-            particle.style.background = theme === 'dark' 
-                ? `rgba(${Math.random() > 0.5 ? '168, 85, 247' : '236, 72, 153'}, 0.8)`
-                : `rgba(${Math.random() > 0.5 ? '167, 208, 140' : '79, 209, 197'}, 0.8)`;
-            particle.style.boxShadow = `0 0 ${size * 2}px ${particle.style.background}`;
-            
-            container.appendChild(particle);
-            
-            anime({
-                targets: particle,
-                translateX: Math.cos(angle) * distance,
-                translateY: Math.sin(angle) * distance,
-                scale: [1, 0],
-                opacity: [1, 0],
-                rotate: Math.random() * 720,
-                duration: 1500,
-                easing: 'easeOutQuad',
-                complete: () => {
-                    if (particle.parentNode) {
-                        particle.parentNode.removeChild(particle);
-                    }
-                }
-            });
-        }
-    };
-    
-    // Animación del botón al hacer hover
-    useEffect(() => {
-        if (!summonButtonRef.current) return;
-        
-        const button = summonButtonRef.current;
-        
-        const handleMouseEnter = () => {
-            if ((!selectedGenre && !selectedMood) || loading) return;
-            
-            anime({
-                targets: button,
-                scale: 1.05,
-                rotate: [0, 5, -5, 0],
-                duration: ANIME_DURATIONS.fast,
-                easing: ANIME_EASINGS.easeOutElastic,
-            });
-        };
-        
-        const handleMouseLeave = () => {
-            anime({
-                targets: button,
-                scale: 1,
-                rotate: 0,
-                duration: ANIME_DURATIONS.fast,
-                easing: ANIME_EASINGS.easeInOutQuad,
-            });
-        };
-        
-        button.addEventListener('mouseenter', handleMouseEnter);
-        button.addEventListener('mouseleave', handleMouseLeave);
-        
-        return () => {
-            button.removeEventListener('mouseenter', handleMouseEnter);
-            button.removeEventListener('mouseleave', handleMouseLeave);
-        };
-    }, [selectedGenre, selectedMood, loading]);
-
     const handleSummon = async () => {
         if (!selectedGenre && !selectedMood) return;
-        
-        // Animación dramática del botón
-        if (summonButtonRef.current) {
-            anime({
-                targets: summonButtonRef.current,
-                scale: [1, 1.2, 0.9, 1],
-                rotate: [0, 360],
-                duration: 800,
-                easing: ANIME_EASINGS.easeOutElastic,
-            });
-        }
-        
-        // Crear partículas místicas
-        createMysticParticles();
-        
         setLoading(true);
         setError(null);
         setRecommendation(null);
 
+        // Obtener géneros para la búsqueda
         let genreIds;
 
         if (selectedMood) {
+            // Mood seleccionado - usar sus géneros directamente
+            // Para TuManga: mood.genres = [1, 4] (numéricos)
+            // Para ManhwaWeb: mood.genres = ["drama", "tragedia"] (strings)
             genreIds = selectedMood.genres;
         } else {
+            // Género individual seleccionado
             genreIds = [selectedGenre];
+            // Para TuManga: selectedGenre = 1 (numérico)
+            // Para ManhwaWeb: selectedGenre = "drama" (string)
         }
 
         console.log('[Oracle] Invocando con géneros:', genreIds, 'Fuente:', selectedSource);
@@ -248,32 +155,13 @@ export const Oracle = () => {
             if (result) {
                 setRecommendation(result);
                 console.log('[Oracle] Recomendación obtenida:', result.title);
-                
-                // Confetti dramático
+                // Confetti de celebración
                 confetti({
                     particleCount: 100,
                     spread: 70,
                     origin: { y: 0.6 },
                     colors: theme === 'dark' ? ['#FFD700', '#00BFFF', '#7B68EE'] : ['#A7D08C', '#FFFFFF', '#4FD1C5']
                 });
-                
-                // Confetti adicional desde los lados
-                setTimeout(() => {
-                    confetti({
-                        particleCount: 50,
-                        angle: 60,
-                        spread: 55,
-                        origin: { x: 0 },
-                        colors: ['#A855F7', '#EC4899', '#FFD700']
-                    });
-                    confetti({
-                        particleCount: 50,
-                        angle: 120,
-                        spread: 55,
-                        origin: { x: 1 },
-                        colors: ['#A855F7', '#EC4899', '#FFD700']
-                    });
-                }, 200);
             } else {
                 console.warn('[Oracle] No se encontró recomendación');
                 setError(selectedMood
@@ -291,14 +179,7 @@ export const Oracle = () => {
     const isAlreadyInLibrary = recommendation && library.some(m => m.id === recommendation.id);
 
     return (
-        <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6 md:py-8 text-center min-h-screen relative">
-            {/* Contenedor de partículas místicas */}
-            <div 
-                ref={particlesContainerRef}
-                className="fixed inset-0 pointer-events-none z-50"
-                aria-hidden="true"
-            />
-            
+        <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6 md:py-8 text-center min-h-screen">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -357,36 +238,29 @@ export const Oracle = () => {
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                     {/* Moods dinámicos - cambian según la fuente seleccionada */}
-                    {currentMoods.map(mood => {
-                        // Validación defensiva para evitar errores con mood.name undefined
-                        const moodName = mood.name || '';
-                        const moodEmoji = moodName.split(' ').pop() || '✨';
-                        const moodText = moodName.split(' ').slice(0, -1).join(' ') || 'Mood';
-                        
-                        return (
-                            <motion.button
-                                key={mood.id}
-                                whileHover={{ scale: 1.05, y: -3 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => {
-                                    setSelectedMood(mood);
-                                    setSelectedGenre(null);
-                                    showToast(mood.toast || 'Mood seleccionado');
-                                }}
-                                className={`
-                                    flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl md:rounded-3xl transition-all border-2
-                                    ${selectedMood?.id === mood.id
-                                        ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-105`
-                                        : 'bg-white dark:bg-gray-900/40 text-gray-400 border-transparent hover:border-purple-200/50'}
-                                `}
-                            >
-                                <span className="text-xl sm:text-2xl md:text-3xl">{moodEmoji}</span>
-                                <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 md:w-20 leading-tight">
-                                    {moodText}
-                                </span>
-                            </motion.button>
-                        );
-                    })}
+                    {currentMoods.map(mood => (
+                        <motion.button
+                            key={mood.id}
+                            whileHover={{ scale: 1.05, y: -3 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                                setSelectedMood(mood);
+                                setSelectedGenre(null);
+                                showToast(mood.toast);
+                            }}
+                            className={`
+                                flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl md:rounded-3xl transition-all border-2
+                                ${selectedMood?.id === mood.id
+                                    ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-105`
+                                    : 'bg-white dark:bg-gray-900/40 text-gray-400 border-transparent hover:border-purple-200/50'}
+                            `}
+                        >
+                            <span className="text-xl sm:text-2xl md:text-3xl">{mood.name.split(' ').pop()}</span>
+                            <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 md:w-20 leading-tight">
+                                {mood.name.split(' ').slice(0, -1).join(' ')}
+                            </span>
+                        </motion.button>
+                    ))}
                 </div>
             </div>
 
@@ -428,14 +302,13 @@ export const Oracle = () => {
 
             <div className="mb-10 sm:mb-16 md:mb-20">
                 <button
-                    ref={summonButtonRef}
                     onClick={handleSummon}
                     disabled={(!selectedGenre && !selectedMood) || loading}
                     className={`
                         px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-full text-base sm:text-xl md:text-2xl font-black text-white shadow-2xl transition-all transform active:scale-95
                         ${(!selectedGenre && !selectedMood)
                             ? 'bg-gray-300 cursor-not-allowed dark:bg-gray-700'
-                            : 'bg-gradient-to-r from-potaxie-green to-teal-500 hover:shadow-[0_20px_50px_rgba(167,208,140,0.4)]'
+                            : 'bg-gradient-to-r from-potaxie-green to-teal-500 hover:scale-105 sm:hover:scale-110 hover:shadow-[0_20px_50px_rgba(167,208,140,0.4)]'
                         }
                     `}
                 >

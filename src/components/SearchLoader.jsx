@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-<<<<<<< HEAD
-import anime from 'animejs/lib/anime.es.js';
-import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
-=======
->>>>>>> parent of c07bf8e (ff)
 
 export const SearchLoader = ({ isLoading }) => {
     const [progress, setProgress] = useState(0);
