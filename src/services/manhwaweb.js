@@ -329,24 +329,30 @@ export const getRandomManhwaWeb = async (genreIds = []) => {
             ? { genres: genreValues }  // Array de values string ["1", "25"]
             : {};
 
-        // Buscar con filtros
-        const results = await searchManhwaWeb('', filters, 1);
+        // Seleccionar una página aleatoria (1-10, ManhwaWeb soporta paginación)
+        const maxPages = 10;
+        const randomPage = Math.floor(Math.random() * maxPages) + 1;
+        console.log(`[ManhwaWeb Random] Página aleatoria: ${randomPage}`);
 
+        // Buscar en la página aleatoria
+        let results = await searchManhwaWeb('', filters, randomPage);
+
+        // Si la página está vacía, intentar página 1
         if (results.length === 0) {
-            console.log('[ManhwaWeb] No se encontraron resultados con filtros, intentando sin filtros');
-            const allResults = await searchManhwaWeb('', {}, 1);
-            if (allResults.length === 0) return null;
-
-            const randomIndex = Math.floor(Math.random() * allResults.length);
-            const randomManhwa = allResults[randomIndex];
-            return await getManhwaWebDetails(randomManhwa.slug);
+            console.log('[ManhwaWeb Random] Página vacía, usando página 1');
+            results = await searchManhwaWeb('', filters, 1);
         }
 
-        // Seleccionar uno aleatorio
+        if (results.length === 0) {
+            console.log('[ManhwaWeb] No se encontraron resultados');
+            return null;
+        }
+
+        // Seleccionar uno aleatorio de los resultados
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManhwa = results[randomIndex];
 
-        console.log(`[ManhwaWeb] Obra aleatoria seleccionada: ${randomManhwa.title}`);
+        console.log(`[ManhwaWeb Random] Obra seleccionada: ${randomManhwa.title} (página ${randomPage}, índice ${randomIndex})`);
         return await getManhwaWebDetails(randomManhwa.slug);
     } catch (error) {
         console.error('[ManhwaWeb] Error obteniendo obra aleatoria:', error);

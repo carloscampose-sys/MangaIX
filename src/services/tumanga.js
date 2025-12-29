@@ -760,28 +760,41 @@ export const getRandomManga = async (genreIds = []) => {
         console.log('[TuManga] Obteniendo manga aleatorio con géneros:', genreIds);
 
         // Si hay géneros, buscar con filtros
-        const filters = genreIds.length > 0
+        const baseFilters = genreIds.length > 0
             ? { genres: genreIds }  // Array de IDs numéricos [1, 4, 7]
             : {};
 
-        // Usar búsqueda con filtros (usa buildTuMangaSearchURL internamente)
-        const results = await searchTuManga('', filters);
+        // Primero obtener resultados de página 0 para verificar que hay resultados
+        const firstPageResults = await searchTuManga('', { ...baseFilters, page: 0 });
 
-        if (results.length === 0) {
-            console.log('[TuManga] No se encontraron resultados con filtros, intentando sin filtros');
-            const allResults = await searchTuManga('', {});
-            if (allResults.length === 0) return null;
-
-            const randomIndex = Math.floor(Math.random() * allResults.length);
-            const randomManga = allResults[randomIndex];
-            return await getTuMangaDetails(randomManga.slug);
+        if (firstPageResults.length === 0) {
+            console.log('[TuManga] No se encontraron resultados con filtros');
+            return null;
         }
 
-        // Seleccionar uno aleatorio de los resultados filtrados
+        // Seleccionar una página aleatoria (0-based, máximo 20 páginas)
+        const maxPages = 20;
+        const randomPage = Math.floor(Math.random() * maxPages);
+        console.log(`[TuManga Random] Página aleatoria: ${randomPage}`);
+
+        // Obtener resultados de la página aleatoria
+        let results;
+        if (randomPage === 0) {
+            results = firstPageResults;
+        } else {
+            results = await searchTuManga('', { ...baseFilters, page: randomPage });
+            // Si la página está vacía, usar la primera página
+            if (results.length === 0) {
+                console.log('[TuManga Random] Página vacía, usando página 0');
+                results = firstPageResults;
+            }
+        }
+
+        // Seleccionar uno aleatorio de los resultados
         const randomIndex = Math.floor(Math.random() * results.length);
         const randomManga = results[randomIndex];
 
-        console.log(`[TuManga] Manga aleatorio seleccionado: ${randomManga.title}`);
+        console.log(`[TuManga Random] Manga seleccionado: ${randomManga.title} (página ${randomPage}, índice ${randomIndex})`);
         return await getTuMangaDetails(randomManga.slug);
     } catch (error) {
         console.error('[TuManga] Error getting random manga:', error);
