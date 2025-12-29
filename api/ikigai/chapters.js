@@ -32,14 +32,23 @@ export default async function handler(req, res) {
 
     while (hasMorePages && currentPage <= maxPages) {
       const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}/chapters?page=${currentPage}`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
       console.log(`[Ikigai Chapters] Página ${currentPage}`);
 
-      const response = await fetch(proxyUrl, {
+      let response = await fetch(proxyUrl, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
+
+      // Fallback a thingproxy
+      if (!response.ok) {
+        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
+        response = await fetch(thingProxyUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+      }
 
       if (!response.ok) {
         console.error(`[Ikigai Chapters] Error en página ${currentPage}:`, response.status);

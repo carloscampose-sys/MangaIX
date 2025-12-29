@@ -52,11 +52,11 @@ export default async function handler(req, res) {
     console.log('[Ikigai Search] Response status:', response.status);
 
     if (!response.ok) {
-      // Si la API directa falla, intentar con el proxy de Vercel
+      // Si la API directa falla, intentar con proxy alternativo
       console.log('[Ikigai Search] API directa falló, intentando alternativa...');
 
-      // Intentar con allorigins como proxy CORS
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+      // Usar corsproxy.io que maneja mejor los parámetros
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
       console.log('[Ikigai Search] Proxy URL:', proxyUrl);
 
       const proxyResponse = await fetch(proxyUrl, {
@@ -67,11 +67,27 @@ export default async function handler(req, res) {
       });
 
       if (!proxyResponse.ok) {
-        console.error('[Ikigai Search] Proxy también falló:', proxyResponse.status);
-        return res.status(proxyResponse.status).json({
-          error: 'Error en la API de Ikigai',
-          details: 'Ambos métodos fallaron'
+        // Intentar con otro proxy como fallback
+        console.log('[Ikigai Search] corsproxy falló, intentando thingproxy...');
+        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
+
+        const thingProxyResponse = await fetch(thingProxyUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
         });
+
+        if (!thingProxyResponse.ok) {
+          console.error('[Ikigai Search] Todos los proxies fallaron');
+          return res.status(500).json({
+            error: 'Error en la API de Ikigai',
+            details: 'Todos los métodos fallaron'
+          });
+        }
+
+        const thingProxyData = await thingProxyResponse.json();
+        return processAndReturnResults(thingProxyData, page, res);
       }
 
       const proxyData = await proxyResponse.json();
