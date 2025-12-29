@@ -62,8 +62,13 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
     // Función para incrementar capítulo
     const incrementChapter = () => {
-        // Solo actualizar el contexto, el useEffect sincronizará chaptersInput
-        updateProgress(manga.id, 1);
+        // Actualizar estado local inmediatamente para feedback visual instantáneo
+        setChaptersInput(prev => {
+            const newVal = (parseInt(prev) || 0) + 1;
+            // También actualizar el contexto
+            updateProgress(manga.id, 1);
+            return newVal;
+        });
     };
 
     // Handlers para mantener presionado
