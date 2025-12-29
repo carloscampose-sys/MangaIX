@@ -100,8 +100,12 @@ export async function unifiedGetChapters(slug, source) {
 
 /**
  * Obtiene páginas de un capítulo en una fuente específica
+ * @param {string} slug - Slug de la obra
+ * @param {string} chapter - Número del capítulo
+ * @param {string} source - Fuente (tumanga, manhwaweb, ikigai)
+ * @param {string} chapterData - Datos adicionales del capítulo (chapterId para Ikigai)
  */
-export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) {
+export async function unifiedGetPages(slug, chapter, source, chapterData = null) {
     try {
         const service = getService(source);
 
@@ -110,7 +114,9 @@ export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) 
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
         } else if (source === 'ikigai') {
-            return await service.getIkigaiPages(slug, chapter);
+            // Ikigai necesita el chapterId (ID largo) para obtener las páginas
+            const chapterId = chapterData?.chapterId || chapterData;
+            return await service.getIkigaiPages(slug, chapter, chapterId);
         }
 
         return [];

@@ -133,7 +133,8 @@ export const DetailModal = ({
         setIsOpeningReader(true);
 
         try {
-            const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource, chapter.url);
+            // Pasar el capítulo completo para que Ikigai pueda acceder al chapterId
+            const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource, chapter);
             if (pages && pages.length > 0) {
                 setReaderPages(pages);
             } else {
@@ -162,7 +163,8 @@ export const DetailModal = ({
             setIsOpeningReader(true);
 
             try {
-                const pages = await unifiedGetPages(manga.slug, nextChapter.chapter, selectedChapterSource, nextChapter.url);
+                // Pasar el capítulo completo para que Ikigai pueda acceder al chapterId
+                const pages = await unifiedGetPages(manga.slug, nextChapter.chapter, selectedChapterSource, nextChapter);
                 if (pages && pages.length > 0) {
                     setReaderPages(pages);
                     showToast(`¡Siguiente capítulo cargado! Cap ${nextChapter.chapter} 🥑`);
@@ -188,7 +190,8 @@ export const DetailModal = ({
             setIsOpeningReader(true);
 
             try {
-                const pages = await unifiedGetPages(manga.slug, prevChapter.chapter, selectedChapterSource, prevChapter.url);
+                // Pasar el capítulo completo para que Ikigai pueda acceder al chapterId
+                const pages = await unifiedGetPages(manga.slug, prevChapter.chapter, selectedChapterSource, prevChapter);
                 if (pages && pages.length > 0) {
                     setReaderPages(pages);
                     showToast(`¡Capítulo anterior cargado! Cap ${prevChapter.chapter} 🥑`);
