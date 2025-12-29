@@ -17,7 +17,8 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "WebFetch(domain:panel.ikigaimangas.com)",
-      "WebFetch(domain:viralikigai.learnixs.site)"
+      "WebFetch(domain:viralikigai.learnixs.site)",
+      "WebFetch(domain:api.ikigaimangas.com)"
     ]
   }
 }
