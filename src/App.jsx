@@ -35,7 +35,7 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
-  const [sourceOrder, setSourceOrder] = useState([]);
+  const [sourceOrder, setSourceOrder] = useState(() => loadSourceOrder());
   
   // Filtros específicos de ManhwaWeb (Tipo, Estado, Erótico, Demografía, Ordenar)
   // Estos estados solo se usan cuando selectedSource === 'manhwaweb'
@@ -86,13 +86,6 @@ const MainApp = ({ userName, userGender }) => {
       setIsInitialLoading(false);
     }, 2000);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Load source order from localStorage on mount
-  useEffect(() => {
-    const savedOrder = loadSourceOrder();
-    setSourceOrder(savedOrder);
-    console.log('[App] Source order loaded:', savedOrder);
   }, []);
 
   // Initialize Swapy for source button reordering
