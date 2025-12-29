@@ -105,7 +105,7 @@ export const Navbar = ({ setPage }) => {
 
                     <button
                         onClick={toggleChristmasMode}
-                        className={`p-1 xs:p-1.5 sm:p-2 rounded-full transition-colors hidden xs:flex ${isChristmasMode ? 'bg-gradient-to-r from-red-600 to-green-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                        className={`p-1 xs:p-1.5 sm:p-2 rounded-full transition-colors ${isChristmasMode ? 'bg-gradient-to-r from-red-600 to-green-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         title={isChristmasMode ? 'Desactivar Modo Navidad' : 'Activar Modo Navidad'}
                     >
                         <span className="text-sm xs:text-base sm:text-lg">{isChristmasMode ? '🎄' : '❄️'}</span>
