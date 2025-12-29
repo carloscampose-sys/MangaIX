@@ -59,105 +59,48 @@ export default async function handler(req, res) {
       try {
         await page.goto(url, {
           waitUntil: 'networkidle2',
-          timeout: 6000
+          timeout: 30000
         });
 
-        // Esperar a que carguen capítulos
-        const chapterSelectors = [
-          '.capitulo-item',
-          '.chapter-item',
-          '.list-group-item',
-          'a[href*="/leer/"]',
-          'li.chapter'
-        ];
-
-        let chaptersLoaded = false;
-        for (const selector of chapterSelectors) {
-          try {
-            await page.waitForSelector(selector, { timeout: 3000 });
-            chaptersLoaded = true;
-            console.log(`[Ikigai Chapters] Selector encontrado: ${selector}`);
-            break;
-          } catch (e) {
-            // Selector no válido, continuar
-          }
-        }
-
-        if (!chaptersLoaded) {
+        // Esperar a que carguen capítulos - Ikigai usa links a /leer/
+        try {
+          await page.waitForSelector('a[href*="/leer/"]', { timeout: 15000 });
+          console.log('[Ikigai Chapters] Capítulos encontrados');
+        } catch (e) {
           console.log(`[Ikigai Chapters] No se encontraron capítulos en página ${currentPage}`);
           break;
         }
 
         // Extraer capítulos de esta página
+        // Estructura: cada capítulo está en un li con un link a /leer/[slug]-[chapter]
         const chaptersOnPage = await page.evaluate(() => {
-          // Intentar múltiples selectores para capítulos
-          const selectors = [
-            '.capitulo-item',
-            '.chapter-item',
-            '.list-group-item',
-            'li.chapter',
-            'a[href*="/leer/"]'
-          ];
+          // Buscar todos los links a capítulos
+          const chapterLinks = document.querySelectorAll('a[href*="/leer/"]');
 
-          let items = [];
-          for (const selector of selectors) {
-            items = document.querySelectorAll(selector);
-            if (items.length > 0) break;
-          }
-
-          return Array.from(items).map(item => {
-            // Encontrar link
-            const link = item.tagName === 'A' ? item : item.querySelector('a');
-            if (!link) return null;
-
+          return Array.from(chapterLinks).map(link => {
             const href = link.href;
 
-            // Extraer texto del capítulo
-            const chapterSelectors = [
-              '.capitulo-numero',
-              '.chapter-number',
-              '.num-cap',
-              'strong',
-              'span'
-            ];
-            let chapterText = '';
-            for (const selector of chapterSelectors) {
-              const el = item.querySelector(selector);
-              if (el) {
-                chapterText = el.textContent.trim();
-                break;
-              }
-            }
+            // Extraer número de capítulo del href
+            // Formato: /leer/slug-172 o /leer/slug-capitulo-172
+            const urlMatch = href.match(/\/leer\/[^\/]+-(\d+)/);
+            const chapter = urlMatch ? urlMatch[1] : '';
 
-            if (!chapterText) {
-              chapterText = link.textContent.trim();
-            }
+            if (!chapter) return null;
 
-            // Extraer número de capítulo
-            const chapterMatch = chapterText.match(/\d+/);
-            const chapter = chapterMatch ? chapterMatch[0] : '';
+            // El texto del link suele tener el número del capítulo
+            const linkText = link.textContent.trim();
 
-            // Título opcional
-            const titleSelectors = [
-              '.capitulo-titulo',
-              '.chapter-title',
-              'span:not(:contains("Capítulo"))'
-            ];
-            let title = '';
-            for (const selector of titleSelectors) {
-              const el = item.querySelector(selector);
-              if (el && !el.textContent.includes('Capítulo')) {
-                title = el.textContent.trim();
-                break;
-              }
-            }
+            // Buscar título adicional si existe
+            const title = linkText.includes('Capítulo')
+              ? linkText
+              : `Capítulo ${chapter}`;
 
             return {
               chapter,
-              title: `Capítulo ${chapter}${title ? ' - ' + title : ''}`,
+              title,
               url: href
             };
-          }).filter(Boolean); // Filtrar nulls
+          }).filter(Boolean);
         });
 
         console.log(`[Ikigai Chapters] Página ${currentPage}: ${chaptersOnPage.length} capítulos encontrados`);
@@ -165,45 +108,29 @@ export default async function handler(req, res) {
         allChapters.push(...chaptersOnPage);
 
         // Verificar si hay siguiente página
-        const hasNextSelectors = [
-          'button.next-page',
-          'a.siguiente',
-          'a[rel="next"]',
-          '.pagination .next'
-        ];
+        // Ikigai usa parámetro ?pagina=N
+        const hasNext = await page.evaluate((currentPageNum) => {
+          // Buscar links de paginación que contengan pagina=N+1
+          const nextPageNum = currentPageNum + 1;
+          const paginationLinks = document.querySelectorAll('a[href*="pagina="]');
 
-        let hasNext = false;
-        for (const selector of hasNextSelectors) {
-          try {
-            const btn = await page.$(selector);
-            if (btn) {
-              const isDisabled = await page.evaluate(el => {
-                return el.disabled || el.classList.contains('disabled');
-              }, btn);
-              if (!isDisabled) {
-                hasNext = true;
-                break;
-              }
+          for (const link of paginationLinks) {
+            if (link.href.includes(`pagina=${nextPageNum}`)) {
+              return true;
             }
-          } catch (e) {
-            // Selector no válido, continuar
           }
-        }
 
-        // También verificar por URL de navegación
-        if (!hasNext) {
-          hasNext = await page.evaluate(() => {
-            const paginationLinks = document.querySelectorAll('.pagination a');
-            for (const link of paginationLinks) {
-              const text = link.textContent.trim();
-              const pageUrl = link.href;
-              if (text === 'Siguiente' || text === 'Next') {
-                return true;
-              }
+          // También verificar si hay un botón o link "siguiente"
+          const allLinks = document.querySelectorAll('a');
+          for (const link of allLinks) {
+            const text = link.textContent.toLowerCase().trim();
+            if (text === 'siguiente' || text === 'next' || text === '→' || text === '>') {
+              return true;
             }
-            return false;
-          });
-        }
+          }
+
+          return false;
+        }, currentPage);
 
         if (hasNext && chaptersOnPage.length > 0) {
           currentPage++;

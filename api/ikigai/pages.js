@@ -56,74 +56,46 @@ export default async function handler(req, res) {
 
     await page.goto(chapterUrl, {
       waitUntil: 'networkidle2',
-      timeout: 8000
+      timeout: 30000
     });
 
-    // Esperar a que carguen imágenes REALES (no loaders)
-    const imageSelectors = [
-      '#lector img',
-      '.pagina img',
-      '.reader img',
-      '.chapter-images img',
-      'img.chapter-page',
-      '.manga-image img'
-    ];
-
-    let imagesLoaded = false;
-    for (const selector of imageSelectors) {
-      try {
-        await page.waitForFunction(
-          (sel) => {
-            const images = document.querySelectorAll(sel);
-            return images.length > 0 &&
-                   Array.from(images).some(img =>
-                     img.complete &&
-                     img.naturalHeight > 0 &&
-                     !img.src.includes('loader') &&
-                     !img.src.includes('placeholder')
-                   );
-          },
-          { timeout: 6000 },
-          selector
-        );
-        imagesLoaded = true;
-        console.log(`[Ikigai Pages] Selector encontrado: ${selector}`);
-        break;
-      } catch (e) {
-        // Selector no válido, continuar
-      }
-    }
-
-    if (!imagesLoaded) {
-      console.log('[Ikigai Pages] No se encontraron imágenes válidas');
-      await browser.close();
-      return res.status(200).json({ pages: [], total: 0 });
+    // Esperar a que carguen imágenes del capítulo
+    // Ikigai carga imágenes desde su CDN (image.ikigaimangas.cloud o cloudflare)
+    try {
+      await page.waitForFunction(
+        () => {
+          const images = document.querySelectorAll('img');
+          // Buscar imágenes del CDN de ikigai
+          const chapterImages = Array.from(images).filter(img =>
+            img.src &&
+            (img.src.includes('ikigaimangas.cloud') || img.src.includes('cloudflare')) &&
+            !img.src.includes('avatar') &&
+            !img.src.includes('icon')
+          );
+          return chapterImages.length > 0;
+        },
+        { timeout: 15000 }
+      );
+      console.log('[Ikigai Pages] Imágenes del capítulo cargadas');
+    } catch (e) {
+      console.log('[Ikigai Pages] Timeout esperando imágenes');
     }
 
     // Extraer URLs de imágenes
+    // Las imágenes del manga están en el CDN de ikigai
     const imageUrls = await page.evaluate(() => {
-      const selectors = [
-        '#lector img',
-        '.pagina img',
-        '.reader img',
-        '.chapter-images img',
-        'img.chapter-page',
-        '.manga-image img'
-      ];
-
-      let images = [];
-      for (const selector of selectors) {
-        images = document.querySelectorAll(selector);
-        if (images.length > 0) break;
-      }
+      const images = document.querySelectorAll('img');
 
       return Array.from(images)
-        .map(img => img.src)
+        .map(img => img.src || img.dataset.src)
         .filter(src =>
           src &&
+          (src.includes('ikigaimangas.cloud') || src.includes('cloudflare')) &&
+          !src.includes('avatar') &&
+          !src.includes('icon') &&
+          !src.includes('logo') &&
           !src.includes('loader') &&
           !src.includes('placeholder') &&
-          !src.includes('base64') &&
           src.startsWith('http')
         );
     });

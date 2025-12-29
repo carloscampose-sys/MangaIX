@@ -246,11 +246,16 @@ const MainApp = ({ userName, userGender }) => {
 
         console.log('[App] Ikigai - Genre values:', selectedGenreValues);
 
+        // Para Ikigai, solo enviar sortBy si es un valor válido de Ikigai
+        // Valores válidos: name, created_at, last_chapter_date, bookmark_count, rating_count, view_count
+        const ikigaiSortValues = ['name', 'created_at', 'last_chapter_date', 'bookmark_count', 'rating_count', 'view_count'];
+        const ikigaiSortBy = ikigaiSortValues.includes(selectedSortBy) ? selectedSortBy : '';
+
         filters = {
           genres: selectedGenreValues,
           types: selectedTypes,
           statuses: selectedStatuses,
-          sortBy: selectedSortBy,
+          sortBy: ikigaiSortBy,
           page: pageToUse - 1
         };
       }

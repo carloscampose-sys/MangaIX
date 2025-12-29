@@ -43,76 +43,57 @@ export default async function handler(req, res) {
       }
     });
 
-    // 4. Navegar a la URL
+    // 4. Navegar a la URL (timeout mayor para Qwik framework)
     await puppeteerPage.goto(searchUrl, {
       waitUntil: 'networkidle2',
-      timeout: 8000
+      timeout: 30000
     });
 
-    // 5. Esperar a que carguen los resultados (probar múltiples selectores)
-    const possibleSelectors = [
-      '.resultado-obra',
-      '.series-card',
-      '.obra-card',
-      'a[href*="/series/"]',
-      '.card'
-    ];
-
-    let resultsFound = false;
-    for (const selector of possibleSelectors) {
-      try {
-        await puppeteerPage.waitForSelector(selector, { timeout: 3000 });
-        resultsFound = true;
-        console.log(`[Ikigai Search] Selector encontrado: ${selector}`);
-        break;
-      } catch (e) {
-        // Selector no válido, continuar
-      }
-    }
-
-    if (!resultsFound) {
-      console.log('[Ikigai Search] No se encontraron resultados');
+    // 5. Esperar a que carguen los resultados
+    // Ikigai usa estructura: ul > li > a[href*="/series/"]
+    try {
+      // Esperar más tiempo porque usa Qwik (framework reactivo)
+      await puppeteerPage.waitForSelector('li a[href*="/series/"]', { timeout: 15000 });
+      console.log('[Ikigai Search] Selector encontrado: li a[href*="/series/"]');
+    } catch (e) {
+      console.log('[Ikigai Search] No se encontraron resultados después de esperar');
       await browser.close();
       return res.status(200).json({ results: [], page, hasMore: false });
     }
 
     // 6. Extraer resultados
+    // Estructura: <li><a href="/series/[slug]/"><img/><h3>Título</h3>...</a></li>
     const results = await puppeteerPage.evaluate(() => {
-      // Intentar múltiples selectores para resultados
-      const selectors = [
-        '.resultado-obra',
-        '.series-card',
-        '.obra-card',
-        'article'
-      ];
-
-      let items = [];
-      for (const selector of selectors) {
-        items = document.querySelectorAll(selector);
-        if (items.length > 0) break;
-      }
+      // Buscar todos los items de lista que contienen links a series
+      const items = document.querySelectorAll('li');
 
       return Array.from(items).map(item => {
-        // Encontrar link
+        // Buscar el link a la serie
         const link = item.querySelector('a[href*="/series/"]');
         if (!link) return null;
 
         const href = link.href;
+        // Extraer slug del href
         const slugMatch = href.match(/\/series\/([^\/]+)/);
         const slug = slugMatch ? slugMatch[1] : '';
 
+        if (!slug) return null;
+
         // Encontrar imagen de portada
         const img = item.querySelector('img');
-        const cover = img ? img.src : '';
+        const cover = img ? (img.src || img.dataset.src) : '';
 
-        // Encontrar título
-        const titleElement = item.querySelector('.title, .titulo, h2, h3');
+        // Encontrar título (h3 dentro del link)
+        const titleElement = item.querySelector('h3');
         const title = titleElement ? titleElement.textContent.trim() : '';
 
+        // Solo retornar si tiene datos válidos
+        if (!title && !cover) return null;
+
         return {
-          id: `ikigai-${slug}-${Date.now()}`,
+          id: `ikigai-${slug}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           slug,
-          title,
+          title: title || slug.replace(/-/g, ' '),
           cover,
           source: 'ikigai'
         };

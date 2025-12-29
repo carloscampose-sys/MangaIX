@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       }
     });
 
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 8000 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
     // CRÍTICO: Manejar botón "Ver más" en sinopsis
     const possibleSelectors = [
@@ -86,71 +86,56 @@ export default async function handler(req, res) {
     }
 
     // Extraer detalles completos
+    // Ikigai usa estructura simple: h1 para título, img para portada, etc.
     const details = await page.evaluate(() => {
-      // Título
-      const titleSelectors = ['.obra-titulo', '.title', 'h1', '.series-title'];
-      let title = '';
-      for (const selector of titleSelectors) {
-        const el = document.querySelector(selector);
-        if (el) {
-          title = el.textContent.trim();
-          break;
-        }
-      }
+      // Título - buscar h1 principal
+      const titleEl = document.querySelector('h1');
+      const title = titleEl ? titleEl.textContent.trim() : '';
 
-      // Portada
-      const coverSelectors = ['.obra-portada img', '.cover img', '.poster img', 'img.series-cover'];
+      // Portada - buscar primera imagen grande (no avatars ni iconos)
+      const allImages = document.querySelectorAll('img');
       let cover = '';
-      for (const selector of coverSelectors) {
-        const el = document.querySelector(selector);
-        if (el) {
-          cover = el.src;
+      for (const img of allImages) {
+        const src = img.src || '';
+        // Buscar imagen de CDN de ikigai (portadas están en image.ikigaimangas.cloud)
+        if (src.includes('ikigaimangas.cloud') || src.includes('cloudflare')) {
+          cover = src;
           break;
         }
       }
+      // Fallback: primera imagen con srcset (suelen ser las de alta calidad)
+      if (!cover) {
+        const imgWithSrcset = document.querySelector('img[srcset]');
+        if (imgWithSrcset) cover = imgWithSrcset.src;
+      }
 
-      // Sinopsis
-      const synopsisSelectors = ['.sinopsis-container', '.synopsis', '.description', '.summary'];
+      // Sinopsis - buscar párrafos después del título
+      // La sinopsis suele estar en un contenedor con texto largo
       let synopsis = '';
-      for (const selector of synopsisSelectors) {
-        const el = document.querySelector(selector);
-        if (el) {
-          synopsis = el.textContent.trim();
+      const paragraphs = document.querySelectorAll('p');
+      for (const p of paragraphs) {
+        const text = p.textContent.trim();
+        // Sinopsis suele tener más de 100 caracteres
+        if (text.length > 100 && !text.includes('Capítulo')) {
+          synopsis = text;
           break;
         }
       }
 
-      // Autor
-      const authorSelectors = ['.autor', '.author', '.creador', 'span:contains("Autor")'];
-      let author = '';
-      for (const selector of authorSelectors) {
-        const el = document.querySelector(selector);
-        if (el) {
-          author = el.textContent.trim();
-          break;
-        }
-      }
-
-      // Estado
-      const statusSelectors = ['.estado', '.status', 'span:contains("Estado")'];
+      // Estado - buscar links que contengan "estados[]"
+      const statusLink = document.querySelector('a[href*="estados[]"]');
       let status = '';
-      for (const selector of statusSelectors) {
-        const el = document.querySelector(selector);
-        if (el) {
-          status = el.textContent.trim();
-          break;
-        }
+      if (statusLink) {
+        status = statusLink.textContent.trim();
       }
 
-      // Géneros
-      const genreSelectors = ['.genero-tag', '.genre', '.tag', '.category'];
-      let genreElements = [];
-      for (const selector of genreSelectors) {
-        genreElements = document.querySelectorAll(selector);
-        if (genreElements.length > 0) break;
-      }
+      // Géneros - buscar links que contengan "generos[]"
+      const genreLinks = document.querySelectorAll('a[href*="generos[]"]');
+      const genres = Array.from(genreLinks).map(link => link.textContent.trim());
 
-      const genres = Array.from(genreElements).map(el => el.textContent.trim());
+      // Autor/Equipo - buscar links a grupos
+      const authorLink = document.querySelector('a[href*="/grupos/"]');
+      const author = authorLink ? authorLink.textContent.trim() : '';
 
       return {
         title,
