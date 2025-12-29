@@ -140,6 +140,14 @@ function processAndReturnResults(data, page, res) {
 
 /**
  * Construye la URL de la API con los filtros
+ *
+ * Parámetros correctos de la API de Ikigai:
+ * - page: número de página
+ * - search: texto de búsqueda
+ * - genres: ID de género (solo uno a la vez)
+ * - type: tipo de contenido (comic/novel)
+ * - status: estado de publicación
+ * - order_by: ordenamiento
  */
 function buildApiUrl(query, filters, page) {
   const baseUrl = 'https://panel.ikigaimangas.com/api/swf/series';
@@ -153,25 +161,19 @@ function buildApiUrl(query, filters, page) {
     params.append('search', query);
   }
 
-  // Géneros (array de IDs)
+  // Género (la API solo acepta un género a la vez)
   if (filters.genres && filters.genres.length > 0) {
-    filters.genres.forEach(genreId => {
-      params.append('genres_ids[]', genreId);
-    });
+    params.append('genres', filters.genres[0]);
   }
 
-  // Tipos (comic, novel)
+  // Tipo (comic, novel) - solo uno a la vez
   if (filters.types && filters.types.length > 0) {
-    filters.types.forEach(type => {
-      params.append('types[]', type);
-    });
+    params.append('type', filters.types[0]);
   }
 
-  // Estados (IDs de estado)
+  // Estado - solo uno a la vez
   if (filters.statuses && filters.statuses.length > 0) {
-    filters.statuses.forEach(statusId => {
-      params.append('statuses_ids[]', statusId);
-    });
+    params.append('status', filters.statuses[0]);
   }
 
   // Ordenamiento
