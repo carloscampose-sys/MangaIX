@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BackgroundImageUploader } from './BackgroundImageUploader';
+import { useColorTheme } from '../context/ColorThemeContext';
 
 // Colores de fondo recomendados (seguros para legibilidad)
 const RECOMMENDED_BACKGROUNDS = [
@@ -15,10 +17,12 @@ const RECOMMENDED_BACKGROUNDS = [
 ];
 
 export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }) {
+  const { backgroundImage, backgroundEffects, setBackgroundImage, resetBackgroundImage } = useColorTheme();
   const [bgColor, setBgColor] = useState(currentColor || '#ffffff');
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(0);
   const [lightness, setLightness] = useState(100);
+  const [showImageUploader, setShowImageUploader] = useState(false);
   
   const saturationRef = useRef(null);
   const hueRef = useRef(null);
@@ -200,11 +204,21 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
     onClose();
   };
 
+  const handleImageApply = (imageData, effects) => {
+    setBackgroundImage(imageData, effects);
+    setShowImageUploader(false);
+    onClose();
+  };
+
+  const handleRemoveImage = () => {
+    resetBackgroundImage();
+  };
+
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && !showImageUploader && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
@@ -328,6 +342,30 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
               </div>
             </div>
 
+            {/* Botón para subir imagen de fondo */}
+            <div className="mb-4">
+              <button
+                onClick={() => setShowImageUploader(true)}
+                className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                <ImageIcon size={20} />
+                Subir Imagen de Fondo
+              </button>
+              {backgroundImage && (
+                <button
+                  onClick={handleRemoveImage}
+                  className="w-full mt-2 py-2 px-4 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-semibold hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors text-sm"
+                >
+                  Eliminar Imagen de Fondo
+                </button>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                {backgroundImage 
+                  ? '✓ Imagen de fondo activa. El cambio de color no afectará la imagen.' 
+                  : 'Sube tu propia imagen como fondo de pantalla'}
+              </p>
+            </div>
+
             {/* Botones */}
             <div className="flex gap-2">
               <button
@@ -347,6 +385,15 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
           </motion.div>
         </div>
       )}
+      
+      {/* Background Image Uploader Modal */}
+      <BackgroundImageUploader
+        isOpen={showImageUploader}
+        onClose={() => setShowImageUploader(false)}
+        onApply={handleImageApply}
+        currentImage={backgroundImage}
+        currentEffects={backgroundEffects}
+      />
     </AnimatePresence>
   );
 }

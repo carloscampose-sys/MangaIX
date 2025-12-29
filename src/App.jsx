@@ -24,6 +24,7 @@ import { getGreeting } from './utils/greetingUtils';
 import { ChristmasThemeProvider } from './context/ChristmasThemeContext';
 import { SnowEffect } from './components/SnowEffect';
 import { LightParticles } from './components/LightParticles';
+import { CustomBackgroundImage } from './components/CustomBackgroundImage';
 import { useChristmasTheme } from './context/ChristmasThemeContext';
 
 const MainApp = ({ userName, userGender }) => {
@@ -484,6 +485,9 @@ const MainApp = ({ userName, userGender }) => {
 
   return (
     <div className="min-h-screen pb-24 md:pb-32 relative">
+      {/* Custom Background Image */}
+      <CustomBackgroundImage />
+      
       {/* Christmas Snow Effect */}
       {isChristmasMode && <SnowEffect />}
 

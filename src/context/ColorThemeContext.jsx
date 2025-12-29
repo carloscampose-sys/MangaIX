@@ -9,8 +9,10 @@ const ColorThemeContext = createContext(null);
 // Color por defecto (verde potaxie)
 const DEFAULT_BASE_COLOR = '#A7D08C';
 
-// Clave para localStorage
+// Claves para localStorage
 const STORAGE_KEY = 'colorTheme';
+const BACKGROUND_IMAGE_KEY = 'customBackgroundImage';
+const BACKGROUND_EFFECTS_KEY = 'backgroundEffects';
 
 /**
  * ColorThemeProvider
@@ -19,6 +21,12 @@ const STORAGE_KEY = 'colorTheme';
 export function ColorThemeProvider({ children }) {
   const [theme, setTheme] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [backgroundImage, setBackgroundImageState] = useState(null);
+  const [backgroundEffects, setBackgroundEffectsState] = useState({
+    blur: 10,
+    overlay: 70,
+    overlayColor: 'black'
+  });
 
   /**
    * Carga el tema desde localStorage al iniciar
@@ -203,11 +211,93 @@ export function ColorThemeProvider({ children }) {
   };
 
   /**
+   * Establece una imagen de fondo personalizada
+   * @param {string} imageData - Imagen en formato base64
+   * @param {object} effects - Efectos de legibilidad (blur, overlay, overlayColor)
+   */
+  const setBackgroundImage = (imageData, effects) => {
+    try {
+      console.log('[ColorThemeContext] Setting background image with effects:', effects);
+      
+      // Guardar imagen en localStorage
+      localStorage.setItem(BACKGROUND_IMAGE_KEY, imageData);
+      localStorage.setItem(BACKGROUND_EFFECTS_KEY, JSON.stringify(effects));
+      
+      // Actualizar estado
+      setBackgroundImageState(imageData);
+      setBackgroundEffectsState(effects);
+      
+      console.log('[ColorThemeContext] Background image applied successfully');
+    } catch (error) {
+      console.error('[ColorThemeContext] Error setting background image:', error);
+      
+      // Si falla por límite de localStorage, intentar con IndexedDB o mostrar error
+      if (error.name === 'QuotaExceededError') {
+        throw new Error('La imagen es demasiado grande. Por favor, selecciona una imagen más pequeña.');
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * Elimina la imagen de fondo personalizada
+   */
+  const resetBackgroundImage = () => {
+    console.log('[ColorThemeContext] Resetting background image');
+    
+    try {
+      // Eliminar de localStorage
+      localStorage.removeItem(BACKGROUND_IMAGE_KEY);
+      localStorage.removeItem(BACKGROUND_EFFECTS_KEY);
+      
+      // Actualizar estado
+      setBackgroundImageState(null);
+      setBackgroundEffectsState({
+        blur: 10,
+        overlay: 70,
+        overlayColor: 'black'
+      });
+      
+      console.log('[ColorThemeContext] Background image reset successfully');
+    } catch (error) {
+      console.error('[ColorThemeContext] Error resetting background image:', error);
+    }
+  };
+
+  /**
+   * Carga la imagen de fondo desde localStorage
+   */
+  const loadBackgroundImageFromStorage = () => {
+    try {
+      const storedImage = localStorage.getItem(BACKGROUND_IMAGE_KEY);
+      const storedEffects = localStorage.getItem(BACKGROUND_EFFECTS_KEY);
+      
+      if (storedImage) {
+        setBackgroundImageState(storedImage);
+        console.log('[ColorThemeContext] Background image loaded from storage');
+      }
+      
+      if (storedEffects) {
+        setBackgroundEffectsState(JSON.parse(storedEffects));
+        console.log('[ColorThemeContext] Background effects loaded from storage');
+      }
+    } catch (error) {
+      console.error('[ColorThemeContext] Error loading background image from storage:', error);
+      // Limpiar localStorage corrupto
+      localStorage.removeItem(BACKGROUND_IMAGE_KEY);
+      localStorage.removeItem(BACKGROUND_EFFECTS_KEY);
+    }
+  };
+
+  /**
    * Inicialización: cargar tema guardado o usar por defecto
    */
   useEffect(() => {
     console.log('[ColorThemeContext] Initializing...');
     const storedTheme = loadThemeFromStorage();
+    
+    // Cargar imagen de fondo si existe
+    loadBackgroundImageFromStorage();
     
     if (storedTheme) {
       // Aplicar tema guardado
@@ -238,6 +328,10 @@ export function ColorThemeProvider({ children }) {
     setCustomBackground,
     resetCustomBackground,
     resetTheme,
+    backgroundImage,
+    backgroundEffects,
+    setBackgroundImage,
+    resetBackgroundImage,
     isLoading
   };
 
