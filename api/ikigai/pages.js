@@ -6,17 +6,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { slug, chapter } = req.body;
+  const { slug, chapter, chapterId } = req.body;
 
-  if (!slug || !chapter) {
-    return res.status(400).json({ error: 'Slug and chapter are required' });
+  // Se requiere chapterId (el ID largo) para construir la URL correcta
+  if (!chapterId) {
+    return res.status(400).json({ error: 'chapterId is required' });
   }
 
   let browser = null;
 
   try {
-    // Construir URL del capítulo (ajustar según estructura real)
-    const chapterUrl = `https://viralikigai.eurofiyati.online/leer/${slug}-${chapter}`;
+    // La URL de lectura usa el ID del capítulo, no el número
+    const chapterUrl = `https://viralikigai.eurofiyati.online/capitulo/${chapterId}/`;
     console.log('[Ikigai Pages] URL:', chapterUrl);
 
     browser = await puppeteer.launch({

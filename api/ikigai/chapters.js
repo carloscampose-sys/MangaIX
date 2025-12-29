@@ -1,7 +1,19 @@
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+/**
+ * API Route: Ikigai Chapters
+ * Usa la API directa de panel.ikigaimangas.com
+ * Obtiene TODOS los capítulos iterando la paginación
+ */
 
 export default async function handler(req, res) {
+  // Configurar CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -12,165 +24,77 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Slug is required' });
   }
 
-  let browser = null;
-
   try {
-    const baseUrl = `https://viralikigai.eurofiyati.online/series/${slug}`;
-    console.log(`[Ikigai Chapters] Iniciando extracción para: ${slug}`);
-
-    browser = await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--no-sandbox'
-      ],
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless
-    });
-
-    const page = await browser.newPage();
-
-    // Bloquear recursos innecesarios
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      const blockedResources = ['ads', 'analytics', 'facebook', 'google-analytics'];
-      const url = request.url().toLowerCase();
-
-      if (blockedResources.some(resource => url.includes(resource))) {
-        request.abort();
-      } else {
-        request.continue();
-      }
-    });
+    console.log(`[Ikigai Chapters] Obteniendo capítulos para: ${slug}`);
 
     let allChapters = [];
     let currentPage = 1;
     let hasMorePages = true;
-    const maxPages = 20; // Seguridad: límite máximo
+    const maxPages = 50; // Límite de seguridad
 
     while (hasMorePages && currentPage <= maxPages) {
-      const url = currentPage === 1
-        ? baseUrl
-        : `${baseUrl}?pagina=${currentPage}`;
+      const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}/chapters?page=${currentPage}`;
+      console.log(`[Ikigai Chapters] Página ${currentPage}: ${apiUrl}`);
 
-      console.log(`[Ikigai Chapters] Página ${currentPage}: ${url}`);
-
-      try {
-        await page.goto(url, {
-          waitUntil: 'networkidle2',
-          timeout: 30000
-        });
-
-        // Esperar a que carguen capítulos - Ikigai usa links a /leer/
-        try {
-          await page.waitForSelector('a[href*="/leer/"]', { timeout: 15000 });
-          console.log('[Ikigai Chapters] Capítulos encontrados');
-        } catch (e) {
-          console.log(`[Ikigai Chapters] No se encontraron capítulos en página ${currentPage}`);
-          break;
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://viralikigai.eurofiyati.online/'
         }
+      });
 
-        // Extraer capítulos de esta página
-        // Estructura: cada capítulo está en un li con un link a /leer/[slug]-[chapter]
-        const chaptersOnPage = await page.evaluate(() => {
-          // Buscar todos los links a capítulos
-          const chapterLinks = document.querySelectorAll('a[href*="/leer/"]');
+      if (!response.ok) {
+        console.error(`[Ikigai Chapters] API Error en página ${currentPage}:`, response.status);
+        break;
+      }
 
-          return Array.from(chapterLinks).map(link => {
-            const href = link.href;
+      const data = await response.json();
+      const chapters = data.data || [];
 
-            // Extraer número de capítulo del href
-            // Formato: /leer/slug-172 o /leer/slug-capitulo-172
-            const urlMatch = href.match(/\/leer\/[^\/]+-(\d+)/);
-            const chapter = urlMatch ? urlMatch[1] : '';
+      console.log(`[Ikigai Chapters] Página ${currentPage}: ${chapters.length} capítulos`);
 
-            if (!chapter) return null;
+      // Transformar capítulos
+      // IMPORTANTE: La URL de lectura usa el ID del capítulo, no el número
+      const transformedChapters = chapters.map(ch => ({
+        id: `ikigai-${slug}-ch-${ch.name}-${ch.id}`,
+        chapter: ch.name,
+        title: ch.title ? `Capítulo ${ch.name} - ${ch.title}` : `Capítulo ${ch.name}`,
+        url: `https://viralikigai.eurofiyati.online/capitulo/${ch.id}/`,
+        publishedAt: ch.published_at,
+        likeCount: ch.like_count,
+        chapterId: ch.id,  // ID numérico largo para la URL de lectura
+        source: 'ikigai'
+      }));
 
-            // El texto del link suele tener el número del capítulo
-            const linkText = link.textContent.trim();
+      allChapters.push(...transformedChapters);
 
-            // Buscar título adicional si existe
-            const title = linkText.includes('Capítulo')
-              ? linkText
-              : `Capítulo ${chapter}`;
-
-            return {
-              chapter,
-              title,
-              url: href
-            };
-          }).filter(Boolean);
-        });
-
-        console.log(`[Ikigai Chapters] Página ${currentPage}: ${chaptersOnPage.length} capítulos encontrados`);
-
-        allChapters.push(...chaptersOnPage);
-
-        // Verificar si hay siguiente página
-        // Ikigai usa parámetro ?pagina=N
-        const hasNext = await page.evaluate((currentPageNum) => {
-          // Buscar links de paginación que contengan pagina=N+1
-          const nextPageNum = currentPageNum + 1;
-          const paginationLinks = document.querySelectorAll('a[href*="pagina="]');
-
-          for (const link of paginationLinks) {
-            if (link.href.includes(`pagina=${nextPageNum}`)) {
-              return true;
-            }
-          }
-
-          // También verificar si hay un botón o link "siguiente"
-          const allLinks = document.querySelectorAll('a');
-          for (const link of allLinks) {
-            const text = link.textContent.toLowerCase().trim();
-            if (text === 'siguiente' || text === 'next' || text === '→' || text === '>') {
-              return true;
-            }
-          }
-
-          return false;
-        }, currentPage);
-
-        if (hasNext && chaptersOnPage.length > 0) {
-          currentPage++;
-        } else {
-          hasMorePages = false;
-        }
-
-      } catch (error) {
-        console.error(`[Ikigai Chapters] Error en página ${currentPage}:`, error.message);
+      // Verificar si hay más páginas
+      const meta = data.meta || {};
+      if (currentPage >= (meta.last_page || 1)) {
         hasMorePages = false;
+      } else {
+        currentPage++;
       }
     }
 
-    // Ordenar capítulos por número (descendente: 172 → 1)
+    // Ordenar capítulos por número (descendente: más reciente primero)
     allChapters.sort((a, b) => {
-      const numA = parseInt(a.chapter) || 0;
-      const numB = parseInt(b.chapter) || 0;
+      const numA = parseFloat(a.chapter) || 0;
+      const numB = parseFloat(b.chapter) || 0;
       return numB - numA;
     });
 
-    // Eliminar duplicados
-    const uniqueChapters = allChapters.reduce((acc, current) => {
-      const exists = acc.find(ch => ch.chapter === current.chapter);
-      if (!exists) acc.push(current);
-      return acc;
-    }, []);
-
-    console.log(`[Ikigai Chapters] Total capítulos: ${uniqueChapters.length}`);
-
-    await browser.close();
+    console.log(`[Ikigai Chapters] Total capítulos: ${allChapters.length}`);
 
     return res.status(200).json({
-      chapters: uniqueChapters,
-      total: uniqueChapters.length
+      chapters: allChapters,
+      total: allChapters.length
     });
 
   } catch (error) {
     console.error('[Ikigai Chapters] Error:', error);
-
-    if (browser) await browser.close();
 
     return res.status(500).json({
       error: 'Error obteniendo capítulos',

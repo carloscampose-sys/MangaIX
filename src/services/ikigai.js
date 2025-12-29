@@ -189,7 +189,8 @@ export const getIkigaiChapters = async (slug) => {
         slug,
         chapter: item.chapter,
         title: item.title,
-        url: item.url
+        url: item.url,
+        chapterId: item.chapterId  // ID largo necesario para la URL de lectura
       }));
 
       console.log(`[Ikigai] Encontrados ${chapters.length} capítulos`);
@@ -209,10 +210,14 @@ export const getIkigaiChapters = async (slug) => {
  *
  * En LOCAL: No funciona (requiere API serverless)
  * En PRODUCCIÓN: Usa API serverless con Puppeteer
+ *
+ * @param {string} slug - Slug de la serie
+ * @param {string} chapter - Número del capítulo
+ * @param {string} chapterId - ID largo del capítulo (necesario para URL)
  */
-export const getIkigaiPages = async (slug, chapter) => {
+export const getIkigaiPages = async (slug, chapter, chapterId) => {
   try {
-    console.log(`[Ikigai] Obteniendo páginas del capítulo ${chapter} de ${slug}`);
+    console.log(`[Ikigai] Obteniendo páginas del capítulo ${chapter} de ${slug} (ID: ${chapterId})`);
 
     // Detectar si estamos en local
     if (isLocalhost()) {
@@ -223,7 +228,8 @@ export const getIkigaiPages = async (slug, chapter) => {
 
     const response = await axios.post('/api/ikigai/pages', {
       slug,
-      chapter
+      chapter,
+      chapterId  // ID largo necesario para construir la URL correcta
     }, {
       timeout: 30000
     });
