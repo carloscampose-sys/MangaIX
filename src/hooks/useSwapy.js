@@ -26,11 +26,18 @@ export function useSwapy(containerId, onOrderChange) {
       }
 
       try {
-        // Initialize Swapy with the container
-        const swapy = createSwapy(container, {
-          animation: 'smooth',
-          threshold: 0.5,
+        // Get all swapable items and add data-index if not present
+        const items = container.querySelectorAll('[data-swapable]');
+        items.forEach((item, index) => {
+          if (!item.getAttribute('data-index')) {
+            item.setAttribute('data-index', index);
+          }
         });
+
+        console.log('[useSwapy] Found', items.length, 'swapable items');
+
+        // Initialize Swapy with the container
+        const swapy = createSwapy(container);
 
         swapyRef.current = swapy;
         console.log('[useSwapy] Swapy initialized for container:', containerId);
