@@ -1,162 +1,101 @@
+<<<<<<< HEAD
 import { useRef, useEffect } from 'react';
 import anime from 'animejs/lib/anime.es.js';
+=======
+import React from 'react';
+import { motion } from 'framer-motion';
+>>>>>>> parent of c07bf8e (ff)
 
 export const StarAnimation = () => {
-  const containerRef = useRef(null);
-  const starsRef = useRef([]);
-  
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Generar 100 estrellas con propiedades aleatorias
+  const stars = [...Array(100)].map((_, i) => {
+    const size = Math.random() * 6 + 3; // 3-9px
+    const x = Math.random() * 100; // Posición X aleatoria (0-100%)
+    const y = Math.random() * 100; // Posición Y aleatoria (0-100%)
+    const duration = Math.random() * 1.5 + 1; // Duración del parpadeo (1-2.5s) - más rápido
+    const delay = Math.random() * 3; // Delay inicial (0-3s)
+    const opacity = Math.random() * 0.6 + 0.4; // Opacidad base (0.4-1.0)
     
-    const stars = [];
-    const count = 100;
-    
-    // Colores variados
+    // Colores variados: blanco, amarillo, dorado, azul claro
     const colors = [
-      'rgba(255, 255, 255, 1)',
-      'rgba(255, 255, 220, 1)',
-      'rgba(255, 240, 180, 1)',
-      'rgba(255, 223, 150, 1)',
-      'rgba(200, 220, 255, 1)',
+      'rgba(255, 255, 255, 1)', // Blanco puro
+      'rgba(255, 255, 220, 1)', // Amarillo muy claro
+      'rgba(255, 240, 180, 1)', // Amarillo dorado
+      'rgba(255, 223, 150, 1)', // Dorado
+      'rgba(200, 220, 255, 1)', // Azul muy claro
     ];
+    const color = colors[Math.floor(Math.random() * colors.length)];
     
-    for (let i = 0; i < count; i++) {
-      const size = Math.random() * 6 + 3;
-      const x = Math.random() * 100;
-      const y = Math.random() * 100;
-      const duration = Math.random() * 1500 + 1000;
-      const delay = Math.random() * 3000;
-      const opacity = Math.random() * 0.6 + 0.4;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const isCircle = Math.random() > 0.3;
-      const moveX = (Math.random() - 0.5) * 40;
-      const moveY = (Math.random() - 0.5) * 40;
-      
-      // Crear contenedor de estrella
-      const starContainer = document.createElement('div');
-      starContainer.className = 'absolute';
-      starContainer.style.width = `${size}px`;
-      starContainer.style.height = `${size}px`;
-      starContainer.style.left = `${x}%`;
-      starContainer.style.top = `${y}%`;
-      
-      // Crear estrella
-      const star = document.createElement('div');
-      star.className = 'w-full h-full';
-      
-      if (isCircle) {
-        star.className += ' rounded-full';
-        star.style.background = `radial-gradient(circle, ${color} 0%, ${color.replace('1)', '0.6)')} 40%, transparent 70%)`;
-        star.style.boxShadow = `0 0 ${size * 3}px ${color.replace('1)', '0.8)')}, 0 0 ${size * 1.5}px ${color.replace('1)', '0.5)')}`;
-      } else {
-        star.style.background = color;
-        star.style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
-        star.style.filter = `drop-shadow(0 0 ${size * 2}px ${color.replace('1)', '0.8)')}) drop-shadow(0 0 ${size}px ${color.replace('1)', '0.6)')})`;
-      }
-      
-      starContainer.appendChild(star);
-      containerRef.current.appendChild(starContainer);
-      stars.push(starContainer);
-      
-      // Animación con anime.js - twinkle más realista
-      anime({
-        targets: starContainer,
-        opacity: [
-          { value: opacity * 0.2, duration: duration * 0.3 },
-          { value: opacity, duration: duration * 0.2 },
-          { value: opacity * 0.5, duration: duration * 0.3 },
-          { value: opacity, duration: duration * 0.2 }
-        ],
-        scale: [
-          { value: 1, duration: duration * 0.4 },
-          { value: 1.5, duration: duration * 0.2 },
-          { value: 1.2, duration: duration * 0.2 },
-          { value: 1, duration: duration * 0.2 }
-        ],
-        translateX: [
-          { value: 0, duration: duration * 0.5 },
-          { value: moveX, duration: duration * 0.5 }
-        ],
-        translateY: [
-          { value: 0, duration: duration * 0.5 },
-          { value: moveY, duration: duration * 0.5 }
-        ],
-        duration: duration,
-        delay: delay,
-        easing: 'easeInOutSine',
-        loop: true,
-        direction: 'alternate',
-      });
-      
-      // Ocasionalmente crear estrellas fugaces
-      if (Math.random() > 0.95) {
-        setTimeout(() => {
-          createShootingStar(containerRef.current);
-        }, delay + Math.random() * 10000);
-      }
-    }
+    // Tipo de estrella: círculo o estrella de 4 puntas
+    const isCircle = Math.random() > 0.3; // 70% círculos, 30% estrellas
     
-    starsRef.current = stars;
+    // Movimiento más pronunciado
+    const moveX = (Math.random() - 0.5) * 40; // -20 a 20 (más movimiento)
+    const moveY = (Math.random() - 0.5) * 40; // -20 a 20 (más movimiento)
     
-    // Limpieza
-    return () => {
-      stars.forEach(star => {
-        if (star.parentNode) {
-          star.parentNode.removeChild(star);
-        }
-      });
+    return {
+      id: i,
+      size,
+      x,
+      y,
+      duration,
+      delay,
+      opacity,
+      color,
+      isCircle,
+      moveX,
+      moveY,
     };
-  }, []);
-  
-  // Función para crear estrellas fugaces
-  const createShootingStar = (container) => {
-    if (!container) return;
-    
-    const shootingStar = document.createElement('div');
-    shootingStar.className = 'absolute';
-    
-    const startX = Math.random() * 50 + 25; // 25-75%
-    const startY = Math.random() * 30; // 0-30%
-    const angle = Math.random() * 45 + 30; // 30-75 grados
-    const distance = Math.random() * 300 + 200;
-    
-    shootingStar.style.left = `${startX}%`;
-    shootingStar.style.top = `${startY}%`;
-    shootingStar.style.width = '3px';
-    shootingStar.style.height = '3px';
-    shootingStar.style.borderRadius = '50%';
-    shootingStar.style.background = 'white';
-    shootingStar.style.boxShadow = '0 0 20px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.8)';
-    
-    container.appendChild(shootingStar);
-    
-    // Animación de estrella fugaz
-    anime({
-      targets: shootingStar,
-      translateX: Math.cos(angle * Math.PI / 180) * distance,
-      translateY: Math.sin(angle * Math.PI / 180) * distance,
-      opacity: [1, 0],
-      scale: [1, 0.5],
-      duration: 1500,
-      easing: 'easeOutQuad',
-      complete: () => {
-        if (shootingStar.parentNode) {
-          shootingStar.parentNode.removeChild(shootingStar);
-        }
-        // Crear otra estrella fugaz después de un tiempo
-        if (Math.random() > 0.7) {
-          setTimeout(() => createShootingStar(container), Math.random() * 15000 + 5000);
-        }
-      }
-    });
-  };
-  
+  });
+
   return (
-    <div 
-      ref={containerRef}
-      className="fixed inset-0 pointer-events-none z-40 overflow-hidden"
-      aria-hidden="true"
-    />
+    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+      {stars.map((star) => (
+        <motion.div
+          key={star.id}
+          className="absolute"
+          style={{
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+          }}
+          animate={{
+            opacity: [star.opacity * 0.2, star.opacity, star.opacity * 0.2],
+            scale: [1, 1.5, 1],
+            x: [0, star.moveX, 0],
+            y: [0, star.moveY, 0],
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: 'easeInOut',
+          }}
+        >
+          {star.isCircle ? (
+            // Estrella circular con glow
+            <div
+              className="w-full h-full rounded-full"
+              style={{
+                background: `radial-gradient(circle, ${star.color} 0%, ${star.color.replace('1)', '0.6)')} 40%, transparent 70%)`,
+                boxShadow: `0 0 ${star.size * 3}px ${star.color.replace('1)', '0.8)')}, 0 0 ${star.size * 1.5}px ${star.color.replace('1)', '0.5)')}`,
+              }}
+            />
+          ) : (
+            // Estrella de 4 puntas (diamante rotado)
+            <div
+              className="w-full h-full"
+              style={{
+                background: star.color,
+                clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+                filter: `drop-shadow(0 0 ${star.size * 2}px ${star.color.replace('1)', '0.8)')}) drop-shadow(0 0 ${star.size}px ${star.color.replace('1)', '0.6)')})`,
+              }}
+            />
+          )}
+        </motion.div>
+      ))}
+    </div>
   );
 };
 

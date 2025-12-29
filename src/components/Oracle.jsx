@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
 import { unifiedGetRandom } from '../services/unified';
-import { SOURCES, DEFAULT_SOURCE, getActiveSources } from '../services/sources';
+import { DEFAULT_SOURCE, getActiveSources } from '../services/sources';
 import { getMoodsForSource, getGenresForSource } from '../services/filterService';
 import { useLibrary } from '../context/LibraryContext';
 import { Sparkles, Plus, Loader2, Coffee } from 'lucide-react';
@@ -358,29 +357,36 @@ export const Oracle = () => {
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                     {/* Moods dinámicos - cambian según la fuente seleccionada */}
-                    {currentMoods.map(mood => (
-                        <motion.button
-                            key={mood.id}
-                            whileHover={{ scale: 1.05, y: -3 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                                setSelectedMood(mood);
-                                setSelectedGenre(null);
-                                showToast(mood.toast);
-                            }}
-                            className={`
-                                flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl md:rounded-3xl transition-all border-2
-                                ${selectedMood?.id === mood.id
-                                    ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-105`
-                                    : 'bg-white dark:bg-gray-900/40 text-gray-400 border-transparent hover:border-purple-200/50'}
-                            `}
-                        >
-                            <span className="text-xl sm:text-2xl md:text-3xl">{mood.name?.split(' ')?.pop()}</span>
-                            <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 md:w-20 leading-tight">
-                                {mood.name?.split(' ')?.slice(0, -1)?.join(' ')}
-                            </span>
-                        </motion.button>
-                    ))}
+                    {currentMoods.map(mood => {
+                        // Validación defensiva para evitar errores con mood.name undefined
+                        const moodName = mood.name || '';
+                        const moodEmoji = moodName.split(' ').pop() || '✨';
+                        const moodText = moodName.split(' ').slice(0, -1).join(' ') || 'Mood';
+                        
+                        return (
+                            <motion.button
+                                key={mood.id}
+                                whileHover={{ scale: 1.05, y: -3 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                    setSelectedMood(mood);
+                                    setSelectedGenre(null);
+                                    showToast(mood.toast || 'Mood seleccionado');
+                                }}
+                                className={`
+                                    flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl md:rounded-3xl transition-all border-2
+                                    ${selectedMood?.id === mood.id
+                                        ? `bg-gradient-to-br ${mood.color} text-white border-transparent shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-105`
+                                        : 'bg-white dark:bg-gray-900/40 text-gray-400 border-transparent hover:border-purple-200/50'}
+                                `}
+                            >
+                                <span className="text-xl sm:text-2xl md:text-3xl">{moodEmoji}</span>
+                                <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-tighter w-14 sm:w-16 md:w-20 leading-tight">
+                                    {moodText}
+                                </span>
+                            </motion.button>
+                        );
+                    })}
                 </div>
             </div>
 

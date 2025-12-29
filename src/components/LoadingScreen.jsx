@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+<<<<<<< HEAD
 import anime from 'animejs/lib/anime.es.js';
 import { ANIME_EASINGS, ANIME_DURATIONS } from '../utils/animeHelpers';
+=======
+>>>>>>> parent of c07bf8e (ff)
 
 const ORBIT_EMOJIS = [
     { emoji: '👑', delay: 0 },
@@ -14,53 +17,10 @@ const ORBIT_EMOJIS = [
 
 export const LoadingScreen = () => {
     const [progress, setProgress] = useState(0);
-    
-    // Referencias para animaciones
-    const avocadoRef = useRef(null);
-    const heartRef = useRef(null);
-    const progressBarRef = useRef(null);
-    const titleRef = useRef(null);
 
     useEffect(() => {
         // Ocultar scrollbar
         document.body.style.overflow = 'hidden';
-        
-        // Animación del aguacate (breathing effect)
-        if (avocadoRef.current) {
-            anime({
-                targets: avocadoRef.current,
-                scale: [1, 1.1, 1],
-                rotate: [0, 5, -5, 0],
-                duration: 3000,
-                easing: ANIME_EASINGS.easeInOutQuad,
-                loop: true,
-            });
-        }
-        
-        // Animación del corazón (pulse más dramático)
-        if (heartRef.current) {
-            anime({
-                targets: heartRef.current,
-                scale: [1, 1.3, 1],
-                rotate: [0, 10, -10, 0],
-                duration: 1500,
-                easing: ANIME_EASINGS.easeInOutQuad,
-                loop: true,
-            });
-        }
-        
-        // Animación del título (wave effect)
-        if (titleRef.current) {
-            const letters = titleRef.current.querySelectorAll('span');
-            anime({
-                targets: letters,
-                translateY: [0, -10, 0],
-                duration: 2000,
-                delay: anime.stagger(100),
-                easing: ANIME_EASINGS.easeInOutQuad,
-                loop: true,
-            });
-        }
         
         const interval = setInterval(() => {
             setProgress(prev => {
@@ -77,18 +37,6 @@ export const LoadingScreen = () => {
             document.body.style.overflow = '';
         };
     }, []);
-    
-    // Animar la barra de progreso con anime.js
-    useEffect(() => {
-        if (progressBarRef.current) {
-            anime({
-                targets: progressBarRef.current,
-                width: `${progress}%`,
-                duration: 300,
-                easing: ANIME_EASINGS.easeOutQuad,
-            });
-        }
-    }, [progress]);
 
     return (
         <motion.div
@@ -145,20 +93,10 @@ export const LoadingScreen = () => {
                     transition={{ duration: 0.5 }}
                     className="relative flex items-center justify-center"
                 >
-                    <span 
-                        ref={avocadoRef}
-                        className="text-[80px] sm:text-[100px] md:text-[120px] filter drop-shadow-xl select-none"
-                    >
-                        🥑
-                    </span>
+                    <span className="text-[80px] sm:text-[100px] md:text-[120px] filter drop-shadow-xl select-none">🥑</span>
                     {/* Golden Heart */}
                     <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <span 
-                            ref={heartRef}
-                            className="text-2xl sm:text-3xl"
-                        >
-                            💛
-                        </span>
+                        <span className="text-2xl sm:text-3xl animate-pulse-heart">💛</span>
                     </div>
                 </motion.div>
 
@@ -188,15 +126,8 @@ export const LoadingScreen = () => {
 
             {/* Texts */}
             <div className="text-center space-y-1.5 sm:space-y-2 mb-8 sm:mb-10 relative z-10">
-                <h1 
-                    ref={titleRef}
-                    className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md"
-                >
-                    {'Santuario Potaxie'.split('').map((char, i) => (
-                        <span key={i} className="inline-block">
-                            {char === ' ' ? '\u00A0' : char}
-                        </span>
-                    ))}
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-md">
+                    Santuario Potaxie
                 </h1>
                 <p className="text-white/80 font-bold text-sm sm:text-base md:text-lg animate-pulse">
                     Cargando Magia Potaxie...
@@ -206,10 +137,10 @@ export const LoadingScreen = () => {
             {/* Progress Bar Container */}
             <div className="w-full max-w-[200px] sm:max-w-xs relative p-0.5 sm:p-1 bg-white/30 backdrop-blur-sm rounded-full border border-white/40 shadow-inner z-10">
                 <div className="w-full h-3 sm:h-4 bg-transparent rounded-full overflow-hidden">
-                    <div
-                        ref={progressBarRef}
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
                         className="h-full bg-white/60 progress-striped rounded-full"
-                        style={{ width: '0%' }}
                     />
                 </div>
 
