@@ -5,12 +5,14 @@
 
 import * as tumanga from './tumanga';
 import * as manhwaweb from './manhwaweb';
+import * as ikigai from './ikigai';
 import { getSourceById } from './sources';
 
 // Mapa de servicios por fuente
 const serviceMap = {
     tumanga,
-    manhwaweb
+    manhwaweb,
+    ikigai
 };
 
 /**
@@ -40,6 +42,9 @@ export async function unifiedSearch(query, filters, source, page = 1) {
             const results = await service.searchManhwaWeb(query, filters, page);
             // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
             return { results, hasMore: results.length >= 30 };
+        } else if (source === 'ikigai') {
+            const results = await service.searchIkigai(query, filters, page);
+            return { results, hasMore: results.length > 0 };
         }
 
         return { results: [], hasMore: false };
@@ -60,6 +65,8 @@ export async function unifiedGetDetails(slug, source) {
             return await service.getTuMangaDetails(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebDetails(slug);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiDetails(slug);
         }
 
         return null;
@@ -80,6 +87,8 @@ export async function unifiedGetChapters(slug, source) {
             return await service.getTuMangaChapters(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebChapters(slug);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiChapters(slug);
         }
 
         return [];
@@ -100,6 +109,8 @@ export async function unifiedGetPages(slug, chapter, source, chapterUrl = null) 
             return await service.getTuMangaPages(slug, chapter);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
+        } else if (source === 'ikigai') {
+            return await service.getIkigaiPages(slug, chapter);
         }
 
         return [];
@@ -120,6 +131,8 @@ export async function unifiedGetRandom(genreIds, source) {
             return await service.getRandomManga(genreIds);
         } else if (source === 'manhwaweb') {
             return await service.getRandomManhwaWeb(genreIds);
+        } else if (source === 'ikigai') {
+            return await service.getRandomIkigai(genreIds);
         }
 
         return null;

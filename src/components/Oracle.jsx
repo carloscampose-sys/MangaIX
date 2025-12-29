@@ -30,6 +30,13 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
         showToast(randomCopy);
 
         const rect = e.target.getBoundingClientRect();
+        // Colores de confetti según fuente seleccionada
+        const confettiColors = selectedSource === 'ikigai'
+          ? ['#A855F7', '#EC4899', '#F472B6'] // Púrpura/Rosa para Ikigai
+          : selectedSource === 'manhwaweb'
+            ? ['#10B981', '#14B8A6', '#06B6D4'] // Verde/Teal para ManhwaWeb
+            : ['#A7D08C', '#FFD700', '#FFFFFF']; // Azul/Púrpura para TuManga
+
         confetti({
             particleCount: 50,
             spread: 60,
@@ -37,7 +44,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                 x: rect.left / window.innerWidth,
                 y: rect.top / window.innerHeight
             },
-            colors: ['#A7D08C', '#FFD700', '#FFFFFF'],
+            colors: confettiColors,
             zIndex: 3000
         });
     };
@@ -155,12 +162,18 @@ export const Oracle = () => {
             if (result) {
                 setRecommendation(result);
                 console.log('[Oracle] Recomendación obtenida:', result.title);
-                // Confetti de celebración
+                // Confetti de celebración con colores según fuente
+                const confettiColors = selectedSource === 'ikigai'
+                  ? ['#A855F7', '#EC4899', '#F472B6'] // Púrpura/Rosa para Ikigai
+                  : selectedSource === 'manhwaweb'
+                    ? ['#10B981', '#14B8A6', '#06B6D4'] // Verde/Teal para ManhwaWeb
+                    : ['#FFD700', '#00BFFF', '#7B68EE']; // Azul/Púrpura para TuManga
+
                 confetti({
                     particleCount: 100,
                     spread: 70,
                     origin: { y: 0.6 },
-                    colors: theme === 'dark' ? ['#FFD700', '#00BFFF', '#7B68EE'] : ['#A7D08C', '#FFFFFF', '#4FD1C5']
+                    colors: confettiColors
                 });
             } else {
                 console.warn('[Oracle] No se encontró recomendación');

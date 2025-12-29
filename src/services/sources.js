@@ -30,12 +30,12 @@ export const SOURCES = {
         id: 'ikigai',
         name: 'Ikigai',
         icon: '🌸',
-        baseUrl: 'https://viralikigai.ozoviral.xyz',
+        baseUrl: 'https://viralikigai.eurofiyati.online',
         color: 'bg-pink-500',
         hoverColor: 'hover:bg-pink-600',
         textColor: 'text-pink-500',
         features: ['search', 'details', 'chapters', 'read', 'random'],
-        status: 'disabled'
+        status: 'active'
     }
 };
 

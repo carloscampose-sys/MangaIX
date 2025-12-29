@@ -46,6 +46,10 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedSortBy, setSelectedSortBy] = useState('alfabetico');  // Por defecto: alfabético
   const [selectedSortOrder, setSelectedSortOrder] = useState('desc');   // Por defecto: descendente
 
+  // Filtros específicos de Ikigai (Tipos, Estados)
+  const [selectedTypes, setSelectedTypes] = useState([]);  // Array de tipos (Comic/Novela)
+  const [selectedStatuses, setSelectedStatuses] = useState([]);  // Array de estados
+
   // Estados de ordenamiento específicos de TuManga
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
   const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
@@ -90,7 +94,7 @@ const MainApp = ({ userName, userGender }) => {
     setSourceOrder(sourceIds);
     saveSourceOrder(sourceIds);
     showToast('✨ Orden de fuentes actualizado');
-  }, []);
+  }, [showToast]);
 
   useSwapy('source-buttons-container', handleSourceOrderChange);
 
@@ -186,12 +190,20 @@ const MainApp = ({ userName, userGender }) => {
       return;
     }
 
+    // Para Ikigai, permitir búsqueda solo con filtros (sin searchTerm)
+    if (selectedSource === 'ikigai' && !searchTerm && selectedGenres.length === 0 && selectedTypes.length === 0 && selectedStatuses.length === 0) {
+      console.log('[App] Ikigai: No hay query ni filtros, no se ejecuta búsqueda');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Toast especial para ManhwaWeb (tarda más)
+      // Toast especial para ManhwaWeb/Ikigai (tarda más)
       if (selectedSource === 'manhwaweb') {
         showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
+      } else if (selectedSource === 'ikigai') {
+        showToast('🌸 Ikigai puede tardar 30-60s... Ten paciencia 🌸');
       }
 
       // Construir filtros según la fuente seleccionada
@@ -222,6 +234,24 @@ const MainApp = ({ userName, userGender }) => {
           demographic: selectedDemographic,
           sortBy: selectedSortBy,
           sortOrder: selectedSortOrder
+        };
+      } else if (selectedSource === 'ikigai') {
+        // Para Ikigai, usar genreValues del mood si está seleccionado
+        const selectedGenreValues = selectedMood
+          ? selectedMood.genreValues  // Usar valores pre-mapeados
+          : selectedGenres.map(genreId => {
+              const genre = currentFilters.genres.find(g => g.id === genreId);
+              return genre ? genre.value : genreId;
+            });
+
+        console.log('[App] Ikigai - Genre values:', selectedGenreValues);
+
+        filters = {
+          genres: selectedGenreValues,
+          types: selectedTypes,
+          statuses: selectedStatuses,
+          sortBy: selectedSortBy,
+          page: pageToUse - 1
         };
       }
       
@@ -418,6 +448,9 @@ const MainApp = ({ userName, userGender }) => {
     setSelectedStatus('');
     setSelectedErotic('');
     setSelectedDemographic('');
+    // Limpiar filtros de Ikigai también
+    setSelectedTypes([]);
+    setSelectedStatuses([]);
     setSelectedSortBy('alfabetico');   // Por defecto: alfabético
     setSelectedSortOrder('desc');      // Por defecto: descendente
     // Resetear ordenamiento de TuManga
@@ -539,7 +572,7 @@ const MainApp = ({ userName, userGender }) => {
                       if (!source) return null;
                       
                       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                      const isDisabled = (isLocal && source.id === 'manhwaweb') || source.status === 'disabled';
+                      const isDisabled = (isLocal && (source.id === 'manhwaweb' || source.id === 'ikigai')) || source.status === 'disabled';
 
                       return (
                         <button
@@ -562,10 +595,14 @@ const MainApp = ({ userName, userGender }) => {
                             setSearchResults([]);
                             setSelectedGenres([]);
                             setSelectedMood(null);
+                            // Resetear filtros ManhwaWeb
                             setSelectedType('');
                             setSelectedStatus('');
                             setSelectedErotic('');
                             setSelectedDemographic('');
+                            // Resetear filtros Ikigai
+                            setSelectedTypes([]);
+                            setSelectedStatuses([]);
                             setSelectedSortBy('alfabetico');   // Por defecto: alfabético
                             setSelectedSortOrder('desc');      // Por defecto: descendente
                             // Resetear ordenamiento de TuManga
@@ -912,6 +949,95 @@ const MainApp = ({ userName, userGender }) => {
                                   </select>
                                 </div>
                               </div>
+                            </>
+                          )}
+
+                          {/* Filtros Avanzados (solo Ikigai) */}
+                          {selectedSource === 'ikigai' && currentFilters.hasAdvancedFilters && (
+                            <>
+                              {/* Tipos (Comic/Novela) */}
+                              {currentFilters.types && currentFilters.types.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Tipo</h4>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {currentFilters.types.map(type => (
+                                      <button
+                                        key={type.id}
+                                        onClick={() => {
+                                          setSelectedMood(null); // Reset mood
+                                          setSelectedTypes(prev =>
+                                            prev.includes(type.value) ? prev.filter(t => t !== type.value) : [...prev, type.value]
+                                          );
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                          selectedTypes.includes(type.value)
+                                            ? 'bg-pink-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-pink-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {type.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Estados */}
+                              {currentFilters.statuses && currentFilters.statuses.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Estado</h4>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {currentFilters.statuses.map(status => (
+                                      <button
+                                        key={status.id}
+                                        onClick={() => {
+                                          setSelectedMood(null); // Reset mood
+                                          setSelectedStatuses(prev =>
+                                            prev.includes(status.value) ? prev.filter(s => s !== status.value) : [...prev, status.value]
+                                          );
+                                        }}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                                          selectedStatuses.includes(status.value)
+                                            ? 'bg-green-500 text-white shadow-lg'
+                                            : 'bg-white/50 dark:bg-gray-900/50 text-gray-400 hover:bg-green-100 dark:hover:bg-gray-800'
+                                        }`}
+                                      >
+                                        {status.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Ordenar (solo Ikigai) */}
+                              {currentFilters.sortOptions && currentFilters.sortOptions.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3 ml-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Ordenar</h4>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <select
+                                      value={selectedSortBy}
+                                      onChange={(e) => setSelectedSortBy(e.target.value)}
+                                      className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-white/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-pink-500 outline-none"
+                                    >
+                                      <option value="">Todos</option>
+                                      {currentFilters.sortOptions.map(sort => (
+                                        <option key={sort.value} value={sort.value}>
+                                          {sort.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              )}
                             </>
                           )}
 
