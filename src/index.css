@@ -509,3 +509,61 @@ body.christmas-mode {
 .christmas-mode .light-particles {
   display: none;
 }
+
+
+/* ========== SWAPY DRAG AND DROP STYLES ========== */
+
+/* Base draggable element styling */
+[data-swapable] {
+  cursor: grab;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+[data-swapable]:active {
+  cursor: grabbing;
+}
+
+/* Visual feedback during drag */
+[data-swapable].swapping {
+  opacity: 0.6;
+  transform: scale(0.95);
+  box-shadow: 0 0 15px rgba(163, 230, 53, 0.4);
+}
+
+/* Pulse animation after swap completes */
+[data-swapable].swapped {
+  animation: swapPulse 0.3s ease;
+}
+
+@keyframes swapPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Hover state for draggable elements */
+[data-swapable]:hover:not(.swapping) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark [data-swapable]:hover:not(.swapping) {
+  box-shadow: 0 4px 12px rgba(163, 230, 53, 0.2);
+}
+
+/* Container for draggable items */
+#source-buttons-container {
+  transition: all 0.3s ease;
+}
+
+/* Smooth transitions for reordering */
+#source-buttons-container button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -12,7 +12,9 @@ import { SearchLoader } from './components/SearchLoader';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
 import { unifiedSearch, unifiedGetDetails } from './services/unified';
-import { SOURCES, DEFAULT_SOURCE, getActiveSources } from './services/sources';
+import { SOURCES, DEFAULT_SOURCE, getActiveSources, getSourceById } from './services/sources';
+import { loadSourceOrder, saveSourceOrder } from './services/sourceOrderService';
+import { useSwapy } from './hooks/useSwapy';
 // Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
 import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
@@ -33,6 +35,7 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
+  const [sourceOrder, setSourceOrder] = useState([]);
   
   // Filtros específicos de ManhwaWeb (Tipo, Estado, Erótico, Demografía, Ordenar)
   // Estos estados solo se usan cuando selectedSource === 'manhwaweb'
@@ -84,6 +87,25 @@ const MainApp = ({ userName, userGender }) => {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Load source order from localStorage on mount
+  useEffect(() => {
+    const savedOrder = loadSourceOrder();
+    setSourceOrder(savedOrder);
+    console.log('[App] Source order loaded:', savedOrder);
+  }, []);
+
+  // Initialize Swapy for source button reordering
+  const handleSourceOrderChange = (newOrder) => {
+    console.log('[App] Source order changed:', newOrder);
+    // Extract source IDs from element IDs (format: "source-{sourceId}")
+    const sourceIds = newOrder.map(id => id.replace('source-', ''));
+    setSourceOrder(sourceIds);
+    saveSourceOrder(sourceIds);
+    showToast('✨ Orden de fuentes actualizado');
+  };
+
+  useSwapy('source-buttons-container', handleSourceOrderChange);
 
   // REMOVIDO: El useEffect que causaba problemas
   // Ahora goToNextPage y goToPreviousPage llaman directamente a handleSearch()
@@ -542,15 +564,20 @@ const MainApp = ({ userName, userGender }) => {
                 </div>
 
                 <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12 px-1">
-                  {/* Selector de Fuente */}
-                  <div className="flex justify-center gap-2 sm:gap-3 mb-4">
-                    {getActiveSources().map(source => {
+                  {/* Selector de Fuente - Draggable con Swapy */}
+                  <div id="source-buttons-container" className="flex justify-center gap-2 sm:gap-3 mb-4">
+                    {sourceOrder.map(sourceId => {
+                      const source = getSourceById(sourceId);
+                      if (!source) return null;
+                      
                       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                       const isDisabled = isLocal && (source.id === 'manhwaweb' || source.id === 'ikigai');
 
                       return (
                         <button
                           key={source.id}
+                          id={`source-${source.id}`}
+                          data-swapable
                           type="button"
                           onClick={() => {
                             if (isDisabled) {
@@ -590,7 +617,7 @@ const MainApp = ({ userName, userGender }) => {
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }
                           `}
-                          title={isDisabled ? 'Solo disponible en Vercel' : ''}
+                          title={isDisabled ? 'Solo disponible en Vercel' : 'Arrastra para reordenar'}
                         >
                           <span className="text-base sm:text-lg">{source.icon}</span>
                           <span className="hidden sm:inline">{source.name}</span>

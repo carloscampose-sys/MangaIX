@@ -1,7 +1,7 @@
 // ========================================
 // CONFIGURACIÓN
 // ========================================
-const IKIGAI_BASE_URL = 'https://viralikigai.ozoviral.xyz';
+const IKIGAI_BASE_URL = 'https://viralikigai.eurofiyati.online';
 
 /**
  * Detecta el entorno de ejecución
@@ -154,6 +154,48 @@ export async function getIkigaiChapters(slug, progressive = true) {
 }
 
 /**
+ * Obtiene capítulos de una página específica
+ * @param {string} slug - Slug de la obra
+ * @param {number} chapterPage - Número de página de capítulos (default: 1)
+ * @returns {Promise<{chapters: Array, pagesDetected: number, pagesProcessed: number}>}
+ */
+export async function getIkigaiChaptersPage(slug, chapterPage = 1) {
+  const { isLocal, apiUrl } = detectEnvironment();
+
+  if (isLocal) {
+    console.warn('[Ikigai] No disponible en localhost');
+    return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
+  }
+
+  try {
+    console.log('[Ikigai] Obteniendo página', chapterPage, 'de capítulos de:', slug);
+
+    const response = await fetch(`${apiUrl}/api/ikigai/chapters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, chapterPage })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log(`[Ikigai] ${data.chapters?.length || 0} capítulos en página ${chapterPage}`);
+
+    return {
+      chapters: data.chapters || [],
+      pagesDetected: data.pagesDetected || 1,
+      pagesProcessed: data.pagesProcessed || 1
+    };
+  } catch (error) {
+    console.error('[Ikigai] Error obteniendo página de capítulos:', error);
+    return { chapters: [], pagesDetected: 1, pagesProcessed: 1 };
+  }
+}
+
+/**
  * Obtiene todos los capítulos de una obra (modo completo, sin carga progresiva)
  * @param {string} slug - Slug de la obra
  * @returns {Promise<Array>} - Array de capítulos completo
@@ -279,6 +321,7 @@ export default {
   searchIkigai,
   getIkigaiDetails,
   getIkigaiChapters,
+  getIkigaiChaptersPage,
   getIkigaiChaptersComplete,
   getIkigaiPages,
   getRandomIkigai
