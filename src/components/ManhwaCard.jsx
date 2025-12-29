@@ -33,6 +33,11 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
     const incrementIntervalRef = useRef(null);
     const incrementTimeoutRef = useRef(null);
 
+    // Sincronizar chaptersInput con manga.chaptersRead cuando cambie
+    useEffect(() => {
+        setChaptersInput(manga?.chaptersRead || 0);
+    }, [manga?.chaptersRead]);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -57,8 +62,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
     // Función para incrementar capítulo
     const incrementChapter = () => {
-        const newVal = (parseInt(chaptersInput) || 0) + 1;
-        setChaptersInput(newVal);
+        // Solo actualizar el contexto, el useEffect sincronizará chaptersInput
         updateProgress(manga.id, 1);
     };
 

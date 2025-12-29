@@ -15,16 +15,27 @@ const incrementIntervalRef = useRef(null);
 const incrementTimeoutRef = useRef(null);
 ```
 
-#### 2. Función de Incremento Reutilizable
+#### 2. Sincronización con el Contexto
+```javascript
+// Sincronizar chaptersInput con manga.chaptersRead cuando cambie
+useEffect(() => {
+    setChaptersInput(manga?.chaptersRead || 0);
+}, [manga?.chaptersRead]);
+```
+
+**Importante**: Este `useEffect` es crucial para que el input se actualice visualmente. Cuando `updateProgress` actualiza el contexto de la biblioteca, este efecto sincroniza el estado local del input con el nuevo valor.
+
+#### 3. Función de Incremento Simplificada
 ```javascript
 const incrementChapter = () => {
-    const newVal = (parseInt(chaptersInput) || 0) + 1;
-    setChaptersInput(newVal);
+    // Solo actualizar el contexto, el useEffect sincronizará chaptersInput
     updateProgress(manga.id, 1);
 };
 ```
 
-#### 3. Handlers para Mantener Presionado
+**Nota**: La función ya no actualiza `chaptersInput` directamente. En su lugar, actualiza el contexto y deja que el `useEffect` sincronice el valor automáticamente.
+
+#### 4. Handlers para Mantener Presionado
 
 **handleIncrementMouseDown**:
 - Incremento inmediato al presionar
@@ -38,7 +49,7 @@ const incrementChapter = () => {
 **handleIncrementMouseLeave**:
 - Detiene el auto-incremento si el mouse sale del botón
 
-#### 4. Limpieza de Recursos
+#### 5. Limpieza de Recursos
 ```javascript
 useEffect(() => {
     return () => {
@@ -52,7 +63,7 @@ useEffect(() => {
 }, []);
 ```
 
-#### 5. Botón Actualizado con Eventos
+#### 6. Botón Actualizado con Eventos
 ```javascript
 <button
     type="button"
@@ -80,6 +91,15 @@ useEffect(() => {
   - Delay de 500ms antes de auto-incremento
   - Auto-incremento cada 150ms mientras se mantiene presionado
   - Se detiene al soltar el botón
+
+### ✅ Sincronización de Estado
+- **useEffect de sincronización**: El input se actualiza automáticamente cuando el contexto cambia
+- **Flujo de datos unidireccional**: 
+  1. Botón "+1" llama a `updateProgress()`
+  2. `updateProgress()` actualiza el contexto de la biblioteca
+  3. `useEffect` detecta el cambio en `manga.chaptersRead`
+  4. El input se actualiza visualmente con el nuevo valor
+- **Sin race conditions**: El estado local siempre refleja el estado del contexto
 
 ### ✅ Responsive y Touch Support
 - **Desktop**: Funciona con mouse (mouseDown, mouseUp, mouseLeave)
