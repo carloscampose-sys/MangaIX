@@ -9,6 +9,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { PageLoader } from './components/PageLoader';
 import { SearchLoader } from './components/SearchLoader';
+import { Pagination } from './components/Pagination';
 
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
@@ -74,6 +75,10 @@ const MainApp = ({ userName, userGender }) => {
   // Library State for filtering
   const { library } = useLibrary();
   const [libraryFilter, setLibraryFilter] = useState('all');
+  
+  // Library Pagination State
+  const [libraryCurrentPage, setLibraryCurrentPage] = useState(1);
+  const LIBRARY_ITEMS_PER_PAGE = 10;
 
   const PAGES_ORDER = ['home', 'library', 'oracle'];
   const [direction, setDirection] = useState(0);
@@ -482,6 +487,35 @@ const MainApp = ({ userName, userGender }) => {
     if (libraryFilter === 'all') return true;
     return m.status === libraryFilter;
   });
+
+  // Calcular paginación de biblioteca
+  const libraryTotalPages = Math.ceil(filteredLibrary.length / LIBRARY_ITEMS_PER_PAGE);
+  const libraryStartIndex = (libraryCurrentPage - 1) * LIBRARY_ITEMS_PER_PAGE;
+  const libraryEndIndex = libraryStartIndex + LIBRARY_ITEMS_PER_PAGE;
+  const currentLibraryItems = filteredLibrary.slice(libraryStartIndex, libraryEndIndex);
+
+  // Handler para cambio de página en biblioteca
+  const handleLibraryPageChange = (page) => {
+    setLibraryCurrentPage(page);
+    // Scroll suave al inicio de la página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Guardar en sessionStorage
+    sessionStorage.setItem('libraryPage', page);
+  };
+
+  // Cargar página guardada al iniciar
+  useEffect(() => {
+    const savedPage = sessionStorage.getItem('libraryPage');
+    if (savedPage) {
+      setLibraryCurrentPage(parseInt(savedPage));
+    }
+  }, []);
+
+  // Resetear página cuando cambia el filtro
+  useEffect(() => {
+    setLibraryCurrentPage(1);
+    sessionStorage.removeItem('libraryPage');
+  }, [libraryFilter]);
 
   return (
     <div className="min-h-screen pb-24 md:pb-32 relative">
@@ -1306,12 +1340,40 @@ const MainApp = ({ userName, userGender }) => {
                     <p className="text-gray-400 text-sm sm:text-base">¡Ve a buscar algo para devorar!</p>
                     <button onClick={() => navigateToPage('home')} className="mt-4 text-potaxie-green font-bold hover:underline text-sm sm:text-base">Ir al Buscador</button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-                    {filteredLibrary.map(manga => (
-                      <ManhwaCard key={manga.id} manga={manga} inLibrary={true} />
-                    ))}
+                ) : filteredLibrary.length === 0 ? (
+                  <div className="text-center py-12 sm:py-16 md:py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4">
+                    <span className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4 block">🔍</span>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-400">No hay obras con este filtro</h3>
+                    <p className="text-gray-400 text-sm sm:text-base">Prueba con otro filtro</p>
                   </div>
+                ) : (
+                  <>
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={libraryCurrentPage}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
+                      >
+                        {currentLibraryItems.map(manga => (
+                          <ManhwaCard key={manga.id} manga={manga} inLibrary={true} />
+                        ))}
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Paginación - Solo mostrar si hay más de 10 obras */}
+                    {filteredLibrary.length > LIBRARY_ITEMS_PER_PAGE && (
+                      <Pagination
+                        currentPage={libraryCurrentPage}
+                        totalPages={libraryTotalPages}
+                        onPageChange={handleLibraryPageChange}
+                        totalItems={filteredLibrary.length}
+                        itemsPerPage={LIBRARY_ITEMS_PER_PAGE}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             )}
