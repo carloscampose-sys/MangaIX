@@ -52,11 +52,11 @@ Este plan implementa un sistema de guardado automático del progreso de lectura 
   - **Property 6: Validación de Datos**
   - **Validates: Requirements 5.4**
 
-- [ ] 2. Checkpoint - Verificar que el servicio funciona correctamente
+- [x] 2. Checkpoint - Verificar que el servicio funciona correctamente
   - Asegurar que todos los tests pasen
   - Preguntar al usuario si hay dudas
 
-- [ ] 3. Integrar ReadingProgressService con el componente Reader
+- [x] 3. Integrar ReadingProgressService con el componente Reader
   - Importar `readingProgressService` en `src/components/Reader.jsx`
   - Agregar props `mangaId` y `chapterId` al componente Reader
   - Agregar estado `hasRestoredProgress` para controlar la restauración inicial
@@ -67,7 +67,7 @@ Este plan implementa un sistema de guardado automático del progreso de lectura 
   - Modificar `handlePreviousChapter` para limpiar progreso antes de cambiar
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2, 3.3_
 
-- [ ] 4. Implementar notificación visual de restauración
+- [x] 4. Implementar notificación visual de restauración
   - Importar `useToast` en el componente Reader
   - Mostrar notificación cuando se restaura progreso: "Continuando desde página X"
   - Configurar notificación para desaparecer después de 3 segundos
@@ -82,13 +82,13 @@ Este plan implementa un sistema de guardado automático del progreso de lectura 
   - Test scroll automático a página restaurada
   - _Requirements: 2.1, 2.2, 2.4, 3.2, 4.1_
 
-- [ ] 5. Actualizar componentes que usan Reader para pasar mangaId y chapterId
+- [x] 5. Actualizar componentes que usan Reader para pasar mangaId y chapterId
   - Identificar todos los lugares donde se usa el componente Reader
   - Agregar props `mangaId` y `chapterId` en cada uso
   - Verificar que los IDs se pasen correctamente desde el contexto/estado
   - _Requirements: 1.3, 1.4_
 
-- [ ] 6. Checkpoint final - Verificar funcionalidad completa
+- [x] 6. Checkpoint final - Verificar funcionalidad completa
   - Asegurar que todos los tests pasen
   - Verificar manualmente que el progreso se guarda y restaura correctamente
   - Verificar que la notificación se muestra correctamente
