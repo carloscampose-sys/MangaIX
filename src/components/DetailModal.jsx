@@ -458,6 +458,7 @@ export const DetailModal = ({
                             pages={readerPages}
                             title={manga.title}
                             chapter={selectedChapter}
+                            manga={manga}
                             onClose={() => {
                                 setReaderPages(null);
                                 setCurrentChapterIndex(-1);

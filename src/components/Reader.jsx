@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
+import { useToast } from '../context/ToastContext';
+import confetti from 'canvas-confetti';
 
 export const Reader = ({ 
     pages, 
@@ -11,11 +14,17 @@ export const Reader = ({
     onPreviousChapter = null,
     hasNextChapter = false,
     hasPreviousChapter = false,
-    isLoadingChapter = false
+    isLoadingChapter = false,
+    manga = null  // Agregar manga para poder guardar progreso
 }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [fullWidth, setFullWidth] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [justSaved, setJustSaved] = useState(false);
     const scrollContainerRef = useRef(null);
+    
+    const { library, updateProgress } = useLibrary();
+    const { showToast } = useToast();
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -60,6 +69,62 @@ export const Reader = ({
 
     const prev = () => {
         if (currentPage > 0) setCurrentPage(v => v - 1);
+    };
+
+    // Función para guardar progreso
+    const handleSaveProgress = async () => {
+        if (!manga) {
+            showToast("⚠️ No se pudo identificar la obra");
+            return;
+        }
+
+        // Verificar si está en biblioteca
+        const mangaInLibrary = library.find(m => m.id === manga.id);
+        
+        if (!mangaInLibrary) {
+            showToast("⚠️ Añade esta obra a tu biblioteca primero 📚");
+            return;
+        }
+        
+        // Verificar si ya fue leído
+        const currentChapterNum = parseInt(chapter);
+        if (mangaInLibrary.chaptersRead >= currentChapterNum) {
+            showToast("ℹ️ Ya marcaste este capítulo como leído ✓");
+            return;
+        }
+        
+        // Guardar progreso
+        setIsSaving(true);
+        
+        try {
+            // Calcular cuántos capítulos incrementar
+            const chaptersToAdd = currentChapterNum - (mangaInLibrary.chaptersRead || 0);
+            
+            updateProgress(manga.id, chaptersToAdd);
+            
+            // Feedback visual
+            setJustSaved(true);
+            showToast("✨ Progreso guardado! +1 capítulo devorado 🥑");
+            
+            // Confetti
+            confetti({
+                particleCount: 50,
+                spread: 60,
+                origin: { y: 0.8 },
+                colors: ['#A7D08C', '#FFD700', '#FFFFFF']
+            });
+            
+            // Resetear después de 2 segundos
+            setTimeout(() => {
+                setJustSaved(false);
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error guardando progreso:', error);
+            showToast("❌ Error al guardar. Intenta de nuevo.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -124,40 +189,84 @@ export const Reader = ({
                     </div>
                     
                     {/* Navegación de capítulos */}
-                    <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full max-w-2xl">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full max-w-3xl">
                         {/* Botón Capítulo Anterior */}
                         {hasPreviousChapter && onPreviousChapter && (
                             <button
                                 onClick={onPreviousChapter}
                                 disabled={isLoadingChapter}
-                                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gray-700 hover:bg-gray-600 text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                                className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 bg-gray-700 hover:bg-gray-600 text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-xs sm:text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
                             >
-                                <ArrowLeft size={20} />
-                                <span className="hidden sm:inline">CAPÍTULO ANTERIOR</span>
-                                <span className="sm:hidden">ANTERIOR</span>
+                                <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
+                                <span className="hidden sm:inline">ANTERIOR</span>
+                                <span className="sm:hidden">◀</span>
                             </button>
                         )}
                         
                         {/* Botón Volver al Santuario */}
                         <button
                             onClick={onClose}
-                            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-white text-black font-black rounded-xl sm:rounded-2xl hover:scale-105 transition-transform shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 bg-white text-black font-black rounded-xl sm:rounded-2xl hover:scale-105 transition-transform shadow-2xl text-xs sm:text-sm flex items-center justify-center gap-2"
                         >
-                            <Home size={20} />
-                            <span className="hidden sm:inline">VOLVER AL SANTUARIO</span>
-                            <span className="sm:hidden">INICIO</span>
+                            <Home size={18} className="sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">MENÚ</span>
+                            <span className="sm:hidden">📚</span>
                         </button>
+                        
+                        {/* NUEVO: Botón Guardar Progreso */}
+                        {manga && (
+                            <button
+                                onClick={handleSaveProgress}
+                                disabled={isSaving || justSaved}
+                                className={`
+                                    w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm
+                                    flex items-center justify-center gap-2 transition-all shadow-2xl
+                                    ${justSaved 
+                                        ? 'bg-green-600 text-white' 
+                                        : isSaving
+                                            ? 'bg-potaxie-green/70 text-white cursor-wait'
+                                            : 'bg-potaxie-green hover:bg-[#A3E635] text-white hover:scale-105 active:scale-95'
+                                    }
+                                    ${(isSaving || justSaved) && 'cursor-not-allowed'}
+                                `}
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        >
+                                            <Save size={18} className="sm:w-5 sm:h-5" />
+                                        </motion.div>
+                                        <span className="hidden sm:inline">GUARDANDO...</span>
+                                        <span className="sm:hidden">💾</span>
+                                    </>
+                                ) : justSaved ? (
+                                    <>
+                                        <Check size={18} className="sm:w-5 sm:h-5" />
+                                        <span className="hidden sm:inline">¡GUARDADO!</span>
+                                        <span className="sm:hidden">✓</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={18} className="sm:w-5 sm:h-5" />
+                                        <span className="hidden sm:inline">GUARDAR</span>
+                                        <span className="sm:hidden">💾</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
                         
                         {/* Botón Siguiente Capítulo */}
                         {hasNextChapter && onNextChapter && (
                             <button
                                 onClick={onNextChapter}
                                 disabled={isLoadingChapter}
-                                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-potaxie-green hover:bg-[#A3E635] text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                                className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 bg-potaxie-green hover:bg-[#A3E635] text-white font-black rounded-xl sm:rounded-2xl transition-all shadow-2xl text-xs sm:text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
                             >
-                                <span className="hidden sm:inline">SIGUIENTE CAPÍTULO</span>
-                                <span className="sm:hidden">SIGUIENTE</span>
-                                <ArrowRight size={20} />
+                                <span className="hidden sm:inline">SIGUIENTE</span>
+                                <span className="sm:hidden">▶</span>
+                                <ArrowRight size={18} className="sm:w-5 sm:h-5" />
                             </button>
                         )}
                     </div>
