@@ -455,6 +455,7 @@ export const DetailModal = ({
 
                     return (
                         <Reader
+                            key={`${manga.slug}-${selectedChapter}`}
                             pages={readerPages}
                             title={manga.title}
                             chapter={selectedChapter}

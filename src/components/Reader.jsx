@@ -22,6 +22,7 @@ export const Reader = ({
     const [fullWidth, setFullWidth] = useState(true);
     const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
     const scrollContainerRef = useRef(null);
+    const isChangingChapterRef = useRef(false); // Para rastrear si estamos cambiando activamente de capítulo
     
     const { library, updateProgress } = useLibrary();
     const { showToast } = useToast();
@@ -82,30 +83,36 @@ export const Reader = ({
         const container = scrollContainerRef.current;
         if (!container || !pages || pages.length === 0) return;
 
+        // Ignorar scroll mientras estamos cambiando de capítulo
+        if (isChangingChapterRef.current) return;
+
         const handleScroll = () => {
+            // Ignorar scroll mientras estamos cambiando de capítulo
+            if (isChangingChapterRef.current) return;
+
             const containerRect = container.getBoundingClientRect();
             const containerCenter = containerRect.top + containerRect.height / 2;
-            
+
             // Obtener solo los divs que contienen imágenes de páginas
             const pageContainers = Array.from(container.children).filter(child => {
                 return child.querySelector('img') && child.querySelector('img').alt?.startsWith('Página');
             });
-            
+
             // Encontrar qué página está más cerca del centro del viewport
             let closestPage = 0;
             let minDistance = Infinity;
-            
+
             pageContainers.forEach((pageDiv, index) => {
                 const rect = pageDiv.getBoundingClientRect();
                 const pageCenter = rect.top + rect.height / 2;
                 const distance = Math.abs(pageCenter - containerCenter);
-                
+
                 if (distance < minDistance) {
                     minDistance = distance;
                     closestPage = index;
                 }
             });
-            
+
             if (closestPage !== currentPage) {
                 setCurrentPage(closestPage);
             }
@@ -114,35 +121,41 @@ export const Reader = ({
         // Ejecutar inmediatamente y luego en cada scroll
         handleScroll();
         container.addEventListener('scroll', handleScroll, { passive: true });
-        
+
         return () => container.removeEventListener('scroll', handleScroll);
     }, [pages, currentPage]);
 
     // Scroll automático al inicio cuando cambian las páginas (nuevo capítulo)
     useEffect(() => {
-        if (pages && pages.length > 0 && scrollContainerRef.current) {
-            // Solo resetear si no estamos restaurando progreso
-            if (!hasRestoredProgress) {
-                // Reset indicador de página
-                setCurrentPage(0);
-                
-                // Scroll inmediato para evitar que el usuario vea la posición anterior
-                scrollContainerRef.current.scrollTop = 0;
-                
-                // Pequeño delay para asegurar que las imágenes se cargaron
-                const timer = setTimeout(() => {
-                    if (scrollContainerRef.current) {
-                        scrollContainerRef.current.scrollTo({
-                            top: 0,
-                            behavior: 'smooth'
-                        });
-                    }
-                }, 100);
-                
-                return () => clearTimeout(timer);
+        if (!pages || pages.length === 0 || !scrollContainerRef.current) return;
+
+        // Solo resetear si no estamos restaurando progreso
+        if (hasRestoredProgress) return;
+
+        // Marcar que estamos cambiando de capítulo
+        isChangingChapterRef.current = true;
+        setCurrentPage(0);
+
+        // Scroll inmediato al inicio
+        scrollContainerRef.current.scrollTop = 0;
+
+        // Delay mayor para asegurar que las imágenes se cargaron
+        // Y también para evitar que el scroll del usuario interfiera
+        const timer = setTimeout(() => {
+            if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTo({
+                    top: 0,
+                    behavior: 'auto' // Usar 'auto' en lugar de 'smooth' para ser más confiable
+                });
             }
-        }
-    }, [pages]);
+            isChangingChapterRef.current = false;
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            isChangingChapterRef.current = false;
+        };
+    }, [pages, hasRestoredProgress]);
 
     // Guardar progreso automáticamente cuando cambia la página (con debounce)
     useEffect(() => {
