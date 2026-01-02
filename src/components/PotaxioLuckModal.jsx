@@ -130,7 +130,7 @@ export const PotaxioLuckModal = ({ isOpen, onClose, library }) => {
                         <div className="bg-white/10 dark:bg-gray-900/40 backdrop-blur-md rounded-[2.5rem] p-1 border-2 border-yellow-400/50 shadow-[0_0_40px_rgba(250,204,21,0.3)] overflow-hidden">
                             <div className="bg-white dark:bg-gray-900 rounded-[2.3rem] overflow-hidden p-6 flex flex-col items-center gap-6">
                                 <div className="text-center space-y-2">
-                                    <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-gray-600 leading-tight">
                                         {header}
                                     </h2>
                                 </div>

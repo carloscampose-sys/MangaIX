@@ -237,7 +237,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-black text-gray-800 dark:text-white">
+              <h3 className="text-lg sm:text-xl font-black text-gray-800 dark:text-gray-600">
                 Color de Fondo Personalizado
               </h3>
               <button
@@ -258,7 +258,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
 
             {/* Colores recomendados */}
             <div className="mb-4">
-              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-600 mb-2">
                 Colores recomendados (seguros para legibilidad)
               </label>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
@@ -286,7 +286,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
 
             {/* Color Picker */}
             <div className="mb-4">
-              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-600 mb-2">
                 O elige un color personalizado
               </label>
               <div
@@ -334,7 +334,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
                   />
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Color seleccionado</p>
-                    <p className="text-lg font-mono font-bold text-gray-800 dark:text-white">
+                    <p className="text-lg font-mono font-bold text-gray-800 dark:text-gray-600">
                       {bgColor.toUpperCase()}
                     </p>
                   </div>
@@ -370,7 +370,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors touch-target"
+                className="flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-gray-700 dark:text-gray-600 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors touch-target"
               >
                 Cancelar
               </button>

@@ -102,8 +102,9 @@ export function ColorThemeProvider({ children }) {
         isDark: false
       };
       
-      // Aplicar tema al DOM
-      themeApplier.applyTheme(palette);
+      // Aplicar tema al DOM - pasar si hay imagen de fondo
+      const hasBackgroundImage = !!backgroundImage;
+      themeApplier.applyTheme(palette, hasBackgroundImage);
       
       // Actualizar estado
       setTheme(newTheme);
@@ -144,8 +145,9 @@ export function ColorThemeProvider({ children }) {
         palette: newPalette
       };
       
-      // Aplicar tema al DOM
-      themeApplier.applyTheme(newPalette);
+      // Aplicar tema al DOM - pasar si hay imagen de fondo
+      const hasBackgroundImage = !!backgroundImage;
+      themeApplier.applyTheme(newPalette, hasBackgroundImage);
       
       // Actualizar estado
       setTheme(newTheme);
@@ -177,7 +179,9 @@ export function ColorThemeProvider({ children }) {
       palette
     };
     
-    themeApplier.applyTheme(palette);
+    // Aplicar tema al DOM - pasar si hay imagen de fondo
+    const hasBackgroundImage = !!backgroundImage;
+    themeApplier.applyTheme(palette, hasBackgroundImage);
     setTheme(newTheme);
     saveThemeToStorage(newTheme);
   };
@@ -198,8 +202,9 @@ export function ColorThemeProvider({ children }) {
       isDark: false
     };
     
-    // Aplicar tema al DOM
-    themeApplier.applyTheme(defaultPalette);
+    // Aplicar tema al DOM - pasar si hay imagen de fondo
+    const hasBackgroundImage = !!backgroundImage;
+    themeApplier.applyTheme(defaultPalette, hasBackgroundImage);
     
     // Actualizar estado
     setTheme(defaultTheme);
@@ -244,12 +249,12 @@ export function ColorThemeProvider({ children }) {
    */
   const resetBackgroundImage = () => {
     console.log('[ColorThemeContext] Resetting background image');
-    
+
     try {
       // Eliminar de localStorage
       localStorage.removeItem(BACKGROUND_IMAGE_KEY);
       localStorage.removeItem(BACKGROUND_EFFECTS_KEY);
-      
+
       // Actualizar estado
       setBackgroundImageState(null);
       setBackgroundEffectsState({
@@ -257,7 +262,30 @@ export function ColorThemeProvider({ children }) {
         overlay: 70,
         overlayColor: 'black'
       });
-      
+
+      // CRÍTICO: Volver a aplicar el tema actual para restaurar el color de fondo
+      // Esto es necesario porque cuando había imagen, el fondo se puso como 'transparent'
+      if (theme) {
+        // Regenerar la paleta completa basada en el color base actual
+        const palette = colorPaletteGenerator.generatePalette(theme.baseColor);
+
+        // Crear nuevo tema sin fondo personalizado
+        const newTheme = {
+          ...theme,
+          customBackground: null,
+          palette
+        };
+
+        // Aplicar tema al DOM (sin fondo personalizado = usar colores normales)
+        themeApplier.applyTheme(palette, false);
+
+        // Actualizar estado
+        setTheme(newTheme);
+
+        // Guardar en localStorage
+        saveThemeToStorage(newTheme);
+      }
+
       console.log('[ColorThemeContext] Background image reset successfully');
     } catch (error) {
       console.error('[ColorThemeContext] Error resetting background image:', error);
@@ -305,10 +333,13 @@ export function ColorThemeProvider({ children }) {
     // Cargar imagen de fondo si existe
     loadBackgroundImageFromStorage();
     
+    // Verificar si hay imagen de fondo en localStorage
+    const hasBackgroundImage = !!localStorage.getItem(BACKGROUND_IMAGE_KEY);
+    
     if (storedTheme) {
-      // Aplicar tema guardado
+      // Aplicar tema guardado - pasar si hay imagen de fondo
       console.log('[ColorThemeContext] Applying stored theme:', storedTheme.baseColor);
-      themeApplier.applyTheme(storedTheme.palette);
+      themeApplier.applyTheme(storedTheme.palette, hasBackgroundImage);
       setTheme(storedTheme);
     } else {
       // Usar tema por defecto
@@ -320,7 +351,7 @@ export function ColorThemeProvider({ children }) {
         isDark: false
       };
       console.log('[ColorThemeContext] Default palette generated:', defaultPalette);
-      themeApplier.applyTheme(defaultPalette);
+      themeApplier.applyTheme(defaultPalette, hasBackgroundImage);
       setTheme(defaultTheme);
     }
     

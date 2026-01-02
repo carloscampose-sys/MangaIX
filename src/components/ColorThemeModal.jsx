@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, RotateCcw, Palette, Copy, Check, Paintbrush } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, RotateCcw, Palette, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useColorTheme } from '../context/ColorThemeContext';
 import colorPaletteGenerator from '../utils/colorPaletteGenerator';
-import { BackgroundColorPicker } from './BackgroundColorPicker';
 
 // Colores predefinidos populares
 const PRESET_COLORS = [
@@ -18,7 +17,7 @@ const PRESET_COLORS = [
 ];
 
 export function ColorThemeModal({ isOpen, onClose }) {
-  const { theme, setBaseColor, setCustomBackground, resetCustomBackground, resetTheme } = useColorTheme();
+  const { theme, setBaseColor, resetTheme } = useColorTheme();
   const [selectedColor, setSelectedColor] = useState(theme?.baseColor || '#3b82f6');
   const [previewPalette, setPreviewPalette] = useState(null);
   const [hue, setHue] = useState(120);
@@ -26,9 +25,6 @@ export function ColorThemeModal({ isOpen, onClose }) {
   const [lightness, setLightness] = useState(50);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  
-  // Estado para selector de fondo personalizado
-  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   
   const saturationRef = useRef(null);
   const hueRef = useRef(null);
@@ -268,19 +264,6 @@ export function ColorThemeModal({ isOpen, onClose }) {
     onClose();
   };
 
-  const handleApplyCustomBackground = (bgColor) => {
-    try {
-      setCustomBackground(bgColor);
-      console.log('[ColorThemeModal] Fondo personalizado aplicado:', bgColor);
-    } catch (err) {
-      console.error('Error aplicando fondo personalizado:', err);
-    }
-  };
-
-  const handleResetBackground = () => {
-    resetCustomBackground();
-  };
-
   const handlePresetClick = (color) => {
     const hsl = hexToHsl(color);
     setHue(hsl.h);
@@ -298,7 +281,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      {isOpen && !showBackgroundPicker && (
+      {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
@@ -321,7 +304,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Palette style={{ color: selectedColor }} size={24} className="sm:w-7 sm:h-7" />
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-800 dark:text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-600">
                   Selector de Color
                 </h2>
               </div>
@@ -387,7 +370,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
                     />
                     <div className="min-w-0">
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold">HEX</p>
-                      <p className="text-lg sm:text-2xl font-mono font-bold text-gray-800 dark:text-white truncate">
+                      <p className="text-lg sm:text-2xl font-mono font-bold text-gray-800 dark:text-gray-600 truncate">
                         {selectedColor.toUpperCase()}
                       </p>
                     </div>
@@ -405,7 +388,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
 
             {/* Colores predefinidos */}
             <div className="mb-4 sm:mb-6">
-              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-600 mb-2 sm:mb-3">
                 Colores populares
               </label>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
@@ -427,7 +410,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
             {/* Vista previa de la paleta */}
             {previewPalette && (
               <div className="mb-4 sm:mb-6">
-                <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-600 mb-2 sm:mb-3">
                   Vista previa del tema
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
@@ -479,37 +462,18 @@ export function ColorThemeModal({ isOpen, onClose }) {
               <p className="text-red-500 text-xs sm:text-sm mb-3 sm:mb-4 text-center font-semibold">{error}</p>
             )}
 
-            {/* Botón para cambiar fondo personalizado */}
-            <div className="mb-4 sm:mb-6">
-              <button
-                onClick={() => setShowBackgroundPicker(true)}
-                className="w-full px-4 py-3 rounded-lg font-bold text-sm sm:text-base bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg flex items-center justify-center gap-2 touch-target"
-              >
-                <Paintbrush size={18} />
-                <span>Cambiar Color de Fondo</span>
-              </button>
-              {theme?.customBackground && (
-                <button
-                  onClick={handleResetBackground}
-                  className="w-full mt-2 px-3 py-2 rounded-lg font-bold text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                >
-                  Restaurar fondo automático
-                </button>
-              )}
-            </div>
-
             {/* Botones de acción */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 onClick={handleReset}
-                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 touch-target"
+                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-gray-700 dark:text-gray-600 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 touch-target"
               >
                 <RotateCcw size={16} className="sm:w-[18px] sm:h-[18px]" />
                 <span>Restablecer</span>
               </button>
               <button
                 onClick={onClose}
-                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors touch-target"
+                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-gray-700 dark:text-gray-600 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors touch-target"
               >
                 Cancelar
               </button>
@@ -524,16 +488,6 @@ export function ColorThemeModal({ isOpen, onClose }) {
             </div>
           </motion.div>
         </div>
-      )}
-
-      {/* Selector de fondo personalizado */}
-      {showBackgroundPicker && (
-        <BackgroundColorPicker
-          isOpen={showBackgroundPicker}
-          onClose={() => setShowBackgroundPicker(false)}
-          onApply={handleApplyCustomBackground}
-          currentColor={theme?.customBackground || theme?.palette?.background || '#FDF5E6'}
-        />
       )}
     </AnimatePresence>
   );

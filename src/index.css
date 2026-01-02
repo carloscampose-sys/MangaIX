@@ -70,6 +70,12 @@ body {
   /* Forzar detrás de todo el contenido interactivo */
 }
 
+/* OCULTAR estrellas cuando hay fondo personalizado - el fondo debe ser lo único visible */
+body.has-custom-background .stars,
+.dark body.has-custom-background .stars {
+  display: none !important;
+}
+
 .star {
   position: absolute;
   width: 2px;
@@ -119,6 +125,45 @@ body {
 
 .border-potaxie-green {
   border-color: var(--color-primary) !important;
+}
+
+/* Variantes de texto potaxie para modo oscuro */
+/* Tonos claros visibles en fondo oscuro */
+.text-potaxie-300,
+.dark .text-potaxie-300 {
+  color: #C5E1A5 !important;
+}
+
+.text-potaxie-400,
+.dark .text-potaxie-400 {
+  color: #AED581 !important;
+}
+
+.text-potaxie-600,
+.dark .text-potaxie-600 {
+  color: #7CB342 !important;
+}
+
+.text-potaxie-700,
+.dark .text-potaxie-700 {
+  color: #558B2F !important;
+}
+
+/* Variantes de fondo potaxie */
+.bg-potaxie-300 {
+  background-color: #C5E1A5 !important;
+}
+
+.bg-potaxie-400 {
+  background-color: #AED581 !important;
+}
+
+.bg-potaxie-600 {
+  background-color: #7CB342 !important;
+}
+
+.bg-potaxie-700 {
+  background-color: #558B2F !important;
 }
 
 .bg-potaxie-cream {
@@ -227,14 +272,16 @@ body {
   scrollbar-color: var(--color-primary, #BEE3B0) rgba(0, 0, 0, 0.2);
 }
 
-/* Manhwa Card Glow in Dark Mode */
+/* Manhwa Card Glow in Dark Mode - Mismo estilo que navideño */
 .dark .manhwa-card {
-  box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
-  transition: box-shadow 0.3s ease;
+  border-color: #fbbf24;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+  transition: all 0.3s ease;
 }
 
 .dark .manhwa-card:hover {
-  box-shadow: 0 0 25px rgba(192, 192, 192, 0.6);
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+  transform: translateY(-4px);
 }
 
 /* Custom Utilities */
@@ -572,7 +619,7 @@ body.christmas-mode {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1; /* Debajo del overlay del fondo personalizado */
   overflow: hidden;
 }
 
@@ -580,7 +627,7 @@ body.christmas-mode {
 .light-particles .particle {
   position: absolute;
   border-radius: 50%;
-  animation: 
+  animation:
     float-particle 8s ease-in-out infinite,
     fade-in-particle 0.8s ease-out;
   /* Efecto de brillo sutil */
@@ -594,13 +641,15 @@ body.christmas-mode {
   }
 }
 
-/* Hide particles in dark mode (extra safety) */
-.dark .light-particles {
+/* Hide particles ONLY in christmas mode (NOT in dark mode when there's custom background) */
+/* Cuando hay fondo personalizado, las partículas deben ocultarse pero el fondo se mantiene */
+.christmas-mode .light-particles {
   display: none;
 }
 
-/* Hide particles in christmas mode (extra safety) */
-.christmas-mode .light-particles {
+/* En modo oscuro CON fondo personalizado, ocultar partículas pero mantener fondo visible */
+body.has-custom-background .light-particles,
+.dark body.has-custom-background .light-particles {
   display: none;
 }
 
@@ -713,19 +762,54 @@ body.christmas-mode {
 }
 
 /* Modo oscuro - Ajustar overlay automáticamente para mejor legibilidad */
-.dark .fixed.inset-0.pointer-events-none[style*="opacity"] {
+.dark .fixed.inset-0.pointer-events-none[style*="opacity"],
+.dark .theme-overlay {
   /* El overlay se mantiene pero puede ajustarse dinámicamente */
   display: block !important;
   visibility: visible !important;
 }
 
-/* CRÍTICO: Cuando hay fondo personalizado, el body debe ser transparente */
-body:has(.fixed.inset-0.bg-cover.bg-center.bg-no-repeat) {
+/* Overlay del fondo personalizado - Ajustar color según tema */
+.theme-overlay {
+  /* En modo claro: overlay negro */
+  background-color: #000000 !important;
+}
+
+/* En modo oscuro: overlay blanco para mejor legibilidad */
+.dark .theme-overlay {
+  background-color: #ffffff !important;
+}
+
+/* ============================================
+   SOLUCIÓN DEFINITIVA: Body transparente con fondo personalizado
+   ============================================
+   Máxima especificidad y prioridad para garantizar que el body
+   sea transparente cuando hay un fondo personalizado activo
+*/
+
+/* CRÍTICO: Cuando hay fondo personalizado, el body DEBE ser transparente */
+body.has-custom-background,
+body.has-custom-background[style],
+html body.has-custom-background {
   background-color: transparent !important;
   background-image: none !important;
 }
 
 /* Modo oscuro - Body transparente cuando hay fondo personalizado */
+.dark body.has-custom-background,
+.dark body.has-custom-background[style],
+html.dark body.has-custom-background {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Selector :has() como respaldo adicional */
+body:has(.fixed.inset-0.bg-cover.bg-center.bg-no-repeat) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Modo oscuro con :has() */
 .dark body:has(.fixed.inset-0.bg-cover.bg-center.bg-no-repeat) {
   background-color: transparent !important;
   background-image: none !important;

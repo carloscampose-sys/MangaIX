@@ -230,13 +230,13 @@ export const DetailModal = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 30 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`relative w-full max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl bg-white dark:bg-gray-900 rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] border-2 ${theme === 'dark' ? 'border-purple-500/30' : 'border-potaxie-green/30'}`}
+                        className={`relative w-full max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl bg-white dark:bg-gray-900 rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] border-2 ${theme === 'dark' ? 'border-potaxie-green/30' : 'border-potaxie-green/30'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Botón de Cierre */}
                         <button
                             onClick={onClose}
-                            className="absolute top-3 sm:top-4 md:top-6 right-3 sm:right-4 md:right-6 z-50 p-2 sm:p-2.5 bg-white/20 dark:bg-gray-800/40 backdrop-blur-xl rounded-full text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hover:scale-110 transition-all border border-white/20"
+                            className="absolute top-3 sm:top-4 md:top-6 right-3 sm:right-4 md:right-6 z-50 p-2 sm:p-2.5 bg-white/20 dark:bg-potaxie-400 backdrop-blur-xl rounded-full text-gray-500 dark:text-gray-900 hover:text-red-500 hover:scale-110 transition-all border border-white/20"
                         >
                             <X size={20} className="sm:w-6 sm:h-6" />
                         </button>
@@ -265,11 +265,11 @@ export const DetailModal = ({
                         {/* Derecha: Información */}
                         <div className="md:w-[55%] p-4 sm:p-6 md:p-8 lg:p-12 overflow-y-auto custom-scrollbar flex flex-col bg-white dark:bg-gray-900">
                             <div className="mb-4 sm:mb-6 md:mb-8">
-                                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white leading-[1.1] mb-2 sm:mb-3 tracking-tighter pr-8">
+                                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-gray-600 leading-[1.1] mb-2 sm:mb-3 tracking-tighter pr-8">
                                     {displayData?.title || manga?.title}
                                 </h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 sm:w-8 h-[2px] bg-potaxie-green rounded-full" />
+                                    <div className="w-6 sm:w-8 h-[2px] bg-potaxie-green dark:bg-potaxie-400 rounded-full" />
                                     <p className="text-potaxie-600 dark:text-potaxie-400 font-black text-xs sm:text-sm uppercase tracking-wider">
                                         {displayData?.author || manga?.author || "Autor Desconocido"}
                                     </p>
@@ -279,22 +279,22 @@ export const DetailModal = ({
                             {/* Información de la Obra */}
                             {mangaDetails && (mangaDetails.genres?.length > 0 || mangaDetails.statusRaw || mangaDetails.alternativeTitles?.length > 0) && (
                                 <div className="mb-4 sm:mb-6 md:mb-8">
-                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4">
+                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 mb-2 sm:mb-3 md:mb-4">
                                         Info de la Obra ✨
                                     </h3>
-                                    <div className="bg-gray-50/50 dark:bg-gray-800/30 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-gray-100/50 dark:border-gray-800 space-y-3">
+                                    <div className="bg-gray-50/50 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-gray-100/50 space-y-3">
 
                                         {/* Géneros */}
                                         {mangaDetails.genres?.length > 0 && (
                                             <div>
-                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 mb-1.5">
                                                     Géneros
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                                     {mangaDetails.genres.map((genre, idx) => (
                                                         <span
                                                             key={idx}
-                                                            className="px-2 sm:px-3 py-1 bg-potaxie-green/10 dark:bg-potaxie-green/20 text-potaxie-700 dark:text-potaxie-300 rounded-lg text-[10px] sm:text-xs font-bold"
+                                                            className="px-2 sm:px-3 py-1 bg-potaxie-green/10 text-potaxie-700 rounded-lg text-[10px] sm:text-xs font-bold"
                                                         >
                                                             {genre}
                                                         </span>
@@ -306,10 +306,10 @@ export const DetailModal = ({
                                         {/* Estado */}
                                         {mangaDetails.statusRaw && (
                                             <div>
-                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 mb-1.5">
                                                     Estado
                                                 </p>
-                                                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium">
+                                                <p className="text-xs sm:text-sm text-gray-700 font-medium">
                                                     {mangaDetails.statusRaw}
                                                 </p>
                                             </div>
@@ -318,12 +318,12 @@ export const DetailModal = ({
                                         {/* Nombres Asociados */}
                                         {mangaDetails.alternativeTitles?.length > 0 && (
                                             <div>
-                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                                                <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-wider text-gray-400 mb-1.5">
                                                     Nombres Asociados
                                                 </p>
                                                 <div className="space-y-1">
                                                     {mangaDetails.alternativeTitles.map((altTitle, idx) => (
-                                                        <p key={idx} className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                                        <p key={idx} className="text-[10px] sm:text-xs text-gray-600 font-medium">
                                                             • {altTitle}
                                                         </p>
                                                     ))}
@@ -336,10 +336,10 @@ export const DetailModal = ({
 
                             {/* Sinopsis */}
                             <div className="mb-4 sm:mb-6 md:mb-8">
-                                <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
+                                <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
                                     <BookOpen size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green" /> Sinopsis Potaxina
                                 </h3>
-                                <div className="text-xs sm:text-sm md:text-[15px] text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50/50 dark:bg-gray-800/30 p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl md:rounded-[2rem] border border-gray-100/50 dark:border-gray-800 transition-colors">
+                                <div className="text-xs sm:text-sm md:text-[15px] text-gray-600 leading-relaxed bg-gray-50/50 p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl md:rounded-[2rem] border border-gray-100/50 transition-colors">
                                     {isLoadingDetails ? (
                                         <span className="animate-pulse">Cargando sinopsis...</span>
                                     ) : (
@@ -351,7 +351,7 @@ export const DetailModal = ({
                             {/* Estados de Lectura (Solo Biblioteca) */}
                             {inLibrary && (
                                 <div className="mb-4 sm:mb-6 md:mb-8">
-                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4">
+                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-600 mb-2 sm:mb-3 md:mb-4">
                                         Estado de mi lectura ✨
                                     </h3>
                                     <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -363,7 +363,7 @@ export const DetailModal = ({
                                                     flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl transition-all border-2
                                                     ${manga.status === opt.id
                                                         ? `${opt.color} ${opt.text} border-transparent shadow-xl scale-105 ring-2 sm:ring-4 ring-offset-2 sm:ring-offset-4 dark:ring-offset-gray-900 ${opt.id === 'devorando' ? 'ring-potaxie-green/20' : 'ring-yellow-400/20'}`
-                                                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 text-gray-400 hover:border-potaxie-200'}
+                                                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-potaxie-green/30/30 text-gray-400 dark:text-gray-600 hover:border-potaxie-200 dark:hover:border-yellow-400'}
                                                 `}
                                             >
                                                 <span className="text-lg sm:text-xl md:text-2xl">{opt.emoji}</span>
@@ -377,14 +377,14 @@ export const DetailModal = ({
                             {/* Notas (Solo Biblioteca) */}
                             {inLibrary && (
                                 <div className="mb-4 sm:mb-6 md:mb-8">
-                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4">
+                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-600 mb-2 sm:mb-3 md:mb-4">
                                         Mis Teorías y Chismes 🤳
                                     </h3>
                                     <textarea
                                         value={note}
                                         onChange={(e) => saveNote(manga.id, e.target.value)}
                                         placeholder="Anota aquí tus teorías más locas potaxie..."
-                                        className="w-full h-24 sm:h-28 md:h-36 p-3 sm:p-4 md:p-6 text-xs sm:text-sm bg-yellow-50/50 dark:bg-gray-800/50 border-2 border-yellow-100/50 dark:border-purple-500/10 rounded-xl sm:rounded-2xl md:rounded-[2rem] focus:ring-4 ring-potaxie-green/10 focus:border-potaxie-green outline-none transition-all resize-none dark:text-gray-200 font-medium italic"
+                                        className="w-full h-24 sm:h-28 md:h-36 p-3 sm:p-4 md:p-6 text-xs sm:text-sm bg-yellow-50/50 dark:bg-gray-800/50 border-2 border-yellow-100/50 dark:border-potaxie-green/30/30 rounded-xl sm:rounded-2xl md:rounded-[2rem] focus:ring-4 ring-potaxie-green/10 focus:border-potaxie-green outline-none transition-all resize-none dark:text-gray-600 font-medium italic"
                                     />
                                 </div>
                             )}
@@ -392,16 +392,16 @@ export const DetailModal = ({
                             {/* Sección de Capítulos */}
                             {manga?.slug && (
                                 <div className="mb-4 sm:mb-6 md:mb-8">
-                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-500 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
-                                        <Sparkles size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green" /> Lectura Directa ✨
+                                    <h3 className="text-[9px] sm:text-[10px] uppercase font-black tracking-[0.2em] sm:tracking-[0.3em] text-gray-400 dark:text-gray-600 mb-2 sm:mb-3 md:mb-4 flex items-center gap-1.5 sm:gap-2">
+                                        <Sparkles size={12} className="sm:w-[14px] sm:h-[14px] text-potaxie-green dark:text-gray-600" /> Lectura Directa ✨
                                     </h3>
 
                                     {/* Tabs de fuentes (si hay capítulos en la fuente actual) */}
                                     {chaptersBySource[selectedChapterSource]?.length > 0 && (
                                         <div className="mb-3">
-                                            <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400">
+                                            <div className="flex items-center gap-2 text-[9px] sm:text-[10px] text-gray-500">
                                                 <span className="font-bold">Fuente:</span>
-                                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg font-bold flex items-center gap-1">
+                                                <span className="px-2 py-1 bg-gray-100 rounded-lg font-bold flex items-center gap-1">
                                                     {getSourceById(selectedChapterSource).icon}
                                                     <span className="hidden sm:inline">{getSourceById(selectedChapterSource).name}</span>
                                                 </span>
@@ -418,7 +418,7 @@ export const DetailModal = ({
                                                     key={ch.id}
                                                     onClick={() => openReader(ch, selectedChapterSource)}
                                                     disabled={isOpeningReader}
-                                                    className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-800 hover:bg-potaxie-green hover:text-white dark:hover:bg-potaxie-green dark:text-gray-300 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all disabled:opacity-50"
+                                                    className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gray-100 hover:bg-potaxie-green hover:text-white rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all disabled:opacity-50"
                                                 >
                                                     Cap {ch.chapter}
                                                 </button>
@@ -434,7 +434,7 @@ export const DetailModal = ({
                             <div className="mt-auto pt-4 sm:pt-6 flex items-center gap-2 sm:gap-4">
                                 <button
                                     onClick={handleShare}
-                                    className="flex-grow flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl sm:rounded-2xl md:rounded-3xl font-black text-xs sm:text-sm transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95 relative overflow-hidden group/share"
+                                    className="flex-grow flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 bg-potaxie-green dark:bg-potaxie-400 text-white dark:text-gray-900 rounded-xl sm:rounded-2xl md:rounded-3xl font-black text-xs sm:text-sm transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95 relative overflow-hidden group/share"
                                 >
                                     <Share2 size={16} className="sm:w-5 sm:h-5 group-hover/share:rotate-12 transition-transform" />
                                     <span className="hidden sm:inline">CONVOCAR A LAS DIVAS 👜</span>

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Database, Palette, Snowflake, ChevronRight } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Database, Palette, Snowflake, ChevronRight, Paintbrush } from 'lucide-react';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { useToast } from '../context/ToastContext';
 import { BackupModal } from './BackupModal';
 import { ColorThemeModal } from './ColorThemeModal';
+import { BackgroundColorModal } from './BackgroundColorModal';
 
 // ============================================================
 // SETTINGS HEADER COMPONENT
@@ -64,11 +64,11 @@ const SettingsCard = ({ section, index }) => {
       </div>
       
       {/* Content */}
-      <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 
+      <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-600 mb-2 sm:mb-3
                      relative z-10 transition-all duration-300">
         {section.title}
       </h3>
-      
+
       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed relative z-10">
         {section.description}
       </p>
@@ -104,8 +104,8 @@ const SettingsGrid = ({ sections }) => (
 export const SettingsPanel = () => {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showColorTheme, setShowColorTheme] = useState(false);
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false);
   const { isChristmasMode, toggleChristmasMode } = useChristmasTheme();
-  const { theme } = useTheme();
   const { showToast } = useToast();
 
   // Definir secciones de ajustes
@@ -120,11 +120,19 @@ export const SettingsPanel = () => {
     },
     {
       id: 'colors',
-      title: 'Personalizar Colores',
-      description: 'Cambia los colores del tema y personaliza tu experiencia visual',
+      title: 'Personalizar Colores del Tema',
+      description: 'Cambia los colores principales del tema y personaliza tu experiencia visual',
       icon: Palette,
       color: 'from-purple-400 to-pink-500',
       action: () => setShowColorTheme(true)
+    },
+    {
+      id: 'background',
+      title: 'Color de Fondo',
+      description: 'Personaliza el color de fondo de la aplicación o sube una imagen',
+      icon: Paintbrush,
+      color: 'from-blue-400 to-cyan-500',
+      action: () => setShowBackgroundModal(true)
     },
     {
       id: 'christmas',
@@ -158,6 +166,10 @@ export const SettingsPanel = () => {
       <ColorThemeModal 
         isOpen={showColorTheme} 
         onClose={() => setShowColorTheme(false)} 
+      />
+      <BackgroundColorModal 
+        isOpen={showBackgroundModal} 
+        onClose={() => setShowBackgroundModal(false)} 
       />
     </div>
   );

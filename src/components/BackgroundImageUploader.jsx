@@ -117,7 +117,7 @@ export function BackgroundImageUploader({ isOpen, onClose, onApply, currentImage
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-black text-gray-800 dark:text-gray-600 flex items-center gap-2">
                 <ImageIcon size={24} />
                 Fondo de Imagen Personalizado
               </h3>
@@ -220,7 +220,7 @@ export function BackgroundImageUploader({ isOpen, onClose, onApply, currentImage
             {/* Effects Controls */}
             {selectedImage && (
               <div className="mb-4 space-y-4">
-                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-600">
                   Efectos de Legibilidad
                 </h4>
 
@@ -297,7 +297,7 @@ export function BackgroundImageUploader({ isOpen, onClose, onApply, currentImage
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-gray-700 dark:text-gray-600 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancelar
               </button>

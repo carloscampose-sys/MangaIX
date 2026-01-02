@@ -7,12 +7,14 @@ class ThemeApplier {
   /**
    * Aplica la paleta de colores al DOM mediante CSS Variables
    * @param {Object} palette - Paleta de colores a aplicar
+   * @param {boolean} hasCustomBackground - Si hay un fondo personalizado activo
    */
-  applyTheme(palette) {
+  applyTheme(palette, hasCustomBackground = false) {
     try {
       const root = document.documentElement;
       
       console.log('[ThemeApplier] Aplicando tema:', palette);
+      console.log('[ThemeApplier] Has custom background:', hasCustomBackground);
       
       // Aplicar cada color como CSS variable
       root.style.setProperty('--color-primary', palette.primary);
@@ -20,8 +22,18 @@ class ThemeApplier {
       root.style.setProperty('--color-primary-dark', palette.primaryDark);
       root.style.setProperty('--color-secondary', palette.secondary);
       root.style.setProperty('--color-accent', palette.accent);
-      root.style.setProperty('--color-background', palette.background);
-      root.style.setProperty('--color-background-alt', palette.backgroundAlt);
+      
+      // CRÍTICO: Si hay fondo personalizado, NO aplicar color de fondo
+      // Esto evita que el body use un color que tape la imagen
+      if (hasCustomBackground) {
+        root.style.setProperty('--color-background', 'transparent');
+        root.style.setProperty('--color-background-alt', 'transparent');
+        console.log('[ThemeApplier] 🖼️ Custom background detected - background set to transparent');
+      } else {
+        root.style.setProperty('--color-background', palette.background);
+        root.style.setProperty('--color-background-alt', palette.backgroundAlt);
+      }
+      
       root.style.setProperty('--color-surface', palette.surface);
       root.style.setProperty('--color-text-primary', palette.textPrimary);
       root.style.setProperty('--color-text-secondary', palette.textSecondary);

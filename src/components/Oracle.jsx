@@ -75,7 +75,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                             <Sparkles className={theme === 'light' ? 'text-yellow-500' : 'text-purple-400'} size={14} />
                             <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400">Favorito del Cosmos</span>
                         </div>
-                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight group-hover:text-potaxie-600 transition-colors">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 dark:text-gray-600 mb-2 sm:mb-3 leading-tight group-hover:text-potaxie-600 transition-colors">
                             {recommendation?.title}
                         </h3>
 
@@ -93,7 +93,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
                             disabled={isAlreadyInLibrary}
                             className={`mt-3 sm:mt-4 w-full py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-xs sm:text-sm
                                 ${isAlreadyInLibrary
-                                    ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                                    ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-600'
                                     : 'bg-potaxie-green hover:bg-green-600 text-white shadow-md active:scale-95'
                                 }
                             `}
@@ -308,7 +308,7 @@ export const Oracle = () => {
                                     ? isSpecial
                                         ? 'bg-gradient-to-r from-pink-400 via-purple-500 to-purple-600 border-pink-300 text-white shadow-[0_0_20px_rgba(236,72,153,0.5)] transform scale-105'
                                         : 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/40 dark:border-purple-400 dark:text-purple-200 transform scale-105 shadow-xl'
-                                    : 'bg-white border-transparent text-gray-600 hover:border-purple-300 dark:bg-gray-800 dark:text-gray-300 hover:shadow-lg'
+                                    : 'bg-white border-transparent text-gray-600 hover:border-purple-300 dark:bg-gray-800 dark:text-gray-600 hover:shadow-lg'
                                 }
                             `}
                         >

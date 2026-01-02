@@ -56,7 +56,7 @@ export const Navbar = ({ setPage }) => {
                         className="p-1 xs:p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         title="Buscar"
                     >
-                        <Search size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+                        <Search size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5 dark:text-white" />
                     </button>
 
                     <button
@@ -64,7 +64,7 @@ export const Navbar = ({ setPage }) => {
                         className="p-1 xs:p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         title="Biblioteca"
                     >
-                        <Book size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+                        <Book size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5 dark:text-white" />
                     </button>
 
                     <button
@@ -85,7 +85,7 @@ export const Navbar = ({ setPage }) => {
                         title="Modo Incógnito"
                         aria-label="Modo Incógnito"
                     >
-                        {incognito ? <EyeOff size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" /> : <Eye size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5" />}
+                        {incognito ? <EyeOff size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5 dark:text-white" /> : <Eye size={14} className="xs:w-4 xs:h-4 sm:w-5 sm:h-5 dark:text-white" />}
                     </button>
 
                     <button

@@ -157,7 +157,7 @@ export function BackupModal({ isOpen, onClose }) {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Database className="text-potaxie-green" size={28} />
-                <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-white">
+                <h2 className="text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-600">
                   Backup de Datos
                 </h2>
               </div>
@@ -205,7 +205,7 @@ export function BackupModal({ isOpen, onClose }) {
               >
                 {/* Data Summary */}
                 <div className="bg-gradient-to-br from-potaxie-green/10 to-potaxie-green/5 rounded-xl p-6 border border-potaxie-green/20">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-600 mb-4">
                     📊 Resumen de tus datos
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -213,28 +213,28 @@ export function BackupModal({ isOpen, onClose }) {
                       <span className="text-3xl">📚</span>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Mangas en biblioteca</p>
-                        <p className="text-2xl font-bold text-gray-800 dark:text-white">{library?.length || 0}</p>
+                        <p className="text-2xl font-bold text-gray-800 dark:text-gray-600">{library?.length || 0}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">🥑</span>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Capítulos devorados</p>
-                        <p className="text-2xl font-bold text-gray-800 dark:text-white">{devouredChapters}</p>
+                        <p className="text-2xl font-bold text-gray-800 dark:text-gray-600">{devouredChapters}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">✨</span>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Nivel actual</p>
-                        <p className="text-lg font-bold text-gray-800 dark:text-white">{level.title}</p>
+                        <p className="text-lg font-bold text-gray-800 dark:text-gray-600">{level.title}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">🎨</span>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Personalización</p>
-                        <p className="text-lg font-bold text-gray-800 dark:text-white">Guardada</p>
+                        <p className="text-lg font-bold text-gray-800 dark:text-gray-600">Guardada</p>
                       </div>
                     </div>
                   </div>
@@ -294,7 +294,7 @@ export function BackupModal({ isOpen, onClose }) {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <FileJson className="mx-auto mb-4 text-gray-400" size={48} />
-                  <p className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  <p className="text-lg font-bold text-gray-700 dark:text-gray-600 mb-2">
                     {importFile ? importFile.name : 'Arrastra tu archivo de backup aquí'}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -318,32 +318,32 @@ export function BackupModal({ isOpen, onClose }) {
                   >
                     {/* Preview Data */}
                     <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-6 border border-purple-500/20">
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-gray-600 mb-4 flex items-center gap-2">
                         <Check className="text-green-500" size={20} />
                         Vista Previa del Backup
                       </h3>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Mangas</p>
-                          <p className="text-xl font-bold text-gray-800 dark:text-white">
+                          <p className="text-xl font-bold text-gray-800 dark:text-gray-600">
                             {importData.metadata?.totalMangas || 0}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Capítulos</p>
-                          <p className="text-xl font-bold text-gray-800 dark:text-white">
+                          <p className="text-xl font-bold text-gray-800 dark:text-gray-600">
                             {importData.metadata?.totalChaptersRead || 0}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Nivel</p>
-                          <p className="text-lg font-bold text-gray-800 dark:text-white">
+                          <p className="text-lg font-bold text-gray-800 dark:text-gray-600">
                             {importData.metadata?.level || 'N/A'}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Exportado</p>
-                          <p className="text-sm font-bold text-gray-800 dark:text-white">
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-600">
                             {new Date(importData.exportDate).toLocaleDateString()}
                           </p>
                         </div>
@@ -352,7 +352,7 @@ export function BackupModal({ isOpen, onClose }) {
 
                     {/* Import Mode */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-gray-600">
                         Modo de importación
                       </label>
                       <div className="space-y-2">
@@ -366,7 +366,7 @@ export function BackupModal({ isOpen, onClose }) {
                             className="mt-1"
                           />
                           <div>
-                            <p className="font-bold text-gray-800 dark:text-white">Reemplazar todo</p>
+                            <p className="font-bold text-gray-800 dark:text-gray-600">Reemplazar todo</p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
                               Borra tus datos actuales y carga el backup completo
                             </p>
@@ -382,7 +382,7 @@ export function BackupModal({ isOpen, onClose }) {
                             className="mt-1"
                           />
                           <div>
-                            <p className="font-bold text-gray-800 dark:text-white">Fusionar</p>
+                            <p className="font-bold text-gray-800 dark:text-gray-600">Fusionar</p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
                               Combina el backup con tus datos actuales (sin duplicados)
                             </p>

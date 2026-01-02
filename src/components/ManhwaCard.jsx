@@ -167,11 +167,11 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`group manhwa-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col h-full relative transition-all hover:shadow-2xl ${manga?.status === 'tiesa' ? 'opacity-70 grayscale-[40%]' : ''}`}
+            className={`group manhwa-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg border border-gray-100 dark:border-white/20 flex flex-col h-full relative transition-all hover:shadow-2xl ${manga?.status === 'tiesa' ? 'opacity-70 grayscale-[40%]' : ''}`}
         >
             {/* Badge de Fuente */}
             {source && (
-                <div className="absolute top-2 right-2 z-20 px-2 py-1 rounded-full text-[8px] sm:text-[9px] font-bold bg-black/70 dark:bg-white/80 text-white dark:text-gray-900 backdrop-blur-sm shadow-lg flex items-center gap-1">
+                <div className="absolute top-2 right-2 z-20 px-2 py-1 rounded-full text-[8px] sm:text-[9px] font-bold bg-gray-900/80 text-white backdrop-blur-md shadow-lg flex items-center gap-1 border border-white/10">
                     <span>{source.icon}</span>
                     <span className="hidden sm:inline">{source.name}</span>
                 </div>
@@ -185,7 +185,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                             e.stopPropagation();
                             setIsMenuOpen(!isMenuOpen);
                         }}
-                        className="p-1.5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-full shadow-lg text-gray-600 dark:text-gray-300 hover:scale-110 transition-all border border-white/20"
+                        className="p-1.5 bg-white/80 backdrop-blur-md rounded-full shadow-lg text-gray-600 hover:scale-110 transition-all border border-white/20"
                     >
                         <MoreVertical size={16} />
                     </button>
@@ -196,7 +196,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                 initial={{ opacity: 0, scale: 0.9, x: -10 }}
                                 animate={{ opacity: 1, scale: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, x: -10 }}
-                                className="absolute top-full left-0 mt-2 w-36 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-800 py-1 overflow-hidden z-20"
+                                className="absolute top-full left-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-white/10 py-1 overflow-hidden z-20"
                             >
                                 {STATUS_OPTIONS.map((opt) => (
                                     <button
@@ -206,7 +206,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                             handleStatusChange(opt.id);
                                         }}
                                         className={`w-full px-3 py-2 text-left text-xs font-bold transition-colors flex items-center gap-2
-                                            ${manga.status === opt.id ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}
+                                            ${manga.status === opt.id ? 'bg-gray-100 dark:bg-white/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'}
                                         `}
                                     >
                                         <span className={`w-2 h-2 rounded-full ${opt.color}`} />
@@ -221,7 +221,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
             {/* Cover */}
             <div
-                className="relative h-40 sm:h-52 md:h-64 overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer"
+                className="relative h-40 sm:h-52 md:h-64 overflow-hidden bg-gray-200 cursor-pointer"
                 onClick={() => setIsModalOpen(true)}
             >
                 {incognito ? (
@@ -238,8 +238,8 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                     />
                 )}
 
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <span className="bg-white/90 text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold text-[10px] sm:text-xs shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <span className="bg-white/90 backdrop-blur-md text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold text-[10px] sm:text-xs shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 border border-white/20">
                         Ver Detalles ✨
                     </span>
                 </div>
@@ -249,7 +249,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                         {currentStatus.emoji} <span className="hidden sm:inline">{currentStatus.label}</span>
                     </div>
                 ) : (
-                    <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-0.5 sm:gap-1 bg-white/20 text-white">
+                    <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black shadow-lg border border-white/20 backdrop-blur-md uppercase flex items-center gap-0.5 sm:gap-1 bg-gray-900/80 text-white">
                         {manga?.lastChapter || "?"} <span className="hidden sm:inline">Caps</span> ✨
                     </div>
                 )}
@@ -257,25 +257,25 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
 
             <div className="p-2.5 sm:p-3 md:p-4 flex flex-col flex-grow gap-1 sm:gap-2">
                 <h3
-                    className="font-bold text-xs sm:text-sm md:text-base line-clamp-1 leading-tight text-gray-900 dark:text-gray-100 cursor-pointer hover:text-potaxie-600 transition-colors"
+                    className="font-bold text-xs sm:text-sm md:text-base line-clamp-1 leading-tight text-gray-900 cursor-pointer hover:text-potaxie-600 transition-colors"
                     onClick={() => setIsModalOpen(true)}
                     title={manga?.title}
                 >
                     {manga?.title || 'Título Desconocido'}
                 </h3>
 
-                <p className="text-[10px] sm:text-[11px] md:text-[12px] text-gray-400 dark:text-gray-500 mb-0.5 sm:mb-1">
+                <p className="text-[10px] sm:text-[11px] md:text-[12px] text-gray-400 mb-0.5 sm:mb-1">
                     {manga?.author || "Desconocido"}
                 </p>
 
                 {!inLibrary && (
                     <div className="flex-grow flex flex-col mb-2 sm:mb-3">
-                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
+                        <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-2 sm:line-clamp-3 leading-relaxed">
                             {manga?.description || "Sin sinopsis disponible."}
                         </p>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="mt-1 sm:mt-2 text-[9px] sm:text-[10px] font-bold text-potaxie-600 dark:text-potaxie-400 hover:underline text-left self-start"
+                            className="mt-1 sm:mt-2 text-[9px] sm:text-[10px] font-bold text-potaxie-600 hover:underline text-left self-start"
                         >
                             Leer sinopsis completa... ✨
                         </button>
@@ -291,10 +291,10 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                     min="0"
                                     value={chaptersInput}
                                     onChange={(e) => setChaptersInput(Math.max(0, parseInt(e.target.value) || 0))}
-                                    className="w-10 sm:w-12 p-0.5 sm:p-1 text-[10px] sm:text-xs border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-600 text-center"
+                                    className="w-10 sm:w-12 p-0.5 sm:p-1 text-[10px] sm:text-xs border rounded bg-gray-50 text-center"
                                 />
                                 <span className="text-[8px] sm:text-[10px] text-gray-500">/{manga?.lastChapter || "?"}</span>
-                                <button type="submit" className="text-[8px] sm:text-[10px] bg-potaxie-green text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold">Ok</button>
+                                <button type="submit" className="text-[8px] sm:text-[10px] bg-green-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold shadow-sm">Ok</button>
                                 <button
                                     type="button"
                                     onMouseDown={handleIncrementMouseDown}
@@ -302,23 +302,19 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                                     onMouseLeave={handleIncrementMouseLeave}
                                     onTouchStart={handleIncrementMouseDown}
                                     onTouchEnd={handleIncrementMouseUp}
-                                    className={`text-[8px] sm:text-[10px] bg-cyan-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold transition-all select-none ${
-                                        isHoldingIncrement 
-                                            ? 'bg-cyan-600 scale-95 shadow-inner' 
-                                            : 'hover:bg-cyan-600 active:scale-95'
-                                    }`}
+                                    className="text-[8px] sm:text-[10px] bg-cyan-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-bold transition-all select-none hover:bg-cyan-600 active:scale-95"
                                 >
                                     +1
                                 </button>
                             </form>
                         </div>
 
-                        <div className="flex gap-0.5 sm:gap-1 justify-center border-t dark:border-gray-700 pt-1.5 sm:pt-2">
+                        <div className="flex gap-0.5 sm:gap-1 justify-center border-t pt-1.5 sm:pt-2">
                             {AVOCADO_RATING.map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setMangaRating(manga.id, r)}
-                                    className={`text-sm sm:text-base transition-transform hover:scale-125 ${(manga?.rating || 0) >= r ? 'opacity-100' : 'opacity-20 grayscale'}`}
+                                    className={`text-sm sm:text-base transition-transform hover:scale-125 ${(manga?.rating || 0) >= r ? 'opacity-100' : 'opacity-30 grayscale'}`}
                                 >
                                     🥑
                                 </button>

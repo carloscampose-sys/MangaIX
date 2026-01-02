@@ -14,60 +14,51 @@ export function CustomBackgroundImage() {
   const memoizedImage = useMemo(() => backgroundImage, [backgroundImage]);
 
   // CRÍTICO: Hacer el body transparente cuando hay fondo personalizado
+  // Y restaurar el color cuando se elimina la imagen
   useEffect(() => {
-    if (memoizedImage) {
-      console.log('[CustomBackgroundImage] 🎨 Setting body to transparent - has background');
-      document.body.style.backgroundColor = 'transparent';
-      document.body.style.backgroundImage = 'none';
-    } else {
-      console.log('[CustomBackgroundImage] 🎨 Restoring body background - no custom background');
-      document.body.style.backgroundColor = '';
-      document.body.style.backgroundImage = '';
-    }
-    
-    // Cleanup al desmontar
-    return () => {
-      if (!memoizedImage) {
-        document.body.style.backgroundColor = '';
-        document.body.style.backgroundImage = '';
-      }
-    };
-  }, [memoizedImage]);
+    console.log('[CustomBackgroundImage] 🎨 Effect triggered, memoizedImage:', !!memoizedImage);
 
-  // Detectar cambios en el tema y verificar que el fondo se mantiene
-  useEffect(() => {
     if (memoizedImage) {
-      console.log('[CustomBackgroundImage] 🌓 Theme changed to:', theme, '- Background preserved:', !!memoizedImage);
-      // Re-aplicar transparencia al cambiar tema
-      document.body.style.backgroundColor = 'transparent';
-      document.body.style.backgroundImage = 'none';
+      // Hay imagen de fondo - hacer body transparente
+      console.log('[CustomBackgroundImage] 🎨 Setting body to transparent');
+      document.body.classList.add('has-custom-background');
+      document.body.style.setProperty('background-color', 'transparent', 'important');
+      document.body.style.setProperty('background-image', 'none', 'important');
+    } else {
+      // No hay imagen - restaurar el color de fondo desde CSS variables
+      console.log('[CustomBackgroundImage] 🎨 Restoring body background color');
+      document.body.classList.remove('has-custom-background');
+      document.body.style.removeProperty('background-color');
+      document.body.style.removeProperty('background-image');
+    }
+
+    // Cleanup: asegurar estado correcto al desmontar
+    return () => {
+      console.log('[CustomBackgroundImage] 🧹 Cleanup - removing custom background styles');
+      document.body.classList.remove('has-custom-background');
+      document.body.style.removeProperty('background-color');
+      document.body.style.removeProperty('background-image');
+    };
+  }, [memoizedImage, theme]); // Re-ejecutar cuando cambia el tema también
+
+  // Effect to update overlay color based on theme changes
+  useEffect(() => {
+    if (!memoizedImage) return;
+
+    console.log('[CustomBackgroundImage] 🎨 Theme changed, updating overlay color for:', theme);
+
+    // Update overlay color based on current theme
+    const overlayElement = document.querySelector('.theme-overlay');
+    if (overlayElement) {
+      const newOverlayColor = theme === 'dark' ? '#ffffff' : '#000000';
+      overlayElement.style.backgroundColor = newOverlayColor;
+      console.log('[CustomBackgroundImage] ✅ Overlay color updated to:', newOverlayColor);
     }
   }, [theme, memoizedImage]);
 
-  useEffect(() => {
-    console.log('[CustomBackgroundImage] 🔄 Effect triggered - backgroundImage changed:', {
-      hasImage: !!backgroundImage,
-      imageLength: backgroundImage?.length || 0
-    });
-  }, [backgroundImage]);
-
-  useEffect(() => {
-    console.log('[CustomBackgroundImage] 🎨 Effect triggered - backgroundEffects changed:', backgroundEffects);
-  }, [backgroundEffects]);
-
-  console.log('[CustomBackgroundImage] 🖼️ Rendering with:', {
-    hasImage: !!memoizedImage,
-    imageLength: memoizedImage?.length || 0,
-    effects: backgroundEffects,
-    currentTheme: theme
-  });
-
   if (!memoizedImage) {
-    console.log('[CustomBackgroundImage] ❌ No background image found');
     return null;
   }
-
-  console.log('[CustomBackgroundImage] ✅ Rendering background image');
 
   return (
     <>
@@ -84,12 +75,12 @@ export function CustomBackgroundImage() {
       
       {/* Overlay para legibilidad - Se ajusta automáticamente según el tema */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none theme-overlay"
         style={{
-          backgroundColor: backgroundEffects.overlayColor === 'black' ? '#000000' : '#ffffff',
+          backgroundColor: theme === 'dark' ? '#ffffff' : '#000000',
           opacity: backgroundEffects.overlay / 100,
           zIndex: -1,
-          transition: 'opacity 0.3s ease-in-out'
+          transition: 'opacity 0.3s ease-in-out, background-color 0.3s ease-in-out'
         }}
       />
     </>
