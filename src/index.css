@@ -718,3 +718,15 @@ body.christmas-mode {
   display: block !important;
   visibility: visible !important;
 }
+
+/* CRÍTICO: Cuando hay fondo personalizado, el body debe ser transparente */
+body:has(.fixed.inset-0.bg-cover.bg-center.bg-no-repeat) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Modo oscuro - Body transparente cuando hay fondo personalizado */
+.dark body:has(.fixed.inset-0.bg-cover.bg-center.bg-no-repeat) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
