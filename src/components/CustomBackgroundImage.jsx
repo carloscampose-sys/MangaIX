@@ -13,10 +13,34 @@ export function CustomBackgroundImage() {
   // Memorizar la imagen para evitar re-renders innecesarios
   const memoizedImage = useMemo(() => backgroundImage, [backgroundImage]);
 
+  // CRÍTICO: Hacer el body transparente cuando hay fondo personalizado
+  useEffect(() => {
+    if (memoizedImage) {
+      console.log('[CustomBackgroundImage] 🎨 Setting body to transparent - has background');
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.backgroundImage = 'none';
+    } else {
+      console.log('[CustomBackgroundImage] 🎨 Restoring body background - no custom background');
+      document.body.style.backgroundColor = '';
+      document.body.style.backgroundImage = '';
+    }
+    
+    // Cleanup al desmontar
+    return () => {
+      if (!memoizedImage) {
+        document.body.style.backgroundColor = '';
+        document.body.style.backgroundImage = '';
+      }
+    };
+  }, [memoizedImage]);
+
   // Detectar cambios en el tema y verificar que el fondo se mantiene
   useEffect(() => {
     if (memoizedImage) {
       console.log('[CustomBackgroundImage] 🌓 Theme changed to:', theme, '- Background preserved:', !!memoizedImage);
+      // Re-aplicar transparencia al cambiar tema
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.backgroundImage = 'none';
     }
   }, [theme, memoizedImage]);
 
