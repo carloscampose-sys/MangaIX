@@ -677,3 +677,44 @@ body.christmas-mode {
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+
+/* ============================================
+   CUSTOM BACKGROUND IMAGE - THEME PRESERVATION
+   ============================================
+   Estas reglas aseguran que el fondo personalizado
+   se mantenga visible al cambiar entre tema claro y oscuro
+*/
+
+/* Fondo personalizado - Siempre visible en ambos temas */
+.fixed.inset-0.bg-cover.bg-center.bg-no-repeat {
+  /* Asegurar que el fondo esté siempre detrás del contenido */
+  z-index: -2 !important;
+  /* Evitar que el fondo interfiera con interacciones */
+  pointer-events: none !important;
+  /* Transición suave al cambiar efectos */
+  transition: filter 0.3s ease-in-out !important;
+}
+
+/* Overlay del fondo - Transición suave al cambiar tema */
+.fixed.inset-0.pointer-events-none[style*="opacity"] {
+  /* Asegurar que el overlay esté encima del fondo pero detrás del contenido */
+  z-index: -1 !important;
+  /* Transición suave de opacidad */
+  transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out !important;
+}
+
+/* Modo oscuro - NO afectar el fondo personalizado */
+.dark .fixed.inset-0.bg-cover.bg-center.bg-no-repeat {
+  /* Mantener el fondo visible en modo oscuro */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Modo oscuro - Ajustar overlay automáticamente para mejor legibilidad */
+.dark .fixed.inset-0.pointer-events-none[style*="opacity"] {
+  /* El overlay se mantiene pero puede ajustarse dinámicamente */
+  display: block !important;
+  visibility: visible !important;
+}

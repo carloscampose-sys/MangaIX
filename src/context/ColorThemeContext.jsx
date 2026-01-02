@@ -272,14 +272,20 @@ export function ColorThemeProvider({ children }) {
       const storedImage = localStorage.getItem(BACKGROUND_IMAGE_KEY);
       const storedEffects = localStorage.getItem(BACKGROUND_EFFECTS_KEY);
       
+      console.log('[ColorThemeContext] 📂 Loading background from storage:', {
+        hasImage: !!storedImage,
+        imageLength: storedImage?.length || 0,
+        hasEffects: !!storedEffects
+      });
+      
       if (storedImage) {
         setBackgroundImageState(storedImage);
-        console.log('[ColorThemeContext] Background image loaded from storage');
+        console.log('[ColorThemeContext] ✅ Background image loaded from storage');
       }
       
       if (storedEffects) {
         setBackgroundEffectsState(JSON.parse(storedEffects));
-        console.log('[ColorThemeContext] Background effects loaded from storage');
+        console.log('[ColorThemeContext] ✅ Background effects loaded from storage');
       }
     } catch (error) {
       console.error('[ColorThemeContext] Error loading background image from storage:', error);

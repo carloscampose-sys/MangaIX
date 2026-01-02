@@ -23,6 +23,12 @@ export const ThemeProvider = ({ children }) => {
     }, [theme]);
 
     const toggleTheme = () => {
+        console.log('[ThemeContext] 🌓 Toggling theme from:', theme);
+        console.log('[ThemeContext] 📦 localStorage before toggle:', {
+            theme: localStorage.getItem('theme'),
+            customBackgroundImage: localStorage.getItem('customBackgroundImage') ? 'EXISTS' : 'NOT FOUND',
+            backgroundEffects: localStorage.getItem('backgroundEffects') ? 'EXISTS' : 'NOT FOUND'
+        });
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
 

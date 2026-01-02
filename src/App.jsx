@@ -5,6 +5,7 @@ import { ColorThemeProvider } from './context/ColorThemeContext';
 import { Navbar } from './components/Navbar';
 import { ManhwaCard } from './components/ManhwaCard';
 import { Oracle } from './components/Oracle';
+import { SettingsPanel } from './components/SettingsPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { PageLoader } from './components/PageLoader';
@@ -80,7 +81,7 @@ const MainApp = ({ userName, userGender }) => {
   const [libraryCurrentPage, setLibraryCurrentPage] = useState(1);
   const LIBRARY_ITEMS_PER_PAGE = 10;
 
-  const PAGES_ORDER = ['home', 'library', 'oracle'];
+  const PAGES_ORDER = ['home', 'library', 'oracle', 'settings'];
   const [direction, setDirection] = useState(0);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLuckModalOpen, setIsLuckModalOpen] = useState(false);
@@ -1379,6 +1380,8 @@ const MainApp = ({ userName, userGender }) => {
             )}
 
             {page === 'oracle' && <Oracle />}
+
+            {page === 'settings' && <SettingsPanel />}
           </motion.div>
         </AnimatePresence>
 
