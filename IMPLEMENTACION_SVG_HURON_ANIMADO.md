@@ -1,4 +1,4 @@
-# ✅ Implementación: Hurón SVG Animado en PageLoader
+<!--  --># ✅ Implementación: Hurón SVG Animado en PageLoader
 
 **Fecha**: 23 de diciembre de 2025
 **Estado**: ✅ COMPLETADO

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home, Save, Check } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Minimize2, ArrowLeft, ArrowRight, Home } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import confetti from 'canvas-confetti';
@@ -20,8 +20,6 @@ export const Reader = ({
 }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [fullWidth, setFullWidth] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [justSaved, setJustSaved] = useState(false);
     const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
     const scrollContainerRef = useRef(null);
     
@@ -176,6 +174,10 @@ export const Reader = ({
         if (mangaId && chapterId) {
             readingProgressService.clearProgress(mangaId, chapterId);
         }
+        
+        // Auto-guardar progreso al avanzar al siguiente capítulo
+        autoSaveProgress();
+        
         if (onNextChapter) {
             onNextChapter();
         }
@@ -190,30 +192,18 @@ export const Reader = ({
         }
     };
 
-    // Función para guardar progreso
-    const handleSaveProgress = async () => {
-        if (!manga) {
-            showToast("⚠️ No se pudo identificar la obra");
-            return;
-        }
+    // Función para auto-guardar progreso
+    const autoSaveProgress = () => {
+        if (!manga) return;
 
         // Verificar si está en biblioteca
         const mangaInLibrary = library.find(m => m.id === manga.id);
         
-        if (!mangaInLibrary) {
-            showToast("⚠️ Añade esta obra a tu biblioteca primero 📚");
-            return;
-        }
+        if (!mangaInLibrary) return;
         
         // Verificar si ya fue leído
         const currentChapterNum = parseInt(chapter);
-        if (mangaInLibrary.chaptersRead >= currentChapterNum) {
-            showToast("ℹ️ Ya marcaste este capítulo como leído ✓");
-            return;
-        }
-        
-        // Guardar progreso
-        setIsSaving(true);
+        if (mangaInLibrary.chaptersRead >= currentChapterNum) return;
         
         try {
             // Calcular cuántos capítulos incrementar
@@ -222,7 +212,6 @@ export const Reader = ({
             updateProgress(manga.id, chaptersToAdd);
             
             // Feedback visual
-            setJustSaved(true);
             showToast("✨ Progreso guardado! +1 capítulo devorado 🥑");
             
             // Confetti
@@ -233,16 +222,8 @@ export const Reader = ({
                 colors: ['#A7D08C', '#FFD700', '#FFFFFF']
             });
             
-            // Resetear después de 2 segundos
-            setTimeout(() => {
-                setJustSaved(false);
-            }, 2000);
-            
         } catch (error) {
             console.error('Error guardando progreso:', error);
-            showToast("❌ Error al guardar. Intenta de nuevo.");
-        } finally {
-            setIsSaving(false);
         }
     };
 
@@ -331,50 +312,6 @@ export const Reader = ({
                             <span className="hidden sm:inline">MENÚ</span>
                             <span className="sm:hidden">📚</span>
                         </button>
-                        
-                        {/* NUEVO: Botón Guardar Progreso */}
-                        {manga && (
-                            <button
-                                onClick={handleSaveProgress}
-                                disabled={isSaving || justSaved}
-                                className={`
-                                    w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm
-                                    flex items-center justify-center gap-2 transition-all shadow-2xl
-                                    ${justSaved 
-                                        ? 'bg-green-600 text-white' 
-                                        : isSaving
-                                            ? 'bg-potaxie-green/70 text-white cursor-wait'
-                                            : 'bg-potaxie-green hover:bg-[#A3E635] text-white hover:scale-105 active:scale-95'
-                                    }
-                                    ${(isSaving || justSaved) && 'cursor-not-allowed'}
-                                `}
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        >
-                                            <Save size={18} className="sm:w-5 sm:h-5" />
-                                        </motion.div>
-                                        <span className="hidden sm:inline">GUARDANDO...</span>
-                                        <span className="sm:hidden">💾</span>
-                                    </>
-                                ) : justSaved ? (
-                                    <>
-                                        <Check size={18} className="sm:w-5 sm:h-5" />
-                                        <span className="hidden sm:inline">¡GUARDADO!</span>
-                                        <span className="sm:hidden">✓</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save size={18} className="sm:w-5 sm:h-5" />
-                                        <span className="hidden sm:inline">GUARDAR</span>
-                                        <span className="sm:hidden">💾</span>
-                                    </>
-                                )}
-                            </button>
-                        )}
                         
                         {/* Botón Siguiente Capítulo */}
                         {hasNextChapter && onNextChapter && (

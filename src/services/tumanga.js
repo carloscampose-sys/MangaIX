@@ -303,7 +303,7 @@ function buildTuMangaSearchURL(query = '', filters = {}) {
  * @param {string} filters.sortBy - 'title', 'year', o 'date'
  * @param {string} filters.sortOrder - 'asc' o 'desc'
  * @param {number} filters.page - Número de página (0-based)
- * @returns {Promise<array>} Array de mangas encontrados
+ * @returns {Promise<{results: array, hasMore: boolean}>} Object con array de resultados y flag de paginación
  */
 export const searchTuManga = async (query = '', filters = {}) => {
     try {
@@ -318,35 +318,69 @@ export const searchTuManga = async (query = '', filters = {}) => {
         const doc = parser.parseFromString(response.data, 'text/html');
         const results = [];
 
-        // Seleccionar elementos de manga
-        doc.querySelectorAll('.gm_h .item, ul.gm_h li.item').forEach((el, index) => {
-            const link = el.querySelector('a');
-            const href = link?.getAttribute('href');
+        // Seleccionar elementos de manga - selector específico para la lista de resultados
+        // Estructura: <ul><li><a href="/online/slug"><img/>Título</a></li></ul>
+        // Usamos 'ul > li > a' para ser más específicos y evitar capturar otros enlaces
+        const items = doc.querySelectorAll('ul > li > a[href^="/online/"]');
+
+        console.log(`[TuManga] Elementos encontrados con selector: ${items.length}`);
+
+        items.forEach((link, index) => {
+            const href = link.getAttribute('href');
 
             if (href && href.startsWith('/online/')) {
                 const slug = href.replace('/online/', '');
-                const title = el.querySelector('h2')?.textContent?.trim();
-                const img = el.querySelector('img');
-                const coverUrl = img?.getAttribute('data-src') || img?.getAttribute('src');
+                // El título está en el texto del enlace (NO en el alt de la imagen)
+                // Las imágenes tienen alt="sssss" que es solo un placeholder
+                let title = link.textContent?.trim();
 
-                if (title && slug) {
+                // Si no hay texto en el enlace, intentar con el alt de la imagen ( fallback)
+                const img = link.querySelector('img');
+                if (!title || title.includes('sssss')) {
+                    title = img?.getAttribute('alt')?.trim();
+                }
+
+                // Limpiar el título si tiene el año añadido entre paréntesis
+                if (title) {
+                    title = title.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+                }
+
+                // DEBUG: Log para ver qué títulos se extraen
+                console.log(`[TuManga] Item ${index}: slug=${slug}, title="${title}"`);
+
+                // Filtrar: solo aceptar si tiene título y el slug tiene sentido
+                // Esto evita capturar enlaces de navegación o footer
+                if (title && slug && slug.length > 2 && !title.includes('sssss')) {
                     const uniqueId = `tumanga-${slug}-${Date.now()}-${index}`;
                     results.push({
                         id: uniqueId,
                         slug,
                         title,
-                        cover: coverUrl?.startsWith('http') ? coverUrl : `${BASE_URL}${coverUrl}`,
+                        cover: img?.getAttribute('data-src') || img?.getAttribute('src') || '',
                         source: 'tumanga'
                     });
                 }
             }
         });
 
-        console.log(`[TuManga] Encontrados ${results.length} resultados`);
-        return results;
+        // Extraer información de paginación del HTML
+        let hasMore = false;
+        const bodyText = doc.body?.textContent || '';
+
+        // Buscar patrón como "2/136" (página actual / total)
+        const paginationMatch = bodyText.match(/(\d+)\/(\d+)/);
+        if (paginationMatch) {
+            const currentPage = parseInt(paginationMatch[1]);
+            const totalPages = parseInt(paginationMatch[2]);
+            hasMore = currentPage < totalPages;
+            console.log(`[TuManga] Paginación: ${currentPage}/${totalPages}, hasMore: ${hasMore}`);
+        }
+
+        console.log(`[TuManga] Encontrados ${results.length} resultados, hasMore: ${hasMore}`);
+        return { results, hasMore };
     } catch (error) {
         console.error('[TuManga] Error en búsqueda:', error);
-        return [];
+        return { results: [], hasMore: false };
     }
 };
 
@@ -765,7 +799,8 @@ export const getRandomManga = async (genreIds = []) => {
             : {};
 
         // Primero obtener resultados de página 0 para verificar que hay resultados
-        const firstPageResults = await searchTuManga('', { ...baseFilters, page: 0 });
+        const firstPageResponse = await searchTuManga('', { ...baseFilters, page: 0 });
+        const firstPageResults = firstPageResponse.results;
 
         if (firstPageResults.length === 0) {
             console.log('[TuManga] No se encontraron resultados con filtros');
@@ -782,7 +817,8 @@ export const getRandomManga = async (genreIds = []) => {
         if (randomPage === 0) {
             results = firstPageResults;
         } else {
-            results = await searchTuManga('', { ...baseFilters, page: randomPage });
+            const randomPageResponse = await searchTuManga('', { ...baseFilters, page: randomPage });
+            results = randomPageResponse.results;
             // Si la página está vacía, usar la primera página
             if (results.length === 0) {
                 console.log('[TuManga Random] Página vacía, usando página 0');
@@ -807,19 +843,22 @@ export const getRandomManga = async (genreIds = []) => {
  */
 export const searchTuMangaWithDetails = async (query = '', filters = {}) => {
     try {
-        const basicResults = await searchTuManga(query, filters);
-        const limitedResults = basicResults.slice(0, 24);
+        const { results, hasMore } = await searchTuManga(query, filters);
+        const limitedResults = results.slice(0, 24);
 
-        return limitedResults.map(manga => ({
-            ...manga,
-            description: "Haz clic para ver más detalles... 🥑",
-            author: 'Cargando...',
-            status: 'ongoing',
-            lastChapter: '?',
-            year: '?'
-        }));
+        return {
+            results: limitedResults.map(manga => ({
+                ...manga,
+                description: "Haz clic para ver más detalles... 🥑",
+                author: 'Cargando...',
+                status: 'ongoing',
+                lastChapter: '?',
+                year: '?'
+            })),
+            hasMore
+        };
     } catch (error) {
         console.error('Error in searchTuMangaWithDetails:', error);
-        return [];
+        return { results: [], hasMore: false };
     }
 };

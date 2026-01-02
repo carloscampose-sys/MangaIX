@@ -36,8 +36,12 @@ export async function unifiedSearch(query, filters, source, page = 1) {
         const service = getService(source);
 
         if (source === 'tumanga') {
-            const results = await service.searchTuManga(query, filters);
-            return { results, hasMore: false }; // TuManga no usa paginación
+            const response = await service.searchTuManga(query, filters);
+            // TuManga ahora retorna { results, hasMore }
+            return {
+                results: response.results,
+                hasMore: response.hasMore
+            };
         } else if (source === 'manhwaweb') {
             const results = await service.searchManhwaWeb(query, filters, page);
             // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
