@@ -5,6 +5,8 @@ import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import confetti from 'canvas-confetti';
 import { readingProgressService } from '../services/readingProgressService';
+import { ChapterLoader } from './ChapterLoader';
+import { useChapterLoader } from '../hooks/useChapterLoader';
 
 export const Reader = ({ 
     pages, 
@@ -26,7 +28,22 @@ export const Reader = ({
     
     const { library, updateProgress } = useLibrary();
     const { showToast } = useToast();
-    
+
+    // Hook del loader de capítulos
+    const { progress, isLoading, startLoading, completeLoading, resetLoading } = useChapterLoader();
+
+    // Sincronizar loader con isLoadingChapter (carga inicial desde DetailModal)
+    useEffect(() => {
+        if (isLoadingChapter) {
+            startLoading();
+        } else {
+            // Solo completar si el loader está activo
+            if (isLoading) {
+                completeLoading();
+            }
+        }
+    }, [isLoadingChapter]);
+
     // Generar IDs únicos para el progreso
     const mangaId = manga?.id || manga?.slug || 'unknown';
     const chapterId = `chapter_${chapter}`;
@@ -184,25 +201,33 @@ export const Reader = ({
 
     // Limpiar progreso al cambiar de capítulo
     const handleNextChapter = () => {
+        startLoading(); // Iniciar loader
+
         if (mangaId && chapterId) {
             readingProgressService.clearProgress(mangaId, chapterId);
         }
-        
+
         // Auto-guardar progreso al avanzar al siguiente capítulo
         autoSaveProgress();
-        
+
         if (onNextChapter) {
             onNextChapter();
         }
+
+        completeLoading(); // Completar loader
     };
 
     const handlePreviousChapter = () => {
+        startLoading(); // Iniciar loader
+
         if (mangaId && chapterId) {
             readingProgressService.clearProgress(mangaId, chapterId);
         }
         if (onPreviousChapter) {
             onPreviousChapter();
         }
+
+        completeLoading(); // Completar loader
     };
 
     // Función para auto-guardar progreso
@@ -351,6 +376,9 @@ export const Reader = ({
                     )}
                 </div>
             </div>
+
+            {/* Loader de capítulos */}
+            <ChapterLoader progress={progress} isVisible={isLoading} />
         </motion.div>
     );
 };
