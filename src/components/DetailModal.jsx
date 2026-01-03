@@ -374,7 +374,7 @@ export const DetailModal = ({
                                                     flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl transition-all border-2
                                                     ${manga.status === opt.id
                                                         ? `${opt.color} ${opt.text} border-transparent shadow-xl scale-105 ring-2 sm:ring-4 ring-offset-2 sm:ring-offset-4 dark:ring-offset-gray-900 ${opt.id === 'devorando' ? 'ring-potaxie-green/20' : 'ring-yellow-400/20'}`
-                                                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-potaxie-green/30/30 text-gray-400 dark:text-gray-600 hover:border-potaxie-200 dark:hover:border-yellow-400'}
+                                                        : 'bg-gray-50 border-gray-100 text-gray-400 hover:border-potaxie-200'}
                                                 `}
                                             >
                                                 <span className="text-lg sm:text-xl md:text-2xl">{opt.emoji}</span>
@@ -395,7 +395,7 @@ export const DetailModal = ({
                                         value={note}
                                         onChange={(e) => saveNote(manga.id, e.target.value)}
                                         placeholder="Anota aquí tus teorías más locas potaxie..."
-                                        className="w-full h-24 sm:h-28 md:h-36 p-3 sm:p-4 md:p-6 text-xs sm:text-sm bg-yellow-50/50 dark:bg-gray-800/50 border-2 border-yellow-100/50 dark:border-potaxie-green/30/30 rounded-xl sm:rounded-2xl md:rounded-[2rem] focus:ring-4 ring-potaxie-green/10 focus:border-potaxie-green outline-none transition-all resize-none dark:text-gray-600 font-medium italic"
+                                        className="w-full h-24 sm:h-28 md:h-36 p-3 sm:p-4 md:p-6 text-xs sm:text-sm bg-yellow-50/50 border-2 border-yellow-100/50 rounded-xl sm:rounded-2xl md:rounded-[2rem] focus:ring-4 ring-potaxie-green/10 focus:border-potaxie-green outline-none transition-all resize-none font-medium italic"
                                     />
                                 </div>
                             )}

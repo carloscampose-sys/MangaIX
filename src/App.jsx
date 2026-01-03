@@ -1301,7 +1301,7 @@ const MainApp = ({ userName, userGender }) => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={handleSurprise}
-                      className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-2 rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 sm:gap-2 font-black text-[10px] sm:text-xs uppercase btn-premium-potaxie group relative overflow-hidden"
+                      className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white text-gray-700 border-2 rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 sm:gap-2 font-black text-[10px] sm:text-xs uppercase btn-premium-potaxie group relative overflow-hidden"
                     >
                       <motion.div
                         className="absolute inset-0 bg-potaxie-green/20 pointer-events-none"
@@ -1320,7 +1320,7 @@ const MainApp = ({ userName, userGender }) => {
                       <select
                         value={libraryFilter}
                         onChange={(e) => setLibraryFilter(e.target.value)}
-                        className="appearance-none pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border-2 border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white font-black text-[10px] sm:text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
+                        className="appearance-none pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border-2 border-gray-100 bg-white font-black text-[10px] sm:text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
                       >
                         <option value="all">Todas las Divas</option>
                         <option value="devorando">Devorando 🥑</option>
