@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ColorThemeProvider } from './context/ColorThemeContext';
+import { ModalProvider, useModal } from './context/ModalContext';
 import { Navbar } from './components/Navbar';
 import { ManhwaCard } from './components/ManhwaCard';
 import { Oracle } from './components/Oracle';
@@ -31,6 +32,7 @@ import { useChristmasTheme } from './context/ChristmasThemeContext';
 
 const MainApp = ({ userName, userGender }) => {
   const { isChristmasMode } = useChristmasTheme();
+  const { isAnyModalOpen } = useModal();
   const [page, setPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -120,6 +122,9 @@ const MainApp = ({ userName, userGender }) => {
   const handleDragEnd = (event, info) => {
     // No permitir swipe si el body tiene overflow hidden (pantallas de bienvenida/carga)
     if (document.body.style.overflow === 'hidden') return;
+
+    // No permitir swipe si hay modales abiertos
+    if (isAnyModalOpen) return;
     
     // Umbrales más estrictos para evitar swipes accidentales
     const threshold = 100;  // Aumentado de 50 a 100px
@@ -589,7 +594,7 @@ const MainApp = ({ userName, userGender }) => {
             initial="enter"
             animate="center"
             exit="exit"
-            drag="x"
+            drag={isAnyModalOpen ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
@@ -1458,9 +1463,10 @@ const App = () => {
   return (
     <ThemeProvider>
       <ColorThemeProvider>
-        <ChristmasThemeProvider>
-          <ToastProvider>
-            <LibraryProvider>
+        <ModalProvider>
+          <ChristmasThemeProvider>
+            <ToastProvider>
+              <LibraryProvider>
               <AnimatePresence mode="wait">
                 {showWelcomeScreen && (
                   <motion.div
@@ -1491,9 +1497,10 @@ const App = () => {
                   <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
                 )}
               </AnimatePresence>
-            </LibraryProvider>
-          </ToastProvider>
-        </ChristmasThemeProvider>
+              </LibraryProvider>
+            </ToastProvider>
+          </ChristmasThemeProvider>
+        </ModalProvider>
       </ColorThemeProvider>
     </ThemeProvider>
   );

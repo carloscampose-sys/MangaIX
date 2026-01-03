@@ -3,6 +3,7 @@ import { AlertTriangle, X, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BackgroundImageUploader } from './BackgroundImageUploader';
 import { useColorTheme } from '../context/ColorThemeContext';
+import { useModal } from '../context/ModalContext';
 
 // Colores de fondo recomendados (seguros para legibilidad)
 const RECOMMENDED_BACKGROUNDS = [
@@ -18,14 +19,16 @@ const RECOMMENDED_BACKGROUNDS = [
 
 export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }) {
   const { backgroundImage, backgroundEffects, setBackgroundImage, resetBackgroundImage } = useColorTheme();
+  const { openModal, closeModal } = useModal();
   const [bgColor, setBgColor] = useState(currentColor || '#ffffff');
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(0);
   const [lightness, setLightness] = useState(100);
   const [showImageUploader, setShowImageUploader] = useState(false);
-  
+
   const saturationRef = useRef(null);
   const hueRef = useRef(null);
+  const modalRef = useRef(null);
   const [isDraggingSaturation, setIsDraggingSaturation] = useState(false);
   const [isDraggingHue, setIsDraggingHue] = useState(false);
 
@@ -86,8 +89,11 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
       setHue(hsl.h);
       setSaturation(hsl.s);
       setLightness(hsl.l);
+      openModal();
+    } else if (!isOpen) {
+      closeModal();
     }
-  }, [isOpen, currentColor]);
+  }, [isOpen, currentColor, openModal, closeModal]);
 
   // Handlers para mouse
   const handleSaturationMouseDown = (e) => {
@@ -161,40 +167,96 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
   // Event listeners
   useEffect(() => {
     if (isDraggingSaturation) {
-      const handleMove = (e) => updateSaturationFromMouse(e);
-      const handleTouchMove = (e) => { e.preventDefault(); updateSaturationFromTouch(e); };
+      const handleMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateSaturationFromMouse(e);
+      };
+      const handleTouchMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateSaturationFromTouch(e);
+      };
       const handleEnd = () => setIsDraggingSaturation(false);
-      
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
+
+      const preventDefault = (e) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      if (modalRef.current) {
+        modalRef.current.style.overflow = 'hidden';
+      }
+
+      window.addEventListener('mousemove', handleMove, { passive: false });
+      window.addEventListener('mouseup', handleEnd, { passive: true });
       window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
-      
+      window.addEventListener('touchend', handleEnd, { passive: true });
+      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
+      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
+      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
+
       return () => {
+        if (modalRef.current) {
+          modalRef.current.style.overflow = 'auto';
+        }
+
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleEnd);
         window.removeEventListener('touchmove', handleTouchMove);
         window.removeEventListener('touchend', handleEnd);
+        window.removeEventListener('wheel', preventDefault, { capture: true });
+        document.removeEventListener('scroll', preventDefault, { capture: true });
+        document.removeEventListener('touchmove', preventDefault, { capture: true });
       };
     }
   }, [isDraggingSaturation]);
 
   useEffect(() => {
     if (isDraggingHue) {
-      const handleMove = (e) => updateHueFromMouse(e);
-      const handleTouchMove = (e) => { e.preventDefault(); updateHueFromTouch(e); };
+      const handleMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateHueFromMouse(e);
+      };
+      const handleTouchMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateHueFromTouch(e);
+      };
       const handleEnd = () => setIsDraggingHue(false);
-      
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
+
+      const preventDefault = (e) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      if (modalRef.current) {
+        modalRef.current.style.overflow = 'hidden';
+      }
+
+      window.addEventListener('mousemove', handleMove, { passive: false });
+      window.addEventListener('mouseup', handleEnd, { passive: true });
       window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
-      
+      window.addEventListener('touchend', handleEnd, { passive: true });
+      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
+      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
+      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
+
       return () => {
+        if (modalRef.current) {
+          modalRef.current.style.overflow = 'auto';
+        }
+
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleEnd);
         window.removeEventListener('touchmove', handleTouchMove);
         window.removeEventListener('touchend', handleEnd);
+        window.removeEventListener('wheel', preventDefault, { capture: true });
+        document.removeEventListener('scroll', preventDefault, { capture: true });
+        document.removeEventListener('touchmove', preventDefault, { capture: true });
       };
     }
   }, [isDraggingHue]);
@@ -221,6 +283,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
       {isOpen && !showImageUploader && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
           <motion.div
+            key="background-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -229,11 +292,18 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
           />
 
           <motion.div
+            key="background-modal"
+            ref={modalRef}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative w-full max-w-lg glass-modal rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto z-10 my-auto"
+            style={{
+              touchAction: (isDraggingSaturation || isDraggingHue) ? 'none' : 'auto',
+              overflow: (isDraggingSaturation || isDraggingHue) ? 'hidden' : 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -290,13 +360,17 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
                 O elige un color personalizado
               </label>
               <div
-                ref={saturationRef}
-                onMouseDown={handleSaturationMouseDown}
-                onTouchStart={handleSaturationTouchStart}
-                className="relative w-full h-40 sm:h-48 rounded-xl cursor-crosshair mb-3 shadow-lg touch-none"
-                style={{
-                  background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`
-                }}
+                 ref={saturationRef}
+                 onMouseDown={handleSaturationMouseDown}
+                 onTouchStart={handleSaturationTouchStart}
+                 className="relative w-full h-40 sm:h-48 rounded-xl cursor-crosshair mb-3 shadow-lg touch-none select-none"
+                 style={{
+                   background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`,
+                   userSelect: 'none',
+                   WebkitUserSelect: 'none',
+                   WebkitUserDrag: 'none',
+                   touchAction: 'none'
+                 }}
               >
                 <div
                   className="absolute w-5 h-5 border-3 border-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
@@ -308,15 +382,19 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
                 />
               </div>
 
-              <div
-                ref={hueRef}
-                onMouseDown={handleHueMouseDown}
-                onTouchStart={handleHueTouchStart}
-                className="relative w-full h-7 rounded-lg cursor-pointer shadow-lg mb-3 touch-none"
-                style={{
-                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
-                }}
-              >
+            <div
+               ref={hueRef}
+               onMouseDown={handleHueMouseDown}
+               onTouchStart={handleHueTouchStart}
+               className="relative w-full h-7 rounded-lg cursor-pointer shadow-lg mb-3 touch-none select-none"
+               style={{
+                 background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+                 userSelect: 'none',
+                 WebkitUserSelect: 'none',
+                 WebkitUserDrag: 'none',
+                 touchAction: 'none'
+               }}
+            >
                 <div
                   className="absolute w-5 h-full border-3 border-white rounded-lg shadow-lg transform -translate-x-1/2 pointer-events-none"
                   style={{

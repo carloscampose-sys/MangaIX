@@ -8,6 +8,7 @@ import { unifiedGetDetails, unifiedGetChapters, unifiedGetPages } from '../servi
 import { getSourceById } from '../services/sources';
 import { chapterHistoryService } from '../services/chapterHistoryService';
 import { Reader } from './Reader';
+import { ChapterLoader } from './ChapterLoader';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
 
 export const DetailModal = ({
@@ -39,6 +40,7 @@ export const DetailModal = ({
     const [isOpeningReader, setIsOpeningReader] = useState(false);
     const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
     const [readChapters, setReadChapters] = useState([]);
+    const [loadingProgress, setLoadingProgress] = useState(0);
 
     useEffect(() => {
         if (isOpen && manga) {
@@ -143,6 +145,12 @@ export const DetailModal = ({
         setSelectedChapter(chapter.chapter);
         setIsOpeningReader(true);
 
+        // Iniciar loader de progreso
+        setLoadingProgress(0);
+        const progressInterval = setInterval(() => {
+            setLoadingProgress(prev => Math.min(prev + 2, 95));
+        }, 50);
+
         try {
             // Pasar el capítulo completo para que Ikigai pueda acceder al chapterId
             const pages = await unifiedGetPages(manga.slug, chapter.chapter, source || selectedChapterSource, chapter);
@@ -160,8 +168,17 @@ export const DetailModal = ({
         } catch (error) {
             console.error('Error opening reader:', error);
             showToast("¡Error de conexión! Intenta de nuevo 💅");
+        } finally {
+            // Completar loader y limpiar intervalo
+            clearInterval(progressInterval);
+            setLoadingProgress(100);
+
+            // Mantener el 100% visible por un momento antes de ocultar
+            setTimeout(() => {
+                setLoadingProgress(0);
+                setIsOpeningReader(false);
+            }, 500);
         }
-        setIsOpeningReader(false);
     };
 
     const goToNextChapter = async () => {
@@ -508,6 +525,12 @@ export const DetailModal = ({
                     );
                 })()}
             </AnimatePresence>
+
+            {/* Loader de capítulo durante carga inicial */}
+            <ChapterLoader
+                progress={loadingProgress}
+                isVisible={isOpeningReader && loadingProgress > 0}
+            />
         </AnimatePresence>
     );
 

@@ -1,9 +1,12 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useColorTheme } from '../context/ColorThemeContext';
+import { useModal } from '../context/ModalContext';
 import { BackgroundColorPicker } from './BackgroundColorPicker';
 
 export function BackgroundColorModal({ isOpen, onClose }) {
   const { theme, setCustomBackground, resetCustomBackground } = useColorTheme();
+  const { openModal, closeModal } = useModal();
 
   const handleApplyCustomBackground = (bgColor) => {
     try {
@@ -18,6 +21,15 @@ export function BackgroundColorModal({ isOpen, onClose }) {
     resetCustomBackground();
     onClose();
   };
+
+  // Llamar a openModal y closeModal cuando el modal se abre/cierra
+  useEffect(() => {
+    if (isOpen) {
+      openModal();
+    } else {
+      closeModal();
+    }
+  }, [isOpen, openModal, closeModal]);
 
   if (!isOpen) return null;
 

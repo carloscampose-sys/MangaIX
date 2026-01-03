@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, RotateCcw, Palette, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useColorTheme } from '../context/ColorThemeContext';
+import { useModal } from '../context/ModalContext';
 import colorPaletteGenerator from '../utils/colorPaletteGenerator';
 
 // Colores predefinidos populares
@@ -18,6 +19,7 @@ const PRESET_COLORS = [
 
 export function ColorThemeModal({ isOpen, onClose }) {
   const { theme, setBaseColor, resetTheme } = useColorTheme();
+  const { openModal, closeModal } = useModal();
   const [selectedColor, setSelectedColor] = useState(theme?.baseColor || '#3b82f6');
   const [previewPalette, setPreviewPalette] = useState(null);
   const [hue, setHue] = useState(120);
@@ -25,9 +27,10 @@ export function ColorThemeModal({ isOpen, onClose }) {
   const [lightness, setLightness] = useState(50);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  
+
   const saturationRef = useRef(null);
   const hueRef = useRef(null);
+  const modalRef = useRef(null);
   const [isDraggingSaturation, setIsDraggingSaturation] = useState(false);
   const [isDraggingHue, setIsDraggingHue] = useState(false);
 
@@ -47,15 +50,15 @@ export function ColorThemeModal({ isOpen, onClose }) {
   const hexToHsl = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     if (!result) return { h: 0, s: 0, l: 0 };
-    
+
     let r = parseInt(result[1], 16) / 255;
     let g = parseInt(result[2], 16) / 255;
     let b = parseInt(result[3], 16) / 255;
-    
+
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     let h, s, l = (max + min) / 2;
-    
+
     if (max === min) {
       h = s = 0;
     } else {
@@ -67,7 +70,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
         case b: h = ((r - g) / d + 4) / 6; break;
       }
     }
-    
+
     return {
       h: Math.round(h * 360),
       s: Math.round(s * 100),
@@ -100,151 +103,195 @@ export function ColorThemeModal({ isOpen, onClose }) {
       setHue(hsl.h);
       setSaturation(hsl.s);
       setLightness(hsl.l);
+      openModal();
+    } else if (!isOpen) {
+      closeModal();
     }
-  }, [isOpen, theme]);
+  }, [isOpen, theme, openModal, closeModal]);
 
-  // Manejar arrastre en el área de saturación/luminosidad
+  // Handlers para saturación
   const handleSaturationMouseDown = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingSaturation(true);
     updateSaturationFromMouse(e);
   };
 
   const handleSaturationTouchStart = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingSaturation(true);
     updateSaturationFromTouch(e);
   };
 
-  const handleSaturationMouseMove = (e) => {
-    if (isDraggingSaturation) {
-      updateSaturationFromMouse(e);
-    }
-  };
-
-  const handleSaturationTouchMove = (e) => {
-    if (isDraggingSaturation) {
-      e.preventDefault();
-      updateSaturationFromTouch(e);
-    }
-  };
-
-  const handleSaturationMouseUp = () => {
-    setIsDraggingSaturation(false);
-  };
-
-  const handleSaturationTouchEnd = () => {
-    setIsDraggingSaturation(false);
-  };
-
-  const updateSaturationFromMouse = (e) => {
+  const updateSaturationFromMouse = useCallback((e) => {
     if (!saturationRef.current) return;
     const rect = saturationRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-    
+
     const newSaturation = (x / rect.width) * 100;
     const newLightness = 100 - (y / rect.height) * 100;
-    
+
     setSaturation(newSaturation);
     setLightness(newLightness);
-  };
+  }, []);
 
-  const updateSaturationFromTouch = (e) => {
+  const updateSaturationFromTouch = useCallback((e) => {
     if (!saturationRef.current || !e.touches[0]) return;
     const rect = saturationRef.current.getBoundingClientRect();
     const touch = e.touches[0];
     const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(touch.clientY - rect.top, rect.height));
-    
+
     const newSaturation = (x / rect.width) * 100;
     const newLightness = 100 - (y / rect.height) * 100;
-    
+
     setSaturation(newSaturation);
     setLightness(newLightness);
-  };
+  }, []);
 
-  // Manejar arrastre en la barra de matiz
+  // Handlers para matiz (hue)
   const handleHueMouseDown = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingHue(true);
     updateHueFromMouse(e);
   };
 
   const handleHueTouchStart = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingHue(true);
     updateHueFromTouch(e);
   };
 
-  const handleHueMouseMove = (e) => {
-    if (isDraggingHue) {
-      updateHueFromMouse(e);
-    }
-  };
-
-  const handleHueTouchMove = (e) => {
-    if (isDraggingHue) {
-      e.preventDefault();
-      updateHueFromTouch(e);
-    }
-  };
-
-  const handleHueMouseUp = () => {
-    setIsDraggingHue(false);
-  };
-
-  const handleHueTouchEnd = () => {
-    setIsDraggingHue(false);
-  };
-
-  const updateHueFromMouse = (e) => {
+  const updateHueFromMouse = useCallback((e) => {
     if (!hueRef.current) return;
     const rect = hueRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const newHue = (x / rect.width) * 360;
     setHue(newHue);
-  };
+  }, []);
 
-  const updateHueFromTouch = (e) => {
+  const updateHueFromTouch = useCallback((e) => {
     if (!hueRef.current || !e.touches[0]) return;
     const rect = hueRef.current.getBoundingClientRect();
     const touch = e.touches[0];
     const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
     const newHue = (x / rect.width) * 360;
     setHue(newHue);
-  };
+  }, []);
 
-  // Agregar event listeners globales
+  // Event listeners para saturación
   useEffect(() => {
     if (isDraggingSaturation) {
-      window.addEventListener('mousemove', handleSaturationMouseMove);
-      window.addEventListener('mouseup', handleSaturationMouseUp);
-      window.addEventListener('touchmove', handleSaturationTouchMove, { passive: false });
-      window.addEventListener('touchend', handleSaturationTouchEnd);
+      const handleMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateSaturationFromMouse(e);
+      };
+      const handleTouchMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateSaturationFromTouch(e);
+      };
+      const handleEnd = () => setIsDraggingSaturation(false);
+
+      // Prevenir scroll a nivel de capture
+      const preventDefault = (e) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      // Bloquear también el scroll del modal específico
+      if (modalRef.current) {
+        modalRef.current.style.overflow = 'hidden';
+      }
+
+      window.addEventListener('mousemove', handleMove, { passive: false });
+      window.addEventListener('mouseup', handleEnd, { passive: true });
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleEnd, { passive: true });
+      // Bloqueo agresivo de wheel
+      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
+      // Bloqueo de scroll en document
+      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
+      // Bloquear touch events globales
+      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
+
       return () => {
-        window.removeEventListener('mousemove', handleSaturationMouseMove);
-        window.removeEventListener('mouseup', handleSaturationMouseUp);
-        window.removeEventListener('touchmove', handleSaturationTouchMove);
-        window.removeEventListener('touchend', handleSaturationTouchEnd);
+        // Restaurar scroll del modal
+        if (modalRef.current) {
+          modalRef.current.style.overflow = 'auto';
+        }
+
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleEnd);
+        window.removeEventListener('wheel', preventDefault, { capture: true });
+        document.removeEventListener('scroll', preventDefault, { capture: true });
+        document.removeEventListener('touchmove', preventDefault, { capture: true });
       };
     }
-  }, [isDraggingSaturation]);
+  }, [isDraggingSaturation, updateSaturationFromMouse, updateSaturationFromTouch]);
 
+  // Event listeners para matiz
   useEffect(() => {
     if (isDraggingHue) {
-      window.addEventListener('mousemove', handleHueMouseMove);
-      window.addEventListener('mouseup', handleHueMouseUp);
-      window.addEventListener('touchmove', handleHueTouchMove, { passive: false });
-      window.addEventListener('touchend', handleHueTouchEnd);
+      const handleMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateHueFromMouse(e);
+      };
+      const handleTouchMove = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateHueFromTouch(e);
+      };
+      const handleEnd = () => setIsDraggingHue(false);
+
+      // Prevenir scroll a nivel de capture
+      const preventDefault = (e) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      // Bloquear también el scroll del modal específico
+      if (modalRef.current) {
+        modalRef.current.style.overflow = 'hidden';
+      }
+
+      window.addEventListener('mousemove', handleMove, { passive: false });
+      window.addEventListener('mouseup', handleEnd, { passive: true });
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleEnd, { passive: true });
+      // Bloqueo agresivo de wheel
+      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
+      // Bloqueo de scroll en document
+      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
+      // Bloquear touch events globales
+      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
+
       return () => {
-        window.removeEventListener('mousemove', handleHueMouseMove);
-        window.removeEventListener('mouseup', handleHueMouseUp);
-        window.removeEventListener('touchmove', handleHueTouchMove);
-        window.removeEventListener('touchend', handleHueTouchEnd);
+        // Restaurar scroll del modal
+        if (modalRef.current) {
+          modalRef.current.style.overflow = 'auto';
+        }
+
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleEnd);
+        window.removeEventListener('wheel', preventDefault, { capture: true });
+        document.removeEventListener('scroll', preventDefault, { capture: true });
+        document.removeEventListener('touchmove', preventDefault, { capture: true });
       };
     }
-  }, [isDraggingHue]);
+  }, [isDraggingHue, updateHueFromMouse, updateHueFromTouch]);
 
   const handleApply = () => {
     try {
@@ -282,26 +329,34 @@ export function ColorThemeModal({ isOpen, onClose }) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 touch-none">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            dragListener={false}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm touch-none"
           />
 
           {/* Modal - Centrado verticalmente */}
           <motion.div
+            ref={modalRef}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            dragListener={false}
             className="relative w-full max-w-2xl glass-modal rounded-2xl shadow-2xl p-6 md:p-8 max-h-[85vh] overflow-y-auto z-10 my-auto"
+            style={{
+              touchAction: (isDraggingSaturation || isDraggingHue) ? 'none' : 'auto',
+              overflow: (isDraggingSaturation || isDraggingHue) ? 'hidden' : 'auto'
+            }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 flex-shrink-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Palette style={{ color: selectedColor }} size={24} className="sm:w-7 sm:h-7" />
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-800 dark:text-gray-600">
@@ -324,9 +379,13 @@ export function ColorThemeModal({ isOpen, onClose }) {
                 ref={saturationRef}
                 onMouseDown={handleSaturationMouseDown}
                 onTouchStart={handleSaturationTouchStart}
-                className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 rounded-xl cursor-crosshair mb-3 sm:mb-4 shadow-lg touch-none"
+                className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 rounded-xl cursor-crosshair mb-3 sm:mb-4 shadow-lg touch-none select-none"
                 style={{
-                  background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`
+                  background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`,
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitUserDrag: 'none',
+                  touchAction: 'none'
                 }}
               >
                 {/* Indicador de posición */}
@@ -345,9 +404,13 @@ export function ColorThemeModal({ isOpen, onClose }) {
                 ref={hueRef}
                 onMouseDown={handleHueMouseDown}
                 onTouchStart={handleHueTouchStart}
-                className="relative w-full h-7 sm:h-8 rounded-lg cursor-pointer shadow-lg mb-3 sm:mb-4 touch-none"
+                className="relative w-full h-7 sm:h-8 rounded-lg cursor-pointer shadow-lg mb-3 sm:mb-4 touch-none select-none"
                 style={{
-                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
+                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitUserDrag: 'none',
+                  touchAction: 'none'
                 }}
               >
                 {/* Indicador de matiz */}
@@ -396,9 +459,8 @@ export function ColorThemeModal({ isOpen, onClose }) {
                   <button
                     key={color}
                     onClick={() => handlePresetClick(color)}
-                    className={`aspect-square rounded-lg transition-all transform hover:scale-110 active:scale-95 shadow-md touch-target ${
-                      selectedColor.toLowerCase() === color.toLowerCase() ? 'ring-3 sm:ring-4 ring-potaxie-green ring-offset-2' : ''
-                    }`}
+                    className={`aspect-square rounded-lg transition-all transform hover:scale-110 active:scale-95 shadow-md touch-target ${selectedColor.toLowerCase() === color.toLowerCase() ? 'ring-3 sm:ring-4 ring-potaxie-green ring-offset-2' : ''
+                      }`}
                     style={{ backgroundColor: color }}
                     aria-label={`Seleccionar ${name}`}
                     title={name}
@@ -415,7 +477,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                   <div className="text-center">
-                    <div 
+                    <div
                       className="h-16 sm:h-20 rounded-lg shadow-md mb-1 sm:mb-2 flex items-center justify-center text-white font-bold text-xs sm:text-sm"
                       style={{ backgroundColor: previewPalette.primary }}
                     >
@@ -424,7 +486,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
                     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-mono truncate">{previewPalette.primary}</p>
                   </div>
                   <div className="text-center">
-                    <div 
+                    <div
                       className="h-16 sm:h-20 rounded-lg shadow-md mb-1 sm:mb-2 flex items-center justify-center text-white font-bold text-xs sm:text-sm"
                       style={{ backgroundColor: previewPalette.secondary }}
                     >
@@ -433,7 +495,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
                     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-mono truncate">{previewPalette.secondary}</p>
                   </div>
                   <div className="text-center">
-                    <div 
+                    <div
                       className="h-16 sm:h-20 rounded-lg shadow-md mb-1 sm:mb-2 flex items-center justify-center text-white font-bold text-xs sm:text-sm"
                       style={{ backgroundColor: previewPalette.accent }}
                     >
@@ -442,9 +504,9 @@ export function ColorThemeModal({ isOpen, onClose }) {
                     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-mono truncate">{previewPalette.accent}</p>
                   </div>
                   <div className="text-center">
-                    <div 
+                    <div
                       className="h-16 sm:h-20 rounded-lg shadow-md mb-1 sm:mb-2 flex items-center justify-center font-bold text-xs sm:text-sm border-2"
-                      style={{ 
+                      style={{
                         backgroundColor: previewPalette.background,
                         color: previewPalette.textPrimary,
                         borderColor: previewPalette.border
@@ -459,11 +521,11 @@ export function ColorThemeModal({ isOpen, onClose }) {
             )}
 
             {error && (
-              <p className="text-red-500 text-xs sm:text-sm mb-3 sm:mb-4 text-center font-semibold">{error}</p>
+              <p className="text-red-500 text-xs sm:text-sm mb-3 sm:mb-4 text-center font-semibold flex-shrink-0">{error}</p>
             )}
 
             {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={handleReset}
                 className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base text-gray-700 dark:text-gray-600 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 touch-target"
