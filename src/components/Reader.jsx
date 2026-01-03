@@ -5,6 +5,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
 import confetti from 'canvas-confetti';
 import { readingProgressService } from '../services/readingProgressService';
+import { chapterHistoryService } from '../services/chapterHistoryService';
 import { ChapterLoader } from './ChapterLoader';
 import { useChapterLoader } from '../hooks/useChapterLoader';
 
@@ -185,11 +186,16 @@ export const Reader = ({
                     currentPage,
                     pages.length
                 );
+
+                // Marcar capítulo como leído si está en las últimas 2 páginas
+                if (currentPage >= pages.length - 2 && chapter) {
+                    chapterHistoryService.markChapterAsRead(mangaId, chapter.toString());
+                }
             }, 500); // Debounce de 500ms
 
             return () => clearTimeout(timeoutId);
         }
-    }, [currentPage, mangaId, chapterId, pages?.length, hasRestoredProgress]);
+    }, [currentPage, mangaId, chapterId, pages?.length, hasRestoredProgress, chapter]);
 
     const next = () => {
         if (currentPage < pages.length - 1) setCurrentPage(v => v + 1);
@@ -200,8 +206,16 @@ export const Reader = ({
     };
 
     // Limpiar progreso al cambiar de capítulo
-    const handleNextChapter = () => {
+    const handleNextChapter = async () => {
         startLoading(); // Iniciar loader
+
+        // Marcar capítulo actual como leído
+        if (mangaId && chapter) {
+            console.log('[Reader] Marking chapter as read:', { mangaId, chapter });
+            chapterHistoryService.markChapterAsRead(mangaId, chapter.toString());
+        } else {
+            console.warn('[Reader] Cannot mark chapter - missing data:', { mangaId, chapter });
+        }
 
         if (mangaId && chapterId) {
             readingProgressService.clearProgress(mangaId, chapterId);
@@ -211,7 +225,7 @@ export const Reader = ({
         autoSaveProgress();
 
         if (onNextChapter) {
-            onNextChapter();
+            await onNextChapter();
         }
 
         completeLoading(); // Completar loader

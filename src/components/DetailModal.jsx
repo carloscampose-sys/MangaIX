@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { getTuMangaChapters, getTuMangaPages, getTuMangaDetails } from '../services/tumanga';
 import { unifiedGetDetails, unifiedGetChapters, unifiedGetPages } from '../services/unified';
 import { getSourceById } from '../services/sources';
+import { chapterHistoryService } from '../services/chapterHistoryService';
 import { Reader } from './Reader';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../utils/imageProxy';
 
@@ -37,10 +38,19 @@ export const DetailModal = ({
     const [readerPages, setReaderPages] = useState(null);
     const [isOpeningReader, setIsOpeningReader] = useState(false);
     const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
+    const [readChapters, setReadChapters] = useState([]);
 
     useEffect(() => {
         if (isOpen && manga) {
             document.body.style.overflow = 'hidden';
+
+            // Cargar capítulos leídos
+            if (manga.slug || manga.id) {
+                const mangaId = manga.id || manga.slug;
+                const read = chapterHistoryService.getReadChapters(mangaId);
+                console.log('[DetailModal] Loading read chapters:', { mangaId, read });
+                setReadChapters(read);
+            }
 
             // Si el manga tiene slug (viene de TuManga), cargar detalles y capítulos
             if (manga.slug) {
@@ -53,6 +63,7 @@ export const DetailModal = ({
                 setChaptersBySource({ tumanga: [], manhwaweb: [] });
                 setSelectedChapter(null);
                 setReaderPages(null);
+                setReadChapters([]);
             }
         }
         return () => {
@@ -413,16 +424,32 @@ export const DetailModal = ({
                                         {isLoadingChapters ? (
                                             <span className="text-[10px] sm:text-xs text-gray-400 italic animate-pulse">Cargando capítulos...</span>
                                         ) : chaptersBySource[selectedChapterSource]?.length > 0 ? (
-                                            chaptersBySource[selectedChapterSource].map((ch) => (
-                                                <button
-                                                    key={ch.id}
-                                                    onClick={() => openReader(ch, selectedChapterSource)}
-                                                    disabled={isOpeningReader}
-                                                    className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gray-100 hover:bg-potaxie-green hover:text-white rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all disabled:opacity-50"
-                                                >
-                                                    Cap {ch.chapter}
-                                                </button>
-                                            ))
+                                            chaptersBySource[selectedChapterSource].map((ch) => {
+                                                const isRead = readChapters.includes(ch.chapter.toString());
+
+                                                return (
+                                                    <button
+                                                        key={ch.id}
+                                                        onClick={() => openReader(ch, selectedChapterSource)}
+                                                        disabled={isOpeningReader}
+                                                        className={`
+                                                            px-2.5 sm:px-4 py-1.5 sm:py-2
+                                                            rounded-lg sm:rounded-xl
+                                                            text-[10px] sm:text-xs font-bold
+                                                            transition-all duration-200
+                                                            border shadow-sm
+                                                            disabled:opacity-50
+                                                            ${isRead
+                                                                ? 'bg-potaxie-green/20 text-potaxie-700 border-potaxie-green/40 hover:bg-potaxie-green/30'
+                                                                : 'bg-gray-100 hover:bg-potaxie-green hover:text-white text-gray-900 border-gray-200 hover:shadow-md hover:scale-105'
+                                                            }
+                                                        `}
+                                                    >
+                                                        {isRead && <span className="mr-1">✓</span>}
+                                                        Cap {ch.chapter}
+                                                    </button>
+                                                );
+                                            })
                                         ) : (
                                             <span className="text-[10px] sm:text-xs text-gray-400 italic">No se encontraron capítulos disponibles.</span>
                                         )}
@@ -463,6 +490,14 @@ export const DetailModal = ({
                             onClose={() => {
                                 setReaderPages(null);
                                 setCurrentChapterIndex(-1);
+
+                                // Refrescar lista de capítulos leídos
+                                if (manga?.slug || manga?.id) {
+                                    const mangaId = manga.id || manga.slug;
+                                    const read = chapterHistoryService.getReadChapters(mangaId);
+                                    console.log('[DetailModal] Refreshing read chapters after reader close:', { mangaId, read });
+                                    setReadChapters(read);
+                                }
                             }}
                             onNextChapter={goToNextChapter}
                             onPreviousChapter={goToPreviousChapter}
