@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../context/ToastContext';
@@ -19,7 +19,16 @@ const STATUS_OPTIONS = [
     { id: 'tiesa', label: 'Tiesa', emoji: '☁️', color: 'bg-blue-100', text: 'text-blue-800' }
 ];
 
-export const ManhwaCard = ({ manga, inLibrary = false }) => {
+// Función de comparación para memo
+const arePropsEqual = (prevProps, nextProps) => {
+  return prevProps.manga?.id === nextProps.manga?.id &&
+         prevProps.manga?.chaptersRead === nextProps.manga?.chaptersRead &&
+         prevProps.manga?.status === nextProps.manga?.status &&
+         prevProps.manga?.rating === nextProps.manga?.rating &&
+         prevProps.inLibrary === nextProps.inLibrary;
+};
+
+export const ManhwaCard = memo(({ manga, inLibrary = false }) => {
     const { incognito, theme } = useTheme();
     const { addToLibrary, removeFromLibrary, updateProgress, saveNote, getNote, setMangaStatus, setMangaRating, updateMangaData } = useLibrary();
     const { showToast } = useToast();
@@ -33,10 +42,14 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
     const incrementIntervalRef = useRef(null);
     const incrementTimeoutRef = useRef(null);
 
+    // OPTIMIZACIÓN: Usar useRef para evitar dependencias innecesarias
+    const mangaIdRef = useRef(manga?.id);
+
     // Sincronizar chaptersInput con manga.chaptersRead cuando cambie
     useEffect(() => {
         setChaptersInput(manga?.chaptersRead || 0);
-    }, [manga?.chaptersRead]);
+        mangaIdRef.current = manga?.id;
+    }, [manga?.chaptersRead, manga?.id]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -66,7 +79,7 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
         setChaptersInput(prev => {
             const newVal = (parseInt(prev) || 0) + 1;
             // También actualizar el contexto
-            updateProgress(manga.id, 1);
+            updateProgress(mangaIdRef.current || manga?.id, 1);
             return newVal;
         });
     };
@@ -234,6 +247,8 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
                         src={getImageUrl(manga?.cover) || PLACEHOLDER_IMAGE}
                         alt={manga?.title || 'Unknown'}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                     />
                 )}
@@ -370,4 +385,4 @@ export const ManhwaCard = ({ manga, inLibrary = false }) => {
             />
         </motion.div>
     );
-};
+}, arePropsEqual);

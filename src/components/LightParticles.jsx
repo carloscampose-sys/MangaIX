@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
+import { isAutomatedTest } from '../utils/storage';
+import { isMobile, prefersReducedMotion } from '../utils/performance';
 
 /**
  * Configuration for particle generation
@@ -9,7 +11,7 @@ import { useChristmasTheme } from '../context/ChristmasThemeContext';
 const PARTICLE_CONFIG = {
   count: {
     desktop: 60,      // Aumentado para más densidad visual
-    mobile: 35        // Aumentado para mobile también
+    mobile: 10        // REDUCIDO DE 35 A 10 para mejor rendimiento en móvil
   },
   size: {
     min: 6,           // Partículas más grandes
@@ -42,8 +44,14 @@ const PARTICLE_CONFIG = {
 const getParticleCount = () => {
   if (typeof window === 'undefined') return PARTICLE_CONFIG.count.desktop;
   
-  // Reduce particles on mobile
-  return window.innerWidth <= 768 
+  // DETECTAR: Test automatizado
+  if (isAutomatedTest()) return 0;
+  
+  // DESACTIVADO TEMPORALMENTE: Prefiere reducir movimiento
+  // if (prefersReducedMotion()) return 0;
+  
+  // DETECTAR: Móvil
+  return isMobile() 
     ? PARTICLE_CONFIG.count.mobile 
     : PARTICLE_CONFIG.count.desktop;
 };

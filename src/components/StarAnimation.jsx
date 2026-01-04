@@ -1,9 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { isAutomatedTest } from '../utils/storage';
+import { isMobile, prefersReducedMotion } from '../utils/performance';
 
 export const StarAnimation = () => {
-  // Generar 100 estrellas con propiedades aleatorias
-  const stars = [...Array(100)].map((_, i) => {
+  // DETECTAR: No renderizar en tests
+  if (isAutomatedTest()) {
+    return null;
+  }
+
+  // DETECTAR: No renderizar si prefiere reducir movimiento
+  if (prefersReducedMotion()) {
+    return null;
+  }
+
+  // DETECTAR: Reducir estrellas en móvil
+  const starCount = isMobile() ? 15 : 100;
+
+  // Generar estrellas con propiedades aleatorias
+  const stars = [...Array(starCount)].map((_, i) => {
     const size = Math.random() * 6 + 3; // 3-9px
     const x = Math.random() * 100; // Posición X aleatoria (0-100%)
     const y = Math.random() * 100; // Posición Y aleatoria (0-100%)

@@ -1,10 +1,25 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { isAutomatedTest } from '../utils/storage';
+import { isMobile, prefersReducedMotion } from '../utils/performance';
 
 export const SnowEffect = () => {
+  // DETECTAR: No renderizar en tests
+  if (isAutomatedTest()) {
+    return null;
+  }
+
+  // DESACTIVADO TEMPORALMENTE: No renderizar si prefiere reducir movimiento
+  // if (prefersReducedMotion()) {
+  //   return null;
+  // }
+
+  // DETECTAR: Reducir copos en móvil
+  const snowflakeCount = isMobile() ? 10 : 80;
+
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      {[...Array(80)].map((_, i) => {
+      {[...Array(snowflakeCount)].map((_, i) => {
         const size = Math.random() * 6 + 3;
         const duration = Math.random() * 4 + 6;
         const delay = Math.random() * 8;
