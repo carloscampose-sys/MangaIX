@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BackgroundImageUploader } from './BackgroundImageUploader';
 import { useColorTheme } from '../context/ColorThemeContext';
 import { useModal } from '../context/ModalContext';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 // Colores de fondo recomendados (seguros para legibilidad)
 const RECOMMENDED_BACKGROUNDS = [
@@ -31,6 +32,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
   const modalRef = useRef(null);
   const [isDraggingSaturation, setIsDraggingSaturation] = useState(false);
   const [isDraggingHue, setIsDraggingHue] = useState(false);
+  const isMobileDevice = useMediaQuery('(pointer: coarse) or (max-width: 768px)');
 
   // Convertir HSL a HEX
   const hslToHex = (h, s, l) => {
@@ -299,10 +301,10 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative w-full max-w-lg glass-modal rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto z-10 my-auto"
-            style={{
-              touchAction: (isDraggingSaturation || isDraggingHue) ? 'none' : 'auto',
-              overflow: (isDraggingSaturation || isDraggingHue) ? 'hidden' : 'auto'
-            }}
+              style={{
+                touchAction: (isDraggingSaturation || isDraggingHue) ? 'none' : 'auto',
+                overflow: isMobileDevice && (isDraggingSaturation || isDraggingHue) ? 'hidden' : 'auto'
+              }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
