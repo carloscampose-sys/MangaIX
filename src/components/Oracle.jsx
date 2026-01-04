@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomManga, TUMANGA_GENRES, TUMANGA_MOODS } from '../services/tumanga';
 import { unifiedGetRandom } from '../services/unified';
@@ -117,7 +117,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
     );
 };
 
-export const Oracle = () => {
+const Oracle = () => {
     const [selectedGenre, setSelectedGenre] = useState(null);
     const [selectedMood, setSelectedMood] = useState(null);
     const [selectedSource, setSelectedSource] = useState(DEFAULT_SOURCE);
@@ -368,3 +368,5 @@ export const Oracle = () => {
         </div>
     );
 };
+
+export default memo(Oracle);

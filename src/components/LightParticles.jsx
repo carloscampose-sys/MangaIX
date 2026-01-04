@@ -10,8 +10,8 @@ import { isMobile, prefersReducedMotion } from '../utils/performance';
  */
 const PARTICLE_CONFIG = {
   count: {
-    desktop: 60,      // Aumentado para más densidad visual
-    mobile: 10        // REDUCIDO DE 35 A 10 para mejor rendimiento en móvil
+    desktop: 30,      // OPTIMIZADO: Reducido de 60 a 30 para mejor rendimiento
+    mobile: 8         // OPTIMIZADO: Reducido de 10 a 8 para mejor rendimiento
   },
   size: {
     min: 6,           // Partículas más grandes

@@ -7,7 +7,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { TypewriterText } from './TypewriterText';
 
-export const PotaxioLuckModal = ({ isOpen, onClose, library }) => {
+const PotaxioLuckModal = ({ isOpen, onClose, library }) => {
     const { theme } = useTheme();
     const { updateProgress, saveNote, getNote, setMangaStatus, setMangaRating, saveTranslation, getTranslation, updateMangaData } = useLibrary();
     const [step, setStep] = useState('loading'); // loading, result
@@ -220,6 +220,8 @@ export const PotaxioLuckModal = ({ isOpen, onClose, library }) => {
                     { id: 'tiesa', label: 'Tiesa', emoji: '☁️', color: 'bg-blue-100', text: 'text-blue-800' }
                 ]}
             />
-        </div>
-    );
+    </div>
+  );
 };
+
+export default PotaxioLuckModal;

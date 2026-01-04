@@ -15,7 +15,7 @@ export const SnowEffect = () => {
   // }
 
   // DETECTAR: Reducir copos en móvil
-  const snowflakeCount = isMobile() ?5 : 40;  // OPTIMIZADO: Reducido -50% en ambos
+  const snowflakeCount = isMobile() ? 10 : 80;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -25,7 +25,7 @@ export const SnowEffect = () => {
         const delay = Math.random() * 8;
         const startX = Math.random() * 100;
         const endX = startX + (Math.random() * 30 - 15);
-
+        
         return (
           <motion.div
             key={i}

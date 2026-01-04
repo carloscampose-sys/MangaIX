@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ColorThemeProvider } from './context/ColorThemeContext';
 import { ModalProvider, useModal } from './context/ModalContext';
 import { Navbar } from './components/Navbar';
 import { ManhwaCard } from './components/ManhwaCard';
-import { Oracle } from './components/Oracle';
-import { SettingsPanel } from './components/SettingsPanel';
 import { LoadingScreen } from './components/LoadingScreen';
-import { PotaxioLuckModal } from './components/PotaxioLuckModal';
 import { PageLoader } from './components/PageLoader';
 import { SearchLoader } from './components/SearchLoader';
 import { Pagination } from './components/Pagination';
+
+// Lazy loading de componentes pesados
+const Oracle = lazy(() => import('./components/Oracle'));
+const SettingsPanel = lazy(() => import('./components/SettingsPanel'));
+const PotaxioLuckModal = lazy(() => import('./components/PotaxioLuckModal'));
 
 import { ToastProvider, useToast } from './context/ToastContext';
 import { searchTuManga, TUMANGA_GENRES, TUMANGA_MOODS, TUMANGA_SORT_BY, TUMANGA_SORT_ORDER } from './services/tumanga';
@@ -1384,17 +1386,27 @@ const MainApp = ({ userName, userGender }) => {
               </div>
             )}
 
-            {page === 'oracle' && <Oracle />}
+            {page === 'oracle' && (
+              <Suspense fallback={<PageLoader />}>
+                <Oracle />
+              </Suspense>
+            )}
 
-            {page === 'settings' && <SettingsPanel />}
+            {page === 'settings' && (
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPanel />
+              </Suspense>
+            )}
           </motion.div>
         </AnimatePresence>
 
-        <PotaxioLuckModal
-          isOpen={isLuckModalOpen}
-          onClose={() => setIsLuckModalOpen(false)}
-          library={library}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <PotaxioLuckModal
+            isOpen={isLuckModalOpen}
+            onClose={() => setIsLuckModalOpen(false)}
+            library={library}
+          />
+        </Suspense>
 
         {/* Search Loader para búsquedas */}
         <SearchLoader isLoading={loading} />

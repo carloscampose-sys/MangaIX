@@ -101,7 +101,7 @@ const SettingsGrid = ({ sections }) => (
 // ============================================================
 // MAIN SETTINGS PANEL COMPONENT
 // ============================================================
-export const SettingsPanel = () => {
+const SettingsPanel = () => {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showColorTheme, setShowColorTheme] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
@@ -171,6 +171,8 @@ export const SettingsPanel = () => {
         isOpen={showBackgroundModal} 
         onClose={() => setShowBackgroundModal(false)} 
       />
-    </div>
-  );
-};
+      </div>
+   );
+  };
+
+export default SettingsPanel;

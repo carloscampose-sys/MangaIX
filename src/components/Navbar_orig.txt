@@ -1,0 +1,10 @@
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((devouredChapters / level.max) * 100, 100)}%` }}
+                            className="h-full bg-potaxie-green"
+                        />
+                    </div>
+                    <span className="text-[7px] xs:text-[8px] sm:text-[9px] md:text-xs text-gray-400 truncate w-full text-center">
+                        {devouredChapters} <span className="hidden xs:inline">caps</span>
+                    </span>
+                </div>
