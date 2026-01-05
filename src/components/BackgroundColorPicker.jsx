@@ -65,7 +65,7 @@ export function BackgroundColorPicker({ isOpen, onClose, onApply, currentColor }
   return (
     <AnimatePresence>
       {isOpen && !showImageUploader && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 overflow-y-auto">
           <motion.div
             key="background-backdrop"
             initial={{ opacity: 0 }}

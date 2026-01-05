@@ -114,7 +114,7 @@ export const ParticleSettingsModal = ({ isOpen, onClose }) => {
       {/* Modal Principal - AnimatePresence Separado */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4 overflow-y-auto">
             <motion.div
               key="particle-settings-backdrop"
               initial={{ opacity: 0 }}
@@ -130,7 +130,7 @@ export const ParticleSettingsModal = ({ isOpen, onClose }) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-3xl glass-modal rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto z-10 my-auto"
+              className="relative w-full max-w-3xl glass-modal rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[85vh] overflow-y-auto z-10 my-auto"
               onClick={(e) => e.stopPropagation()}
             >
             {/* Header */}
