@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { isAutomatedTest } from '../utils/storage';
 import { isMobile, prefersReducedMotion } from '../utils/performance';
 
@@ -116,11 +117,11 @@ const generateParticles = (count, primaryColor, glowColor) => {
 /**
  * LightParticles Component
  * 
- * Renders animated particles in the background. Compatible with both light and dark modes.
+ * Renders animated particles in the background for light mode.
  * Particles are purely decorative and do not interfere with user interactions.
  * 
  * Features:
- * - Compatible with both light and dark modes
+ * - Only renders in light mode (not in dark or christmas mode)
  * - GPU-accelerated animations using CSS transforms
  * - Responsive particle count based on screen size
  * - Accessible (aria-hidden, pointer-events: none)
@@ -132,13 +133,10 @@ const generateParticles = (count, primaryColor, glowColor) => {
  */
 export const LightParticles = ({ colors = null }) => {
   const { theme } = useTheme();
+  const { isChristmasMode } = useChristmasTheme();
   
   const primaryColor = colors?.primary;
   const glowColor = colors?.glow;
-  
-  console.log('[LightParticles] colors prop:', colors);
-  console.log('[LightParticles] primaryColor:', primaryColor);
-  console.log('[LightParticles] glowColor:', glowColor);
 
   // Memoize particles to generate them only once
   const particles = useMemo(() => {
@@ -163,13 +161,18 @@ export const LightParticles = ({ colors = null }) => {
     }
   }, [primaryColor, glowColor]);
 
+  // Only render in light mode and when christmas mode is not active
+  if (theme !== 'light' || isChristmasMode) {
+    return null;
+  }
+
   // Don't render if no particles were generated
   if (particles.length === 0) {
     return null;
   }
 
   return (
-    <div className="light-particles fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+    <div className="light-particles" aria-hidden="true">
       {particles.map((particle) => (
         <div
           key={particle.id}

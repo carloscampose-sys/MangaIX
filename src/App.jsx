@@ -534,18 +534,21 @@ const MainApp = ({ userName, userGender }) => {
     <div className="min-h-screen pb-24 md:pb-32 relative">
       {/* Custom Background Image */}
       <CustomBackgroundImage />
+      
+      {/* Christmas Snow Effect - Priority over user selection */}
+      {isChristmasMode && <SnowEffect />}
 
-      {/* User Selected Particles - Work in all modes including Christmas */}
-      {settings.particleType === 'snow' && (
+      {/* User Selected Particles - Only render when Christmas mode is off */}
+      {!isChristmasMode && settings.particleType === 'snow' && (
         <SnowEffect colors={settings.customColors.snow} />
       )}
-      {settings.particleType === 'stars' && (
+      {!isChristmasMode && settings.particleType === 'stars' && (
         <StarAnimation colors={settings.customColors.stars} />
       )}
-      {settings.particleType === 'light-particles' && (
-        <LightParticles colors={settings.customColors['light-particles']} />
+      {!isChristmasMode && settings.particleType === 'light-particles' && (
+        <LightParticles colors={settings.customColors.lightParticles} />
       )}
-      {settings.particleType === 'hearts' && (
+      {!isChristmasMode && settings.particleType === 'hearts' && (
         <HeartParticles colors={settings.customColors.hearts} />
       )}
 

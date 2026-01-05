@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS = {
       primary: 'rgba(255, 255, 255, 1)',
       glow: 'rgba(255, 255, 255, 0.6)'
     },
-    'light-particles': {
+    lightParticles: {
       primary: 'rgba(190, 227, 176, 0.9)',
       glow: 'rgba(255, 204, 128, 0.7)'
     },
