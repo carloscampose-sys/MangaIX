@@ -21,7 +21,8 @@
       "WebFetch(domain:api.ikigaimangas.com)",
       "Bash(grep:*)",
       "WebFetch(domain:tumanga.org)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(pnpm install)"
     ]
   }
 }

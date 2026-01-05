@@ -113,6 +113,11 @@ export default async function handler(req, res) {
 function processAndReturnResults(data, page, res) {
   console.log('[Ikigai Search] API Response - Total:', data.total, 'Current Page:', data.current_page);
 
+  // Detectar si la API está ignorando el parámetro search
+  if (data.total > 2000) {
+    console.warn('[Ikigai Search] ⚠️ High result count - search parameter might be ignored');
+  }
+
   // Transformar resultados al formato esperado por la app
   const results = (data.data || []).map(serie => ({
     id: `ikigai-${serie.slug}-${serie.id}`,
@@ -144,10 +149,10 @@ function processAndReturnResults(data, page, res) {
  * Parámetros correctos de la API de Ikigai:
  * - page: número de página
  * - search: texto de búsqueda
- * - genres: ID de género (solo uno a la vez)
- * - type: tipo de contenido (comic/novel)
- * - status: estado de publicación
- * - order_by: ordenamiento
+ * - genres_ids[]: Array de IDs de géneros (soporta múltiples)
+ * - types[]: Array de tipos de contenido (comic/novel, soporta múltiples)
+ * - statuses_ids[]: Array de IDs de estados (soporta múltiples)
+ * - order_by: ordenamiento (name, created_at, etc.)
  */
 function buildApiUrl(query, filters, page) {
   const baseUrl = 'https://panel.ikigaimangas.com/api/swf/series';
@@ -156,24 +161,30 @@ function buildApiUrl(query, filters, page) {
   // Página
   params.append('page', page);
 
-  // Query de búsqueda
-  if (query) {
-    params.append('search', query);
+  // Query de búsqueda por título
+  if (query && query.trim()) {
+    params.append('search', query.trim());
   }
 
-  // Género (la API solo acepta un género a la vez)
+  // Géneros como array (soporta múltiples)
   if (filters.genres && filters.genres.length > 0) {
-    params.append('genres', filters.genres[0]);
+    filters.genres.forEach(genreId => {
+      params.append('genres_ids[]', genreId);
+    });
   }
 
-  // Tipo (comic, novel) - solo uno a la vez
+  // Tipos como array (soporta múltiples)
   if (filters.types && filters.types.length > 0) {
-    params.append('type', filters.types[0]);
+    filters.types.forEach(typeId => {
+      params.append('types[]', typeId);
+    });
   }
 
-  // Estado - solo uno a la vez
+  // Estados como array (soporta múltiples)
   if (filters.statuses && filters.statuses.length > 0) {
-    params.append('status', filters.statuses[0]);
+    filters.statuses.forEach(statusId => {
+      params.append('statuses_ids[]', statusId);
+    });
   }
 
   // Ordenamiento
