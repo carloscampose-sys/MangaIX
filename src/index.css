@@ -616,11 +616,7 @@ body.christmas-mode {
 
 /* Light particles container */
 .light-particles {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1; /* Debajo del overlay del fondo personalizado */
-  overflow: hidden;
+  /* z-index manejado por Tailwind en el componente (z-0) */
 }
 
 /* Individual particle styling */
@@ -639,18 +635,6 @@ body.christmas-mode {
   .light-particles .particle {
     animation: float-particle 20s linear infinite !important;
   }
-}
-
-/* Hide particles ONLY in christmas mode (NOT in dark mode when there's custom background) */
-/* Cuando hay fondo personalizado, las partículas deben ocultarse pero el fondo se mantiene */
-.christmas-mode .light-particles {
-  display: none;
-}
-
-/* En modo oscuro CON fondo personalizado, ocultar partículas pero mantener fondo visible */
-body.has-custom-background .light-particles,
-.dark body.has-custom-background .light-particles {
-  display: none;
 }
 
 
