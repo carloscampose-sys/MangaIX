@@ -53,54 +53,23 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       // Si la API directa falla, intentar con proxy alternativo
-      console.log('[Ikigai Search] API directa falló, intentando alternativas...');
+      console.log('[Ikigai Search] API directa falló, intentando alternativa...');
 
-      // Probar primero con allorigins.win (preserva mejor los query params)
-      try {
-        const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-        console.log('[Ikigai Search] Intentando allorigins.win...');
+      // Usar corsproxy.io - NO encodear la URL (ya tiene los params correctos)
+      const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
+      console.log('[Ikigai Search] Proxy URL:', proxyUrl);
 
-        const alloriginsResponse = await fetch(alloriginsUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (alloriginsResponse.ok) {
-          const alloriginsData = await alloriginsResponse.json();
-          console.log('[Ikigai Search] ✓ allorigins.win funcionó');
-          return processAndReturnResults(alloriginsData, page, res, query);
+      const proxyResponse = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
         }
-      } catch (e) {
-        console.log('[Ikigai Search] allorigins.win falló:', e.message);
-      }
+      });
 
-      // Fallback: corsproxy.io
-      try {
-        const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
-        console.log('[Ikigai Search] Intentando corsproxy.io...');
-
-        const proxyResponse = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (proxyResponse.ok) {
-          const proxyData = await proxyResponse.json();
-          console.log('[Ikigai Search] ✓ corsproxy.io funcionó');
-          return processAndReturnResults(proxyData, page, res, query);
-        }
-      } catch (e) {
-        console.log('[Ikigai Search] corsproxy.io falló:', e.message);
-      }
-
-      // Último fallback: thingproxy
-      try {
+      if (!proxyResponse.ok) {
+        // Intentar con otro proxy como fallback
+        console.log('[Ikigai Search] corsproxy falló, intentando thingproxy...');
         const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
-        console.log('[Ikigai Search] Intentando thingproxy...');
 
         const thingProxyResponse = await fetch(thingProxyUrl, {
           method: 'GET',
@@ -109,25 +78,24 @@ export default async function handler(req, res) {
           }
         });
 
-        if (thingProxyResponse.ok) {
-          const thingProxyData = await thingProxyResponse.json();
-          console.log('[Ikigai Search] ✓ thingproxy funcionó');
-          return processAndReturnResults(thingProxyData, page, res, query);
+        if (!thingProxyResponse.ok) {
+          console.error('[Ikigai Search] Todos los proxies fallaron');
+          return res.status(500).json({
+            error: 'Error en la API de Ikigai',
+            details: 'Todos los métodos fallaron'
+          });
         }
-      } catch (e) {
-        console.log('[Ikigai Search] thingproxy falló:', e.message);
+
+        const thingProxyData = await thingProxyResponse.json();
+        return processAndReturnResults(thingProxyData, page, res);
       }
 
-      // Si todos fallaron
-      console.error('[Ikigai Search] Todos los proxies fallaron');
-      return res.status(500).json({
-        error: 'Error en la API de Ikigai',
-        details: 'Todos los métodos de proxy fallaron'
-      });
+      const proxyData = await proxyResponse.json();
+      return processAndReturnResults(proxyData, page, res);
     }
 
     const data = await response.json();
-    return processAndReturnResults(data, page, res, query);
+    return processAndReturnResults(data, page, res);
 
   } catch (error) {
     console.error('[Ikigai Search] Error:', error);
@@ -142,46 +110,8 @@ export default async function handler(req, res) {
 /**
  * Procesa los datos y retorna la respuesta
  */
-function processAndReturnResults(data, page, res, query = '') {
+function processAndReturnResults(data, page, res) {
   console.log('[Ikigai Search] API Response - Total:', data.total, 'Current Page:', data.current_page);
-
-  // Detectar si la API está ignorando el parámetro search
-  if (data.total > 2000 && query && query.trim()) {
-    console.warn('[Ikigai Search] ⚠️ High result count with query - search parameter ignored by proxy');
-    console.warn('[Ikigai Search] Applying client-side filtering for query:', query);
-
-    // Filtrado client-side: buscar en nombre y slug
-    const queryLower = query.toLowerCase().trim();
-    const filteredData = (data.data || []).filter(serie => {
-      const titleMatch = serie.name.toLowerCase().includes(queryLower);
-      const slugMatch = serie.slug.toLowerCase().includes(queryLower.replace(/\s+/g, '-'));
-      return titleMatch || slugMatch;
-    });
-
-    console.log(`[Ikigai Search] Client-side filtered: ${filteredData.length} results (from ${data.data?.length || 0})`);
-
-    // Transformar resultados filtrados
-    const results = filteredData.map(serie => ({
-      id: `ikigai-${serie.slug}-${serie.id}`,
-      slug: serie.slug,
-      title: serie.name,
-      cover: serie.cover || '',
-      source: 'ikigai',
-      type: serie.type,
-      status: serie.status,
-      chapterCount: serie.chapter_count,
-      genres: (serie.genres || []).map(g => g.name)
-    }));
-
-    return res.status(200).json({
-      results,
-      page: 1,
-      totalPages: 1,
-      total: results.length,
-      hasMore: false,
-      warning: 'Results filtered server-side due to proxy limitation'
-    });
-  }
 
   // Transformar resultados al formato esperado por la app
   const results = (data.data || []).map(serie => ({
@@ -214,10 +144,10 @@ function processAndReturnResults(data, page, res, query = '') {
  * Parámetros correctos de la API de Ikigai:
  * - page: número de página
  * - search: texto de búsqueda
- * - genres_ids[]: Array de IDs de géneros (soporta múltiples)
- * - types[]: Array de tipos de contenido (comic/novel, soporta múltiples)
- * - statuses_ids[]: Array de IDs de estados (soporta múltiples)
- * - order_by: ordenamiento (name, created_at, etc.)
+ * - genres: ID de género (solo uno a la vez)
+ * - type: tipo de contenido (comic/novel)
+ * - status: estado de publicación
+ * - order_by: ordenamiento
  */
 function buildApiUrl(query, filters, page) {
   const baseUrl = 'https://panel.ikigaimangas.com/api/swf/series';
@@ -226,30 +156,24 @@ function buildApiUrl(query, filters, page) {
   // Página
   params.append('page', page);
 
-  // Query de búsqueda por título
-  if (query && query.trim()) {
-    params.append('search', query.trim());
+  // Query de búsqueda
+  if (query) {
+    params.append('search', query);
   }
 
-  // Géneros como array (soporta múltiples)
+  // Género (la API solo acepta un género a la vez)
   if (filters.genres && filters.genres.length > 0) {
-    filters.genres.forEach(genreId => {
-      params.append('genres_ids[]', genreId);
-    });
+    params.append('genres', filters.genres[0]);
   }
 
-  // Tipos como array (soporta múltiples)
+  // Tipo (comic, novel) - solo uno a la vez
   if (filters.types && filters.types.length > 0) {
-    filters.types.forEach(typeId => {
-      params.append('types[]', typeId);
-    });
+    params.append('type', filters.types[0]);
   }
 
-  // Estados como array (soporta múltiples)
+  // Estado - solo uno a la vez
   if (filters.statuses && filters.statuses.length > 0) {
-    filters.statuses.forEach(statusId => {
-      params.append('statuses_ids[]', statusId);
-    });
+    params.append('status', filters.statuses[0]);
   }
 
   // Ordenamiento
