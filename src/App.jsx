@@ -3,6 +3,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ColorThemeProvider } from './context/ColorThemeContext';
 import { ModalProvider, useModal } from './context/ModalContext';
+import { ParticleSettingsProvider } from './context/ParticleSettingsContext';
+import { useParticleSettings } from './context/ParticleSettingsContext';
 import { Navbar } from './components/Navbar';
 import { ManhwaCard } from './components/ManhwaCard';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -28,13 +30,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getGreeting } from './utils/greetingUtils';
 import { ChristmasThemeProvider } from './context/ChristmasThemeContext';
 import { SnowEffect } from './components/SnowEffect';
+import { StarAnimation } from './components/StarAnimation';
 import { LightParticles } from './components/LightParticles';
+import { HeartParticles } from './components/HeartParticles';
 import { CustomBackgroundImage } from './components/CustomBackgroundImage';
 import { useChristmasTheme } from './context/ChristmasThemeContext';
 
 const MainApp = ({ userName, userGender }) => {
   const { isChristmasMode } = useChristmasTheme();
   const { isAnyModalOpen } = useModal();
+  const { settings } = useParticleSettings();
   const [page, setPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -530,11 +535,22 @@ const MainApp = ({ userName, userGender }) => {
       {/* Custom Background Image */}
       <CustomBackgroundImage />
       
-      {/* Christmas Snow Effect */}
+      {/* Christmas Snow Effect - Priority over user selection */}
       {isChristmasMode && <SnowEffect />}
 
-      {/* Light Mode Particles */}
-      <LightParticles />
+      {/* User Selected Particles - Only render when Christmas mode is off */}
+      {!isChristmasMode && settings.particleType === 'snow' && (
+        <SnowEffect colors={settings.customColors.snow} />
+      )}
+      {!isChristmasMode && settings.particleType === 'stars' && (
+        <StarAnimation colors={settings.customColors.stars} />
+      )}
+      {!isChristmasMode && settings.particleType === 'light-particles' && (
+        <LightParticles colors={settings.customColors.lightParticles} />
+      )}
+      {!isChristmasMode && settings.particleType === 'hearts' && (
+        <HeartParticles colors={settings.customColors.hearts} />
+      )}
 
       <AnimatePresence>
         {/* Global Toasts handled by ToastProvider */}
@@ -1475,10 +1491,11 @@ const App = () => {
   return (
     <ThemeProvider>
       <ColorThemeProvider>
-        <ModalProvider>
-          <ChristmasThemeProvider>
-            <ToastProvider>
-              <LibraryProvider>
+        <ParticleSettingsProvider>
+          <ModalProvider>
+            <ChristmasThemeProvider>
+              <ToastProvider>
+                <LibraryProvider>
               <AnimatePresence mode="wait">
                 {showWelcomeScreen && (
                   <motion.div
@@ -1509,10 +1526,11 @@ const App = () => {
                   <MainApp key="app" userName={userName} userGender={userGender} /> // Pass userName and userGender to MainApp
                 )}
               </AnimatePresence>
-              </LibraryProvider>
-            </ToastProvider>
-          </ChristmasThemeProvider>
-        </ModalProvider>
+                </LibraryProvider>
+              </ToastProvider>
+            </ChristmasThemeProvider>
+          </ModalProvider>
+        </ParticleSettingsProvider>
       </ColorThemeProvider>
     </ThemeProvider>
   );

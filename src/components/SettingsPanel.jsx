@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Database, Palette, Snowflake, ChevronRight, Paintbrush } from 'lucide-react';
+import { Database, Palette, Snowflake, ChevronRight, Paintbrush, Sparkles } from 'lucide-react';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { useToast } from '../context/ToastContext';
 import { BackupModal } from './BackupModal';
 import { ColorThemeModal } from './ColorThemeModal';
 import { BackgroundColorModal } from './BackgroundColorModal';
+import { ParticleSettingsModal } from './ParticleSettingsModal';
 
 // ============================================================
 // SETTINGS HEADER COMPONENT
@@ -105,6 +106,7 @@ const SettingsPanel = () => {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showColorTheme, setShowColorTheme] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  const [showParticleModal, setShowParticleModal] = useState(false);
   const { isChristmasMode, toggleChristmasMode } = useChristmasTheme();
   const { showToast } = useToast();
 
@@ -133,6 +135,14 @@ const SettingsPanel = () => {
       icon: Paintbrush,
       color: 'from-blue-400 to-cyan-500',
       action: () => setShowBackgroundModal(true)
+    },
+    {
+      id: 'particles',
+      title: 'Partículas de Fondo',
+      description: 'Elige el tipo de partículas y personaliza sus colores',
+      icon: Sparkles,
+      color: 'from-yellow-400 to-orange-500',
+      action: () => setShowParticleModal(true)
     },
     {
       id: 'christmas',
@@ -171,8 +181,12 @@ const SettingsPanel = () => {
         isOpen={showBackgroundModal} 
         onClose={() => setShowBackgroundModal(false)} 
       />
+      <ParticleSettingsModal
+        isOpen={showParticleModal}
+        onClose={() => setShowParticleModal(false)}
+      />
       </div>
    );
-  };
+};
 
 export default SettingsPanel;

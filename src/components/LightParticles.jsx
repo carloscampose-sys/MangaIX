@@ -25,7 +25,14 @@ const PARTICLE_CONFIG = {
     min: 0.4,         // Más opacas para mejor visibilidad
     max: 0.85         // Más opacas para mejor visibilidad
   },
-  colors: [
+  getDefaultColors: (customColors) => customColors ? [
+    customColors.primary,
+    customColors.primary.replace('0.9)', '0.85)'),
+    customColors.primary.replace('0.9)', '0.8)'),
+    customColors.glow,
+    customColors.glow.replace('0.7)', '0.75)'),
+    customColors.glow.replace('0.7)', '0.6)')
+  ] : [
     'rgba(190, 227, 176, 0.9)',  // potaxie-green-pastel - muy visible
     'rgba(255, 204, 128, 0.85)', // potaxie-cream-dark - muy visible
     'rgba(201, 235, 179, 0.8)',  // potaxie-light-green - muy visible
@@ -89,9 +96,12 @@ const randomInRange = (min, max) => {
  * Each particle has unique size, position, duration, delay, opacity, and color
  * 
  * @param {number} count - Number of particles to generate
+ * @param {string} primaryColor - Primary color for particles
+ * @param {string} glowColor - Glow color for particles
  * @returns {Array} Array of particle objects
  */
-const generateParticles = (count) => {
+const generateParticles = (count, primaryColor, glowColor) => {
+  const colors = PARTICLE_CONFIG.getDefaultColors(primaryColor ? { primary: primaryColor, glow: glowColor } : null);
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     size: randomInRange(PARTICLE_CONFIG.size.min, PARTICLE_CONFIG.size.max),
@@ -100,7 +110,7 @@ const generateParticles = (count) => {
     duration: randomInRange(PARTICLE_CONFIG.duration.min, PARTICLE_CONFIG.duration.max),
     delay: randomInRange(0, 5),
     opacity: randomInRange(PARTICLE_CONFIG.opacity.min, PARTICLE_CONFIG.opacity.max),
-    color: PARTICLE_CONFIG.colors[Math.floor(Math.random() * PARTICLE_CONFIG.colors.length)]
+    color: colors[Math.floor(Math.random() * colors.length)]
   }));
 };
 
@@ -115,10 +125,18 @@ const generateParticles = (count) => {
  * - GPU-accelerated animations using CSS transforms
  * - Responsive particle count based on screen size
  * - Accessible (aria-hidden, pointer-events: none)
+ * - Accepts custom colors for particles
+ * 
+ * @param {Object} colors - Custom colors for particles
+ * @param {string} colors.primary - Primary color
+ * @param {string} colors.glow - Glow color
  */
-export const LightParticles = () => {
+export const LightParticles = ({ colors = null }) => {
   const { theme } = useTheme();
   const { isChristmasMode } = useChristmasTheme();
+  
+  const primaryColor = colors?.primary;
+  const glowColor = colors?.glow;
 
   // Memoize particles to generate them only once
   const particles = useMemo(() => {
@@ -135,13 +153,13 @@ export const LightParticles = () => {
     }
     
     try {
-      return generateParticles(count);
+      return generateParticles(count, primaryColor, glowColor);
     } catch (error) {
       console.error('LightParticles: Failed to generate particles', error);
       // Fallback: generate simplified version with fewer particles
-      return generateParticles(10);
+      return generateParticles(10, primaryColor, glowColor);
     }
-  }, []);
+  }, [primaryColor, glowColor]);
 
   // Only render in light mode and when christmas mode is not active
   if (theme !== 'light' || isChristmasMode) {

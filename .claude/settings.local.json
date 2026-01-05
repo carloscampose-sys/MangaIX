@@ -20,7 +20,8 @@
       "WebFetch(domain:viralikigai.learnixs.site)",
       "WebFetch(domain:api.ikigaimangas.com)",
       "Bash(grep:*)",
-      "WebFetch(domain:tumanga.org)"
+      "WebFetch(domain:tumanga.org)",
+      "Bash(npm run dev:*)"
     ]
   }
 }

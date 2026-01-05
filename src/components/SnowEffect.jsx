@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { isAutomatedTest } from '../utils/storage';
 import { isMobile, prefersReducedMotion } from '../utils/performance';
 
-export const SnowEffect = () => {
+export const SnowEffect = ({ colors = { primary: '#ffffff', glow: 'rgba(255, 255, 255, 0.8)' } }) => {
   // DETECTAR: No renderizar en tests
   if (isAutomatedTest()) {
     return null;
@@ -35,8 +35,8 @@ export const SnowEffect = () => {
               height: `${size}px`,
               left: `${startX}%`,
               top: '-10px',
-              background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.4) 100%)',
-              boxShadow: '0 0 10px rgba(255, 255, 255, 0.8)',
+              background: `radial-gradient(circle, ${colors.primary} 0%, ${colors.primary.replace('1)', '0.8)')} 50%, ${colors.primary.replace('1)', '0.4)')} 100%)`,
+              boxShadow: `0 0 10px ${colors.glow}`,
             }}
             animate={{
               y: ['0vh', '110vh'],

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, RotateCcw, Palette, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, RotateCcw, Palette, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ColorPickerSelector } from './ColorPickerSelector';
 import { useColorTheme } from '../context/ColorThemeContext';
 import { useModal } from '../context/ModalContext';
 import colorPaletteGenerator from '../utils/colorPaletteGenerator';
@@ -22,67 +23,9 @@ export function ColorThemeModal({ isOpen, onClose }) {
   const { openModal, closeModal } = useModal();
   const [selectedColor, setSelectedColor] = useState(theme?.baseColor || '#3b82f6');
   const [previewPalette, setPreviewPalette] = useState(null);
-  const [hue, setHue] = useState(120);
-  const [saturation, setSaturation] = useState(50);
-  const [lightness, setLightness] = useState(50);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
 
-  const saturationRef = useRef(null);
-  const hueRef = useRef(null);
   const modalRef = useRef(null);
-  const [isDraggingSaturation, setIsDraggingSaturation] = useState(false);
-  const [isDraggingHue, setIsDraggingHue] = useState(false);
-
-  // Convertir HSL a HEX
-  const hslToHex = (h, s, l) => {
-    l /= 100;
-    const a = s * Math.min(l, 1 - l) / 100;
-    const f = n => {
-      const k = (n + h / 30) % 12;
-      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-    return `#${f(0)}${f(8)}${f(4)}`;
-  };
-
-  // Convertir HEX a HSL
-  const hexToHsl = (hex) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return { h: 0, s: 0, l: 0 };
-
-    let r = parseInt(result[1], 16) / 255;
-    let g = parseInt(result[2], 16) / 255;
-    let b = parseInt(result[3], 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max === min) {
-      h = s = 0;
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-        case g: h = ((b - r) / d + 2) / 6; break;
-        case b: h = ((r - g) / d + 4) / 6; break;
-      }
-    }
-
-    return {
-      h: Math.round(h * 360),
-      s: Math.round(s * 100),
-      l: Math.round(l * 100)
-    };
-  };
-
-  // Actualizar color cuando cambian HSL
-  useEffect(() => {
-    const hex = hslToHex(hue, saturation, lightness);
-    setSelectedColor(hex);
-  }, [hue, saturation, lightness]);
 
   // Generar vista previa al cambiar color
   useEffect(() => {
@@ -99,199 +42,12 @@ export function ColorThemeModal({ isOpen, onClose }) {
   // Sincronizar con tema actual al abrir
   useEffect(() => {
     if (isOpen && theme) {
-      const hsl = hexToHsl(theme.baseColor);
-      setHue(hsl.h);
-      setSaturation(hsl.s);
-      setLightness(hsl.l);
+      setSelectedColor(theme.baseColor);
       openModal();
     } else if (!isOpen) {
       closeModal();
     }
   }, [isOpen, theme, openModal, closeModal]);
-
-  // Handlers para saturación
-  const handleSaturationMouseDown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingSaturation(true);
-    updateSaturationFromMouse(e);
-  };
-
-  const handleSaturationTouchStart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingSaturation(true);
-    updateSaturationFromTouch(e);
-  };
-
-  const updateSaturationFromMouse = useCallback((e) => {
-    if (!saturationRef.current) return;
-    const rect = saturationRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-
-    const newSaturation = (x / rect.width) * 100;
-    const newLightness = 100 - (y / rect.height) * 100;
-
-    setSaturation(newSaturation);
-    setLightness(newLightness);
-  }, []);
-
-  const updateSaturationFromTouch = useCallback((e) => {
-    if (!saturationRef.current || !e.touches[0]) return;
-    const rect = saturationRef.current.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
-    const y = Math.max(0, Math.min(touch.clientY - rect.top, rect.height));
-
-    const newSaturation = (x / rect.width) * 100;
-    const newLightness = 100 - (y / rect.height) * 100;
-
-    setSaturation(newSaturation);
-    setLightness(newLightness);
-  }, []);
-
-  // Handlers para matiz (hue)
-  const handleHueMouseDown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingHue(true);
-    updateHueFromMouse(e);
-  };
-
-  const handleHueTouchStart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingHue(true);
-    updateHueFromTouch(e);
-  };
-
-  const updateHueFromMouse = useCallback((e) => {
-    if (!hueRef.current) return;
-    const rect = hueRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const newHue = (x / rect.width) * 360;
-    setHue(newHue);
-  }, []);
-
-  const updateHueFromTouch = useCallback((e) => {
-    if (!hueRef.current || !e.touches[0]) return;
-    const rect = hueRef.current.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
-    const newHue = (x / rect.width) * 360;
-    setHue(newHue);
-  }, []);
-
-  // Event listeners para saturación
-  useEffect(() => {
-    if (isDraggingSaturation) {
-      const handleMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateSaturationFromMouse(e);
-      };
-      const handleTouchMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateSaturationFromTouch(e);
-      };
-      const handleEnd = () => setIsDraggingSaturation(false);
-
-      // Prevenir scroll a nivel de capture
-      const preventDefault = (e) => {
-        if (e.cancelable) {
-          e.preventDefault();
-        }
-      };
-
-      // Bloquear también el scroll del modal específico
-      if (modalRef.current) {
-        modalRef.current.style.overflow = 'hidden';
-      }
-
-      window.addEventListener('mousemove', handleMove, { passive: false });
-      window.addEventListener('mouseup', handleEnd, { passive: true });
-      window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleEnd, { passive: true });
-      // Bloqueo agresivo de wheel
-      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
-      // Bloqueo de scroll en document
-      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
-      // Bloquear touch events globales
-      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
-
-      return () => {
-        // Restaurar scroll del modal
-        if (modalRef.current) {
-          modalRef.current.style.overflow = 'auto';
-        }
-
-        window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', handleEnd);
-        window.removeEventListener('touchmove', handleTouchMove);
-        window.removeEventListener('touchend', handleEnd);
-        window.removeEventListener('wheel', preventDefault, { capture: true });
-        document.removeEventListener('scroll', preventDefault, { capture: true });
-        document.removeEventListener('touchmove', preventDefault, { capture: true });
-      };
-    }
-  }, [isDraggingSaturation, updateSaturationFromMouse, updateSaturationFromTouch]);
-
-  // Event listeners para matiz
-  useEffect(() => {
-    if (isDraggingHue) {
-      const handleMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateHueFromMouse(e);
-      };
-      const handleTouchMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateHueFromTouch(e);
-      };
-      const handleEnd = () => setIsDraggingHue(false);
-
-      // Prevenir scroll a nivel de capture
-      const preventDefault = (e) => {
-        if (e.cancelable) {
-          e.preventDefault();
-        }
-      };
-
-      // Bloquear también el scroll del modal específico
-      if (modalRef.current) {
-        modalRef.current.style.overflow = 'hidden';
-      }
-
-      window.addEventListener('mousemove', handleMove, { passive: false });
-      window.addEventListener('mouseup', handleEnd, { passive: true });
-      window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleEnd, { passive: true });
-      // Bloqueo agresivo de wheel
-      window.addEventListener('wheel', preventDefault, { passive: false, capture: true });
-      // Bloqueo de scroll en document
-      document.addEventListener('scroll', preventDefault, { passive: false, capture: true });
-      // Bloquear touch events globales
-      document.addEventListener('touchmove', preventDefault, { passive: false, capture: true });
-
-      return () => {
-        // Restaurar scroll del modal
-        if (modalRef.current) {
-          modalRef.current.style.overflow = 'auto';
-        }
-
-        window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', handleEnd);
-        window.removeEventListener('touchmove', handleTouchMove);
-        window.removeEventListener('touchend', handleEnd);
-        window.removeEventListener('wheel', preventDefault, { capture: true });
-        document.removeEventListener('scroll', preventDefault, { capture: true });
-        document.removeEventListener('touchmove', preventDefault, { capture: true });
-      };
-    }
-  }, [isDraggingHue, updateHueFromMouse, updateHueFromTouch]);
 
   const handleApply = () => {
     try {
@@ -309,19 +65,6 @@ export function ColorThemeModal({ isOpen, onClose }) {
   const handleReset = () => {
     resetTheme();
     onClose();
-  };
-
-  const handlePresetClick = (color) => {
-    const hsl = hexToHsl(color);
-    setHue(hsl.h);
-    setSaturation(hsl.s);
-    setLightness(hsl.l);
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(selectedColor);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!isOpen) return null;
@@ -350,10 +93,6 @@ export function ColorThemeModal({ isOpen, onClose }) {
             onClick={(e) => e.stopPropagation()}
             dragListener={false}
             className="relative w-full max-w-2xl glass-modal rounded-2xl shadow-2xl p-6 md:p-8 max-h-[85vh] overflow-y-auto z-10 my-auto"
-            style={{
-              touchAction: (isDraggingSaturation || isDraggingHue) ? 'none' : 'auto',
-              overflow: (isDraggingSaturation || isDraggingHue) ? 'hidden' : 'auto'
-            }}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4 sm:mb-6 flex-shrink-0">
@@ -374,79 +113,13 @@ export function ColorThemeModal({ isOpen, onClose }) {
 
             {/* Color Picker Principal */}
             <div className="mb-4 sm:mb-6">
-              {/* Área de Saturación/Luminosidad */}
-              <div
-                ref={saturationRef}
-                onMouseDown={handleSaturationMouseDown}
-                onTouchStart={handleSaturationTouchStart}
-                className="relative w-full h-48 sm:h-56 md:h-64 lg:h-80 rounded-xl cursor-crosshair mb-3 sm:mb-4 shadow-lg touch-none select-none"
-                style={{
-                  background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`,
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  WebkitUserDrag: 'none',
-                  touchAction: 'none'
-                }}
-              >
-                {/* Indicador de posición */}
-                <div
-                  className="absolute w-5 h-5 sm:w-6 sm:h-6 border-3 sm:border-4 border-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{
-                    left: `${saturation}%`,
-                    top: `${100 - lightness}%`,
-                    boxShadow: '0 0 0 1px rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.3)'
-                  }}
-                />
-              </div>
-
-              {/* Barra de Matiz */}
-              <div
-                ref={hueRef}
-                onMouseDown={handleHueMouseDown}
-                onTouchStart={handleHueTouchStart}
-                className="relative w-full h-7 sm:h-8 rounded-lg cursor-pointer shadow-lg mb-3 sm:mb-4 touch-none select-none"
-                style={{
-                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  WebkitUserDrag: 'none',
-                  touchAction: 'none'
-                }}
-              >
-                {/* Indicador de matiz */}
-                <div
-                  className="absolute w-5 sm:w-6 h-full border-3 sm:border-4 border-white rounded-lg shadow-lg transform -translate-x-1/2 pointer-events-none"
-                  style={{
-                    left: `${(hue / 360) * 100}%`,
-                    boxShadow: '0 0 0 1px rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.3)'
-                  }}
-                />
-              </div>
-
-              {/* Código HEX */}
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 sm:p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div
-                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg shadow-md border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
-                      style={{ backgroundColor: selectedColor }}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold">HEX</p>
-                      <p className="text-lg sm:text-2xl font-mono font-bold text-gray-800 dark:text-gray-600 truncate">
-                        {selectedColor.toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={copyToClipboard}
-                    className="p-2 sm:p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 touch-target"
-                    title="Copiar código"
-                  >
-                    {copied ? <Check size={18} className="sm:w-5 sm:h-5 text-green-500" /> : <Copy size={18} className="sm:w-5 sm:h-5" />}
-                  </button>
-                </div>
-              </div>
+              <ColorPickerSelector
+                color={selectedColor}
+                onChange={setSelectedColor}
+                presets={PRESET_COLORS}
+                showPresets={false}
+                modalRef={modalRef}
+              />
             </div>
 
             {/* Colores predefinidos */}
@@ -458,7 +131,7 @@ export function ColorThemeModal({ isOpen, onClose }) {
                 {PRESET_COLORS.map(({ color, name }) => (
                   <button
                     key={color}
-                    onClick={() => handlePresetClick(color)}
+                    onClick={() => setSelectedColor(color)}
                     className={`aspect-square rounded-lg transition-all transform hover:scale-110 active:scale-95 shadow-md touch-target ${selectedColor.toLowerCase() === color.toLowerCase() ? 'ring-3 sm:ring-4 ring-potaxie-green ring-offset-2' : ''
                       }`}
                     style={{ backgroundColor: color }}

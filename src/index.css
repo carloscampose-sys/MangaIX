@@ -105,7 +105,7 @@ body.has-custom-background .stars,
 
 /* Glassmorphism utility */
 .glass-modal {
-  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10;
+  @apply bg-white dark:bg-gray-900 border border-white/20 dark:border-white/10;
 }
 
 /* Theme transitioning class */
