@@ -307,6 +307,8 @@ const MainApp = ({ userName, userGender }) => {
     
     // Para Ikigai con searchTerm: Usar Fuse.js si las series están cargadas
     if (selectedSource === 'ikigai' && searchTerm && searchTerm.trim()) {
+      setLoading(true);
+      
       const fuseResult = ikigaiFuseManager.search(searchTerm, {
         genres: selectedGenres,
         types: selectedTypes,
@@ -452,58 +454,125 @@ const MainApp = ({ userName, userGender }) => {
   // Las sinopsis aparecen gradualmente en lotes de 5 obras.
   // ============================================================
   
-  // Función para cargar sinopsis en segundo plano (Lazy Loading)
-  const loadDescriptionsInBackground = async (mangas) => {
-    console.log('[App] Iniciando carga de sinopsis en background para', mangas.length, 'obras');
-    
-    // Cargar en lotes de 5 para no sobrecargar el servidor ni el navegador
-    const batchSize = 5;
+   // Función para cargar sinopsis en segundo plano (Lazy Loading)
+   const loadDescriptionsInBackground = async (mangas) => {
+     console.log('[App] 🔍 Iniciando carga de sinopsis en background para', mangas.length, 'obras');
+     console.log('[App] 🔍 IDs de obras:', mangas.map(m => ({ id: m.id, title: m.title, source: m.source })));
+     
+     // Cargar en lotes de 5 para no sobrecargar el servidor ni el navegador
+     const batchSize = 5;
     
     for (let i = 0; i < mangas.length; i += batchSize) {
       const batch = mangas.slice(i, i + batchSize);
       
-      // Procesar batch en paralelo
-      await Promise.allSettled(
-        batch.map(async (manga) => {
-          try {
-            console.log(`[App] Cargando sinopsis de: ${manga.title}`);
-            const details = await unifiedGetDetails(manga.slug, manga.source);
-            
-            if (details && details.description) {
-              // Actualizar la descripción en el estado
-              updateMangaDescription(manga.id, details.description, details.author, details.genres);
-              console.log(`[App] ✓ Sinopsis cargada: ${manga.title}`);
-            }
-          } catch (error) {
-            console.error(`[App] Error cargando sinopsis de ${manga.title}:`, error);
-            // Marcar como fallida
-            updateMangaDescription(manga.id, "No se pudo cargar la sinopsis.", '', []);
-          }
-        })
-      );
-      
-      // Pequeña pausa entre batches
-      if (i + batchSize < mangas.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+       // Procesar batch en paralelo
+       const batchResults = await Promise.allSettled(
+         batch.map(async (manga) => {
+           try {
+             console.log(`[App] 🔍 Cargando detalles de: ${manga.title} (ID: ${manga.id}, Slug: ${manga.slug})`);
+             const details = await unifiedGetDetails(manga.slug, manga.source);
+             
+             console.log(`[App] 🔍 Resultado unifiedGetDetails:`, {
+               hasDetails: !!details,
+               hasDescription: !!details?.description,
+               descriptionLength: details?.description?.length || 0,
+               hasAuthor: !!details?.author,
+               author: details?.author
+             });
+             
+             if (details && details.description) {
+               console.log(`[App] ✅ Actualizando descripción de: ${manga.title}`);
+               updateMangaDescription(manga.id, details.description, details.author, details.genres);
+               return { status: 'fulfilled', mangaId: manga.id };
+             } else {
+               console.warn(`[App] ⚠️ Sinopsis vacía o sin detalles para: ${manga.title}`);
+               updateMangaDescription(manga.id, "No se pudo cargar la sinopsis.", '', []);
+               return { status: 'fulfilled', mangaId: manga.id };
+             }
+           } catch (error) {
+             console.error(`[App] ❌ Error cargando sinopsis de ${manga.title}:`, error);
+             updateMangaDescription(manga.id, `Error: ${error.message}`, '', []);
+             return { status: 'rejected', mangaId: manga.id, error };
+           }
+         })
+       );
+       
+       const batchResults = await Promise.allSettled(
+         batch.map(async (manga) => {
+           try {
+             console.log(`[App] 🔍 Cargando detalles de: ${manga.title} (ID: ${manga.id}, Slug: ${manga.slug})`);
+             const details = await unifiedGetDetails(manga.slug, manga.source);
+             
+             console.log(`[App] 🔍 Resultado unifiedGetDetails:`, {
+               hasDetails: !!details,
+               hasDescription: !!details?.description,
+               descriptionLength: details?.description?.length || 0,
+               hasAuthor: !!details?.author,
+               author: details?.author
+             });
+             
+             if (details && details.description) {
+               console.log(`[App] ✅ Actualizando descripción de: ${manga.title}`);
+               updateMangaDescription(manga.id, details.description, details.author, details.genres);
+               return { status: 'fulfilled', mangaId: manga.id };
+             } else {
+               console.warn(`[App] ⚠️ Sinopsis vacía o sin detalles para: ${manga.title}`);
+               updateMangaDescription(manga.id, "No se pudo cargar la sinopsis.", '', []);
+               return { status: 'fulfilled', mangaId: manga.id };
+             }
+           } catch (error) {
+             console.error(`[App] ❌ Error cargando sinopsis de ${manga.title}:`, error);
+             updateMangaDescription(manga.id, `Error: ${error.message}`, '', []);
+             return { status: 'rejected', mangaId: manga.id, error };
+           }
+         })
+       );
+       
+        const successful = batchResults.filter(r => r.status === 'fulfilled').length;
+        const failed = batchResults.filter(r => r.status === 'rejected').length;
+        
+        console.log(`[App] 📊 Batch ${i/batchSize + 1}/${Math.ceil(mangas.length/batchSize)} completado: ${successful} éxitos, ${failed} errores`);
+        
+       console.log(`[App] 📊 Batch ${i/batchSize + 1}/${Math.ceil(mangas.length/batchSize)} completado: ${successful} éxitos, ${failed} errores`);
+       
+       // Pequeña pausa entre batches
+       if (i + batchSize < mangas.length) {
+         await new Promise(resolve => setTimeout(resolve, 1000));
+       }
+     }
     
     console.log('[App] ✓ Carga de sinopsis completada');
   };
   
   // Función para actualizar descripción de un manga específico
   const updateMangaDescription = (mangaId, description, author = '', genres = []) => {
-    setSearchResults(prev => prev.map(manga => 
-      manga.id === mangaId 
-        ? { 
-            ...manga, 
-            description, 
-            author,
-            genres: genres.length > 0 ? genres : manga.genres,
-            isLoadingDescription: false 
-          }
-        : manga
-    ));
+    console.log(`[App] 🔄 updateMangaDescription llamado:`, {
+      mangaId,
+      descriptionLength: description?.length || 0,
+      author,
+      genresCount: genres.length
+    });
+    
+    setSearchResults(prev => {
+      console.log(`[App] 🔄 searchResults.length antes de update:`, prev.length);
+      
+      const updated = prev.map(manga => 
+        manga.id === mangaId 
+          ? { 
+              ...manga, 
+              description, 
+              author,
+              genres: genres.length > 0 ? genres : manga.genres,
+              isLoadingDescription: false 
+            }
+          : manga
+      );
+      
+      console.log(`[App] 🔄 searchResults.length después de update:`, updated.length);
+      console.log(`[App] 🔄 ¿Se actualizó alguna obra?`, updated.some(m => m.id === mangaId && m.description !== 'Cargando sinopsis... 📖'));
+      
+      return updated;
+    });
   };
   
   // ============================================================

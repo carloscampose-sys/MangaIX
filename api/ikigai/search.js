@@ -440,7 +440,9 @@ function processAndReturnResults(data, page, res, query, filters) {
     type: serie.type,
     status: serie.status,
     chapterCount: serie.chapter_count,
-    genres: (serie.genres || []).map(g => g.name)
+    genres: (serie.genres || []).map(g => g.name),
+    description: serie.summary || serie.synopsis || '',
+    author: serie.team?.name || ''
   }));
 
   // Filtrar por coincidencia exacta si el checkbox está marcado

@@ -150,7 +150,9 @@ class IkigaiFuseManager {
         status: r.item.status?.name || 'En Curso',
         chapterCount: r.item.chapter_count,
         genres: (r.item.genres || []).map(g => g.name),
-        score: r.score
+        score: r.score,
+        description: r.item.summary || r.item.synopsis || '',
+        author: r.item.team?.name || ''
       }));
       
       return {
