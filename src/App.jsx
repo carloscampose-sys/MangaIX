@@ -63,6 +63,9 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedTypes, setSelectedTypes] = useState([]);  // Array de tipos (Comic/Novela)
   const [selectedStatuses, setSelectedStatuses] = useState([]);  // Array de estados
 
+  // Checkbox "Coincidencia Exacta" para Ikigai
+  const [ikigaiExactMatch, setIkigaiExactMatch] = useState(false);
+
   // Estados de ordenamiento específicos de TuManga
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
   const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
@@ -276,7 +279,8 @@ const MainApp = ({ userName, userGender }) => {
           types: selectedTypes,
           statuses: selectedStatuses,
           sortBy: ikigaiSortBy,
-          page: pageToUse - 1
+          page: pageToUse - 1,
+          exactMatch: ikigaiExactMatch
         };
       }
       
@@ -485,6 +489,8 @@ const MainApp = ({ userName, userGender }) => {
     // Resetear ordenamiento de TuManga
     setSelectedTuMangaSortBy('title');
     setSelectedTuMangaSortOrder('asc');
+    // Resetear checkbox "Coincidencia Exacta"
+    setIkigaiExactMatch(false);
     setCurrentPage(1); // Reset página también
   };
 
@@ -680,6 +686,8 @@ const MainApp = ({ userName, userGender }) => {
                             // Resetear ordenamiento de TuManga
                             setSelectedTuMangaSortBy('title');
                             setSelectedTuMangaSortOrder('asc');
+                            // Resetear checkbox "Coincidencia Exacta"
+                            setIkigaiExactMatch(false);
                             setCurrentPage(1); // Reset página también
                             
                             showToast(`Fuente cambiada a ${source.name} ${source.icon}`);
@@ -739,6 +747,28 @@ const MainApp = ({ userName, userGender }) => {
                       </button>
                     </div>
                   </form>
+
+                  {/* Checkbox "Coincidencia Exacta" - Solo visible en Ikigai + con query */}
+                  {selectedSource === 'ikigai' && searchQuery.trim() && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex items-center justify-center mt-3"
+                    >
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={ikigaiExactMatch}
+                          onChange={(e) => setIkigaiExactMatch(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-potaxie-green focus:ring-potaxie-green cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400 group-hover:text-potaxie-green transition-colors">
+                          Coincidencia Exacta
+                        </span>
+                      </label>
+                    </motion.div>
+                  )}
 
                   <AnimatePresence>
                     {isFiltersOpen && (

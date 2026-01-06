@@ -87,15 +87,15 @@ export default async function handler(req, res) {
         }
 
         const thingProxyData = await thingProxyResponse.json();
-        return processAndReturnResults(thingProxyData, page, res);
+        return processAndReturnResults(thingProxyData, page, res, query, filters);
       }
 
       const proxyData = await proxyResponse.json();
-      return processAndReturnResults(proxyData, page, res);
+      return processAndReturnResults(proxyData, page, res, query, filters);
     }
 
     const data = await response.json();
-    return processAndReturnResults(data, page, res);
+    return processAndReturnResults(data, page, res, query, filters);
 
   } catch (error) {
     console.error('[Ikigai Search] Error:', error);
@@ -110,11 +110,11 @@ export default async function handler(req, res) {
 /**
  * Procesa los datos y retorna la respuesta
  */
-function processAndReturnResults(data, page, res) {
+function processAndReturnResults(data, page, res, query, filters) {
   console.log('[Ikigai Search] API Response - Total:', data.total, 'Current Page:', data.current_page);
 
   // Transformar resultados al formato esperado por la app
-  const results = (data.data || []).map(serie => ({
+  let results = (data.data || []).map(serie => ({
     id: `ikigai-${serie.slug}-${serie.id}`,
     slug: serie.slug,
     title: serie.name,
@@ -126,6 +126,31 @@ function processAndReturnResults(data, page, res) {
     chapterCount: serie.chapter_count,
     genres: (serie.genres || []).map(g => g.name)
   }));
+
+  // Filtrar por coincidencia exacta si el checkbox está marcado
+  if (filters.exactMatch && query && query.trim()) {
+    const normalizedQuery = normalizeTitle(query.trim());
+    console.log('[Ikigai Search] Filtrando por coincidencia exacta:', normalizedQuery);
+
+    results = results.filter(serie =>
+      normalizeTitle(serie.title).toLowerCase() === normalizedQuery.toLowerCase()
+    );
+
+    console.log(`[Ikigai Search] ${results.length} resultados después de filtro exacto`);
+  }
+
+  // Si no hay resultados y checkbox marcado, enviar mensaje informativo
+  if (results.length === 0 && filters.exactMatch && query && query.trim()) {
+    console.log('[Ikigai Search] No se encontró coincidencia exacta');
+    return res.status(200).json({
+      results: [],
+      message: 'No se encontró una obra con ese título exacto',
+      page: 1,
+      totalPages: 1,
+      total: 0,
+      hasMore: false
+    });
+  }
 
   console.log(`[Ikigai Search] ${results.length} resultados transformados`);
 
@@ -181,5 +206,24 @@ function buildApiUrl(query, filters, page) {
     params.append('order_by', filters.sortBy);
   }
 
+  // Habilitar contenido adulto en resultados
+  params.append('nsfw', 'true');
+
   return `${baseUrl}?${params.toString()}`;
+}
+
+/**
+ * Normaliza un título para comparaciones
+ * - Minúsculas
+ * - Sin acentos
+ * - Sin caracteres especiales
+ * - Espacios normalizados
+ */
+function normalizeTitle(title) {
+  return title
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // Remove accents
+    .replace(/[^\w\s-]/g, '')  // Remove special chars (keep alphanumeric, space, hyphen)
+    .replace(/\s+/g, ' ')  // Normalize multiple spaces to single space
+    .trim();
 }
