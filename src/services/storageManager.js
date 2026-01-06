@@ -1,0 +1,208 @@
+/**
+ * Gestor de almacenamiento: localStorage + IndexedDB (fallback)
+ * Automáticamente usa IndexedDB si localStorage está lleno
+ */
+
+class StorageManager {
+  constructor() {
+    this.storageType = 'none';
+    this.db = null;
+  }
+
+  async init() {
+    try {
+      const testData = { test: true, timestamp: Date.now() };
+      localStorage.setItem('ikigai-test', JSON.stringify(testData));
+      localStorage.removeItem('ikigai-test');
+      
+      this.storageType = 'localStorage';
+      console.log('[StorageManager] Usando localStorage');
+      return 'localStorage';
+    } catch (error) {
+      console.warn('[StorageManager] localStorage lleno, usando IndexedDB');
+      return this.initIndexedDB();
+    }
+  }
+
+  async initIndexedDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('MangaIX-Ikigai', 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('series')) {
+          db.createObjectStore('series', { keyPath: 'id' });
+        }
+      };
+      
+      request.onsuccess = (event) => {
+        this.db = event.target.result;
+        this.storageType = 'indexedDB';
+        console.log('[StorageManager] IndexedDB inicializado');
+        resolve('indexedDB');
+      };
+      
+      request.onerror = (error) => {
+        console.error('[StorageManager] Error inicializando IndexedDB:', error);
+        reject(error);
+      };
+    });
+  }
+
+  async saveSeries(series) {
+    if (this.storageType === 'localStorage') {
+      try {
+        localStorage.setItem('ikigai-series', JSON.stringify(series));
+        console.log(`[StorageManager] ${series.length} series guardadas en localStorage`);
+        return true;
+      } catch (error) {
+        console.warn('[StorageManager] localStorage lleno, migrando a IndexedDB...', error);
+        await this.initIndexedDB();
+        return this.saveSeriesToIndexedDB(series);
+      }
+    } else {
+      return this.saveSeriesToIndexedDB(series);
+    }
+  }
+
+  async saveSeriesToIndexedDB(series) {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('IndexedDB no inicializado'));
+        return;
+      }
+
+      const transaction = this.db.transaction(['series'], 'readwrite');
+      const store = transaction.objectStore('series');
+      
+      store.clear();
+      
+      series.forEach(serie => {
+        store.add(serie);
+      });
+      
+      transaction.oncomplete = () => {
+        console.log(`[StorageManager] ${series.length} series guardadas en IndexedDB`);
+        resolve(true);
+      };
+      
+      transaction.onerror = (error) => {
+        console.error('[StorageManager] Error guardando en IndexedDB:', error);
+        reject(error);
+      };
+    });
+  }
+
+  async loadSeries() {
+    if (this.storageType === 'localStorage') {
+      const data = localStorage.getItem('ikigai-series');
+      if (data) {
+        console.log(`[StorageManager] ${JSON.parse(data).length} series cargadas desde localStorage`);
+        return JSON.parse(data);
+      }
+      return null;
+    } else {
+      return this.loadSeriesFromIndexedDB();
+    }
+  }
+
+  async loadSeriesFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('IndexedDB no inicializado'));
+        return;
+      }
+
+      const transaction = this.db.transaction(['series'], 'readonly');
+      const store = transaction.objectStore('series');
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        console.log(`[StorageManager] ${request.result.length} series cargadas desde IndexedDB`);
+        resolve(request.result);
+      };
+      
+      request.onerror = (error) => {
+        console.error('[StorageManager] Error cargando desde IndexedDB:', error);
+        reject(error);
+      };
+    });
+  }
+
+  async savePartialProgress(progress) {
+    const partialData = {
+      series: progress.series,
+      loadedPages: progress.loadedPages,
+      timestamp: Date.now()
+    };
+
+    if (this.storageType === 'localStorage') {
+      try {
+        localStorage.setItem('ikigai-partial', JSON.stringify(partialData));
+        console.log('[StorageManager] Progreso parcial guardado en localStorage');
+        return true;
+      } catch (error) {
+        console.warn('[StorageManager] No se pudo guardar progreso parcial en localStorage');
+        return false;
+      }
+    } else {
+      return this.savePartialProgressToIndexedDB(partialData);
+    }
+  }
+
+  async savePartialProgressToIndexedDB(partialData) {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('IndexedDB no inicializado'));
+        return;
+      }
+
+      const transaction = this.db.transaction(['series'], 'readwrite');
+      const store = transaction.objectStore('series');
+      
+      const seriesStore = transaction.objectStore('series');
+      seriesStore.clear();
+      
+      partialData.series.forEach(serie => {
+        store.add(serie);
+      });
+      
+      transaction.oncomplete = () => {
+        console.log('[StorageManager] Progreso parcial guardado en IndexedDB');
+        resolve(true);
+      };
+      
+      transaction.onerror = (error) => {
+        console.error('[StorageManager] Error guardando progreso parcial:', error);
+        reject(error);
+      };
+    });
+  }
+
+  async loadPartialProgress() {
+    if (this.storageType === 'localStorage') {
+      const data = localStorage.getItem('ikigai-partial');
+      if (data) {
+        console.log('[StorageManager] Progreso parcial cargado desde localStorage');
+        return JSON.parse(data);
+      }
+      return null;
+    } else {
+      return null;
+    }
+  }
+
+  async clearPartialProgress() {
+    if (this.storageType === 'localStorage') {
+      localStorage.removeItem('ikigai-partial');
+      console.log('[StorageManager] Progreso parcial eliminado de localStorage');
+    }
+  }
+
+  getStorageType() {
+    return this.storageType;
+  }
+}
+
+const storageManager = new StorageManager();
+export default storageManager;

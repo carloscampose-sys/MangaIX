@@ -25,6 +25,9 @@ import { loadSourceOrder, saveSourceOrder } from './services/sourceOrderService'
 import { useSwapy } from './hooks/useSwapy';
 // Filtros dinámicos - Cambian según la fuente seleccionada (TuManga/ManhwaWeb)
 import { getFiltersForSource, getEmptyFiltersForSource } from './services/filterService';
+// Storage y Fuse.js para Ikigai
+import storageManager from './services/storageManager';
+import ikigaiFuseManager from './services/ikigaiFuse';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGreeting } from './utils/greetingUtils';
@@ -60,12 +63,23 @@ const MainApp = ({ userName, userGender }) => {
   const [selectedSortOrder, setSelectedSortOrder] = useState('desc');   // Por defecto: descendente
 
   // Filtros específicos de Ikigai (Tipos, Estados)
-  const [selectedTypes, setSelectedTypes] = useState([]);  // Array de tipos (Comic/Novela)
-  const [selectedStatuses, setSelectedStatuses] = useState([]);  // Array de estados
-
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+ 
   // Checkbox "Coincidencia Exacta" para Ikigai
   const [ikigaiExactMatch, setIkigaiExactMatch] = useState(false);
-
+ 
+  // Estado de carga progresiva de Ikigai
+  const [ikigaiStatus, setIkigaiStatus] = useState({
+    seriesLoaded: false,
+    isLoading: false,
+    loadedPages: 0,
+    totalPages: 199,
+    percent: 0,
+    seriesCount: 0,
+    estimatedTimeRemaining: 0
+  });
+ 
   // Estados de ordenamiento específicos de TuManga
   const [selectedTuMangaSortBy, setSelectedTuMangaSortBy] = useState('title');
   const [selectedTuMangaSortOrder, setSelectedTuMangaSortOrder] = useState('asc');
@@ -98,6 +112,53 @@ const MainApp = ({ userName, userGender }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLuckModalOpen, setIsLuckModalOpen] = useState(false);
 
+  // Inicializar storageManager y carga progresiva de Ikigai
+  useEffect(() => {
+    const initStorage = async () => {
+      await storageManager.init();
+      
+      if (selectedSource === 'ikigai') {
+        const alreadyLoaded = await ikigaiFuseManager.init(storageManager);
+        
+        if (alreadyLoaded) {
+          setIkigaiStatus(prev => ({
+            ...prev,
+            seriesLoaded: true,
+            seriesCount: ikigaiFuseManager.getSeriesCount(),
+            percent: 100,
+            loadedPages: ikigaiFuseManager.getLoadedPages()
+          }));
+        } else {
+          const partialProgress = await storageManager.loadPartialProgress();
+          if (partialProgress) {
+            setIkigaiStatus(prev => ({
+              ...prev,
+              seriesLoaded: false,
+              isLoading: true,
+              loadedPages: partialProgress.loadedPages,
+              seriesCount: partialProgress.series?.length || 0,
+              percent: (partialProgress.loadedPages / 199) * 100
+            }));
+          }
+          
+          ikigaiFuseManager.startBackgroundLoad((progress) => {
+            setIkigaiStatus({
+              seriesLoaded: false,
+              isLoading: true,
+              loadedPages: progress.loaded,
+              totalPages: progress.total,
+              percent: progress.percent,
+              seriesCount: progress.seriesCount,
+              estimatedTimeRemaining: progress.estimatedTimeRemaining
+            });
+          });
+        }
+      }
+    };
+    
+    initStorage();
+  }, [selectedSource]);
+
   useEffect(() => {
     // Simulamos el tiempo del ritual potaxie
     const timer = setTimeout(() => {
@@ -115,6 +176,18 @@ const MainApp = ({ userName, userGender }) => {
     saveSourceOrder(sourceIds);
     showToast('✨ Orden de fuentes actualizado');
   }, [showToast]);
+
+  const handleCancelIkigaiLoad = async () => {
+    ikigaiFuseManager.cancel();
+    await storageManager.clearPartialProgress();
+    
+    setIkigaiStatus(prev => ({
+      ...prev,
+      isLoading: false
+    }));
+    
+    showToast('🚫 Carga de series de Ikigai cancelada');
+  };
 
   useSwapy('source-buttons-container', handleSourceOrderChange);
 
@@ -218,15 +291,37 @@ const MainApp = ({ userName, userGender }) => {
       console.log('[App] Ikigai: No hay query ni filtros, no se ejecuta búsqueda');
       return;
     }
+    
+    // Para Ikigai con searchTerm: Usar Fuse.js si las series están cargadas
+    if (selectedSource === 'ikigai' && searchTerm && searchTerm.trim()) {
+      const fuseResult = ikigaiFuseManager.search(searchTerm, {
+        genres: selectedGenres,
+        types: selectedTypes,
+        statuses: selectedStatuses
+      });
+      
+      if (fuseResult.type === 'search_not_available') {
+        showToast(`🌸 ${fuseResult.message}`);
+        setSearchResults([]);
+        setLoading(false);
+        return;
+      }
+      
+      if (fuseResult.type === 'search_results') {
+        setSearchResults(fuseResult.results);
+        setLoading(false);
+        setHasMorePages(false);
+        console.log(`[App] Ikigai Fuse.js: ${fuseResult.results.length} resultados`);
+        return;
+      }
+    }
 
     try {
       setLoading(true);
 
-      // Toast especial para ManhwaWeb/Ikigai (tarda más)
+       // Toast especial para ManhwaWeb (Ikigai usa Fuse.js ya cargado)
       if (selectedSource === 'manhwaweb') {
         showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
-      } else if (selectedSource === 'ikigai') {
-        showToast('🌸 Ikigai puede tardar 30-60s... Ten paciencia 🌸');
       }
 
       // Construir filtros según la fuente seleccionada
@@ -716,13 +811,22 @@ const MainApp = ({ userName, userGender }) => {
                     <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
                       <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" size={18} />
                     </div>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Busca por título..."
-                      className="w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base"
-                    />
+                     <input
+                       type="text"
+                       value={searchQuery}
+                       onChange={(e) => setSearchQuery(e.target.value)}
+                       placeholder={
+                         selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded
+                           ? `Búsqueda disponible en ${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${ikigaiStatus.estimatedTimeRemaining / 60 >= 2 ? 's' : ''}`
+                           : 'Busca por título...'
+                       }
+                       disabled={selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded}
+                       className={`w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base ${
+                         selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded
+                           ? 'bg-gray-100 dark:bg-gray-800 border-dashed border-gray-300 dark:border-gray-600 cursor-not-allowed opacity-60'
+                           : 'border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green'
+                       }`}
+                     />
                     <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">
                       <button
                         type="button"
@@ -1162,15 +1266,81 @@ const MainApp = ({ userName, userGender }) => {
                           </div>
                         </div>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                     )}
+                 </AnimatePresence>
+                 </div>
+ 
+                 {/* Barra de progreso de Ikigai */}
+                 <AnimatePresence>
+                   {selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded && (
+                     <motion.div
+                       initial={{ opacity: 0, y: -20 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       exit={{ opacity: 0, y: -20 }}
+                       className="ikigai-progress-container"
+                     >
+                       <div className="ikigai-progress-header">
+                         <div className="ikigai-progress-icon">🌸</div>
+                         <div className="ikigai-progress-title">
+                           Cargando series de Ikigai
+                         </div>
+                       </div>
+                       
+                       <div className="ikigai-progress-bar-container">
+                         <motion.div 
+                           className="ikigai-progress-bar-fill"
+                           initial={{ width: '0%' }}
+                           animate={{ width: `${ikigaiStatus.percent}%` }}
+                           transition={{ duration: 0.5, ease: 'easeInOut' }}
+                         >
+                           <div className="ikigai-progress-bar-glow" />
+                         </motion.div>
+                         
+                         <div className="ikigai-progress-percent">
+                           {ikigaiStatus.percent.toFixed(1)}%
+                         </div>
+                       </div>
+                       
+                       <motion.div 
+                         key={ikigaiStatus.estimatedTimeRemaining}
+                         initial={{ opacity: 0 }}
+                         animate={{ opacity: 1 }}
+                         className="ikigai-progress-time"
+                       >
+                         ⏱️ Tiempo restante: {Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto
+                         {ikigaiStatus.estimatedTimeRemaining / 60 >= 2 ? 's' : ''}
+                       </motion.div>
+                       
+                       <div className="ikigai-progress-stats">
+                         <div className="ikigai-progress-stat">
+                           <span className="ikigai-stat-label">Series:</span>
+                           <span className="ikigai-stat-value">{ikigaiStatus.seriesCount}</span>
+                         </div>
+                         <div className="ikigai-progress-stat">
+                           <span className="ikigai-stat-label">Páginas:</span>
+                           <span className="ikigai-stat-value">{ikigaiStatus.loaded}/{ikigaiStatus.totalPages}</span>
+                         </div>
+                       </div>
+                       
+                       <button 
+                         onClick={handleCancelIkigaiLoad}
+                         className="ikigai-cancel-button"
+                       >
+                         ✕ Cancelar carga
+                       </button>
+                       
+                       <div className="ikigai-progress-hint">
+                         💡 Mientras tanto, puedes usar los filtros de género para buscar
+                       </div>
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
 
-                <motion.div
-                  ref={resultsRef}
-                  layout
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
-                >
+                 <motion.div
+                   ref={resultsRef}
+                   layout
+                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6"
+                 >
                   <AnimatePresence>
                     {searchResults.map(manga => (
                       <motion.div

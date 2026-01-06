@@ -82,14 +82,14 @@ async function handleSearchWithPuppeteer(query, filters, page, res) {
       headless: chromium.headless
     });
 
-    const page = await browser.newPage();
+    const puppeteerPage = await browser.newPage();
 
     // User agent de navegador real
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await puppeteerPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     // Bloquear ads y recursos innecesarios (misma lógica que pages.js)
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
+    await puppeteerPage.setRequestInterception(true);
+    puppeteerPage.on('request', (request) => {
       const blockedResources = ['ads', 'analytics', 'facebook', 'google-analytics', 'doubleclick', 'tracking'];
       const url = request.url().toLowerCase();
       const resourceType = request.resourceType();
@@ -109,7 +109,7 @@ async function handleSearchWithPuppeteer(query, filters, page, res) {
     });
 
     // Navegar a la página de búsqueda
-    await page.goto(searchUrl, {
+    await puppeteerPage.goto(searchUrl, {
       waitUntil: 'networkidle0',
       timeout: 45000
     });
@@ -120,7 +120,7 @@ async function handleSearchWithPuppeteer(query, filters, page, res) {
 
     // Extraer resultados con múltiples selectores
     console.log('[Ikigai Search Puppeteer] Extrayendo resultados...');
-    const searchResults = await page.evaluate(() => {
+    const searchResults = await puppeteerPage.evaluate(() => {
       // Intentar múltiples selectores para encontrar cards
       const selectors = [
         '.card',
