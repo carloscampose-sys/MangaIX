@@ -3,6 +3,8 @@
  * Implementa cancelación, progreso dinámico y búsqueda híbrida
  */
 
+import Fuse from 'fuse.js';
+
 class IkigaiFuseManager {
   constructor() {
     this.series = [];
