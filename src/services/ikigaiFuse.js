@@ -42,11 +42,86 @@ class IkigaiFuseManager {
     });
   }
 
-  async startBackgroundLoad(onProgress) {
+  async startBackgroundLoad(onProgress, onComplete) {
     if (this.isLoading) {
       console.warn('[IkigaiFuse] Ya se está cargando');
       return;
     }
+    
+    this.isLoading = true;
+    this.isCancelled = false;
+    this.onProgress = onProgress;
+    this.onComplete = onComplete;
+    this.series = [];
+    this.loadedPages = 0;
+    
+    console.log('[IkigaiFuse] Iniciando carga progresiva...');
+    
+    const startTime = Date.now();
+    
+    while (!this.isCancelled && this.loadedPages < this.totalPages) {
+      const chunkSize = this.loadedPages === 0 ? 3 :5;
+      
+      try {
+        const response = await fetch(`/api/ikigai/load-series-progressive?chunk=${chunkSize}&startPage=${this.loadedPages + 1}`);
+        const data = await response.json();
+        
+        if (this.isCancelled) break;
+        
+        this.series.push(...data.series);
+        this.loadedPages = data.loaded;
+        
+        this.initFuse();
+        
+        if (this.loadedPages % 50 === 0) {
+          await this.storageManager.savePartialProgress({
+            series: this.series,
+            loadedPages: this.loadedPages
+          });
+        }
+        
+        if (this.onProgress) {
+          const timeElapsed = (Date.now() - startTime) / 1000;
+          const pagesPerSecond = this.loadedPages / timeElapsed;
+          const pagesRemaining = this.totalPages - this.loadedPages;
+          const estimatedTimeRemaining = Math.ceil(pagesRemaining / pagesPerSecond);
+          
+          this.onProgress({
+            loaded: this.loadedPages,
+            total: this.totalPages,
+            percent: data.percent,
+            seriesCount: this.series.length,
+            estimatedTimeRemaining: estimatedTimeRemaining,
+            isComplete: data.isComplete
+          });
+        }
+        
+        await new Promise(r => setTimeout(r, 200));
+        
+      } catch (error) {
+        console.error('[IkigaiFuse] Error cargando chunk:', error);
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+    }
+    
+    this.isLoading = false;
+    
+    if (!this.isCancelled) {
+      await this.storageManager.saveSeries(this.series);
+      await this.storageManager.clearPartialProgress();
+      console.log(`[IkigaiFuse] Carga completada: ${this.series.length} series`);
+      
+      if (this.onComplete) {
+        this.onComplete({
+          seriesLoaded: true,
+          seriesCount: this.series.length
+        });
+      }
+    } else {
+      console.log('[IkigaiFuse] Carga cancelada por el usuario');
+    }
+  }
     
     this.isLoading = true;
     this.isCancelled = false;

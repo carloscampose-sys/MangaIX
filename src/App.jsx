@@ -141,17 +141,30 @@ const MainApp = ({ userName, userGender }) => {
             }));
           }
           
-          ikigaiFuseManager.startBackgroundLoad((progress) => {
-            setIkigaiStatus({
-              seriesLoaded: false,
-              isLoading: true,
-              loadedPages: progress.loaded,
-              totalPages: progress.total,
-              percent: progress.percent,
-              seriesCount: progress.seriesCount,
-              estimatedTimeRemaining: progress.estimatedTimeRemaining
-            });
-          });
+          ikigaiFuseManager.startBackgroundLoad(
+            (progress) => {
+              setIkigaiStatus({
+                seriesLoaded: false,
+                isLoading: true,
+                loadedPages: progress.loaded,
+                totalPages: progress.total,
+                percent: progress.percent,
+                seriesCount: progress.seriesCount,
+                estimatedTimeRemaining: progress.estimatedTimeRemaining
+              });
+            },
+            (completionData) => {
+              setIkigaiStatus({
+                seriesLoaded: true,
+                isLoading: false,
+                loadedPages: 199,
+                totalPages: 199,
+                percent: 100,
+                seriesCount: completionData.seriesCount,
+                estimatedTimeRemaining: 0
+              });
+            }
+          );
         }
       }
     };
