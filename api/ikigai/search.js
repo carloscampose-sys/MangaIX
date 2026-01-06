@@ -181,9 +181,9 @@ function buildApiUrl(query, filters, page) {
   // Página
   params.append('page', page);
 
-  // Query de búsqueda
+  // Query de búsqueda (Ikigai usa 'buscar')
   if (query) {
-    params.append('search', query);
+    params.append('buscar', query);
   }
 
   // Género (la API solo acepta un género a la vez)
