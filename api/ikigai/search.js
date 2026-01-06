@@ -31,7 +31,9 @@ export default async function handler(req, res) {
       'Accept-Encoding': 'gzip, deflate, br',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Origin': 'https://viralikigai.learnixs.site',
-      'Referer': 'https://viralikigai.learnixs.site/',
+      'Referer': `https://viralikigai.learnixs.site/`,
+      // Header adicional para identificar la solicitud como AJAX
+      'X-Requested-With': 'XMLHttpRequest',
       'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
       'Sec-Ch-Ua-Mobile': '?0',
       'Sec-Ch-Ua-Platform': '"Windows"',
@@ -55,8 +57,8 @@ export default async function handler(req, res) {
       // Si la API directa falla, intentar con proxy alternativo
       console.log('[Ikigai Search] API directa falló, intentando alternativa...');
 
-      // Usar corsproxy.io - NO encodear la URL (ya tiene los params correctos)
-      const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
+      // Usar corsproxy.io con URL encode para preservar parámetros
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
       console.log('[Ikigai Search] Proxy URL:', proxyUrl);
 
       const proxyResponse = await fetch(proxyUrl, {
@@ -67,9 +69,26 @@ export default async function handler(req, res) {
       });
 
       if (!proxyResponse.ok) {
+        // Intentar con allorigins.win (más confiable para query strings complejos)
+        console.log('[Ikigai Search] corsproxy falló, intentando allorigins.win...');
+        const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+
+        const alloriginsResponse = await fetch(alloriginsUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (alloriginsResponse.ok) {
+          console.log('[Ikigai Search] allorigins.win funcionó');
+          const alloriginsData = await alloriginsResponse.json();
+          return processAndReturnResults(alloriginsData, page, res, query, filters);
+        }
+
+        console.log('[Ikigai Search] allorigins falló, intentando thingproxy...');
         // Intentar con otro proxy como fallback
-        console.log('[Ikigai Search] corsproxy falló, intentando thingproxy...');
-        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
+        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(apiUrl)}`;
 
         const thingProxyResponse = await fetch(thingProxyUrl, {
           method: 'GET',
