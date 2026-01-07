@@ -111,6 +111,14 @@ class IkigaiFuseManager {
         this.series.push(...data.series);
         this.loadedPages = data.loaded;
         
+        this.series = this.series.map(s => ({
+          ...s,
+          nameNormalized: this.normalizeText(s.name),
+          slugNormalized: this.normalizeText(s.slug),
+          summaryNormalized: this.normalizeText(s.summary || ''),
+          synopsisNormalized: this.normalizeText(s.synopsis || '')
+        }));
+        
         this.initFuse();
         
         if (this.loadedPages % 50 === 0) {
@@ -148,6 +156,11 @@ class IkigaiFuseManager {
     this.isLoading = false;
     
     if (!this.isCancelled) {
+      const withoutNormalized = this.series.filter(s => !s.nameNormalized);
+      if (withoutNormalized.length > 0) {
+        console.warn(`[IkigaiFuse] ⚠️ ${withoutNormalized.length} series sin campos normalizados`);
+      }
+      
       await this.storageManager.saveSeries(this.series);
       await this.storageManager.clearPartialProgress();
       console.log(`[IkigaiFuse] Carga completada: ${this.series.length} series`);
