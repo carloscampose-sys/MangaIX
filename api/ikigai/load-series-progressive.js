@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const allResults = await Promise.allSettled(
       pagesToLoad.map(async (page) => {
-        const apiUrl = `https://panel.ikigaimangas.com/api/swf/series?page=${page}`;
+        const apiUrl = `https://panel.ikigaimangas.com/api/swf/series?page=${page}&nsfw=true`;
         const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
         
         try {
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
 
     const loadedPages = allResults.filter(r => r.status === 'fulfilled' && r.value).length;
     const actualStartPage = parseInt(startPage);
-    const totalPages = 199;
+    const totalPages = 338;
     const percent = ((actualStartPage - 1 + loadedPages) / totalPages) * 100;
 
     const timeElapsed = Date.now() - startTime;

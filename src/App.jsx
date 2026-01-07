@@ -137,7 +137,7 @@ const MainApp = ({ userName, userGender }) => {
               isLoading: true,
               loadedPages: partialProgress.loadedPages,
               seriesCount: partialProgress.series?.length || 0,
-              percent: (partialProgress.loadedPages / 199) * 100
+              percent: (partialProgress.loadedPages / 338) * 100
             }));
           }
           
@@ -157,8 +157,8 @@ const MainApp = ({ userName, userGender }) => {
               setIkigaiStatus({
                 seriesLoaded: true,
                 isLoading: false,
-                loadedPages: 199,
-                totalPages: 199,
+                loadedPages: 338,
+    totalPages: 338,
                 percent: 100,
                 seriesCount: completionData.seriesCount,
                 estimatedTimeRemaining: 0

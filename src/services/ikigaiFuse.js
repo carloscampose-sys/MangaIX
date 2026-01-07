@@ -12,7 +12,7 @@ class IkigaiFuseManager {
     this.isLoading = false;
     this.isCancelled = false;
     this.loadedPages = 0;
-    this.totalPages = 199;
+    this.totalPages = 338;
     this.onProgress = null;
     this.storageManager = null;
   }
@@ -40,6 +40,22 @@ class IkigaiFuseManager {
       }
       
       this.series = cachedSeries.filter(s => s.name && s.slug);
+      
+      const expectedMinSeries = Math.floor(this.totalPages * 10);
+      const isCacheIncomplete = this.series.length < expectedMinSeries;
+      
+      if (isCacheIncomplete) {
+        console.warn(`[IkigaiFuse] Cache incompleto detectado:`);
+        console.warn(`  Series cacheadas: ${this.series.length}`);
+        console.warn(`  Series esperadas (mínimo): ${expectedMinSeries}`);
+        console.warn(`  Total de páginas: ${this.totalPages}`);
+        console.warn(`[IkigaiFuse] Limpiando cache y forzando recarga completa...`);
+        
+        await this.storageManager.clearPartialProgress();
+        await this.storageManager.clearSeries();
+        
+        return false;
+      }
       
       this.series = this.series.map(s => ({
         ...s,

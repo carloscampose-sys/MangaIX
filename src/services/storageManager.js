@@ -199,6 +199,29 @@ class StorageManager {
     }
   }
 
+  async clearSeries() {
+    if (this.storageType === 'localStorage') {
+      localStorage.removeItem('ikigai-series');
+      console.log('[StorageManager] Series eliminadas de localStorage');
+    } else if (this.storageType === 'indexedDB' && this.db) {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(['series'], 'readwrite');
+        const store = transaction.objectStore('series');
+        store.clear();
+        
+        transaction.oncomplete = () => {
+          console.log('[StorageManager] Series eliminadas de IndexedDB');
+          resolve(true);
+        };
+        
+        transaction.onerror = (error) => {
+          console.error('[StorageManager] Error eliminando series de IndexedDB:', error);
+          reject(error);
+        };
+      });
+    }
+  }
+
   getStorageType() {
     return this.storageType;
   }
