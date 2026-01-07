@@ -49,6 +49,11 @@ class IkigaiFuseManager {
         synopsisNormalized: this.normalizeText(s.synopsis || '')
       }));
       
+      console.log('[IkigaiFuse] Ejemplos de normalización:');
+      this.series.slice(0, 3).forEach((s, i) => {
+        console.log(`  ${i+1}. Original: "${s.name}" → Normalizado: "${s.nameNormalized}"`);
+      });
+      
       this.loadedPages = this.totalPages;
       this.initFuse();
       console.log(`[IkigaiFuse] Cargado desde cache: ${cachedSeries.length} series (${this.series.length} válidas)`);
@@ -61,10 +66,10 @@ class IkigaiFuseManager {
   initFuse() {
     this.fuse = new Fuse(this.series, {
       keys: [
-        { name: 'name', weight: 1.0 },
-        { name: 'slug', weight: 0.8 },
-        { name: 'summary', weight: 0.5 },
-        { name: 'synopsis', weight: 0.5 }
+        { name: 'nameNormalized', weight: 1.0 },
+        { name: 'slugNormalized', weight: 0.8 },
+        { name: 'summaryNormalized', weight: 0.5 },
+        { name: 'synopsisNormalized', weight: 0.5 }
       ],
       threshold: 0.4,
       ignoreLocation: true,
@@ -199,8 +204,8 @@ class IkigaiFuseManager {
         console.log('[IkigaiFuse] Búsqueda difusa sin resultados, intentando búsqueda directa...');
         
         const directResults = this.series.filter(s => {
-          const nameMatch = s.name && s.name.toLowerCase().includes(normalizedQuery.toLowerCase());
-          const slugMatch = s.slug && s.slug.toLowerCase().includes(normalizedQuery.toLowerCase());
+          const nameMatch = s.nameNormalized && s.nameNormalized.includes(normalizedQuery);
+          const slugMatch = s.slugNormalized && s.slugNormalized.includes(normalizedQuery);
           return nameMatch || slugMatch;
         });
         
