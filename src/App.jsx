@@ -312,7 +312,8 @@ const MainApp = ({ userName, userGender }) => {
       const fuseResult = ikigaiFuseManager.search(searchTerm, {
         genres: selectedGenres,
         types: selectedTypes,
-        statuses: selectedStatuses
+        statuses: selectedStatuses,
+        exactMatch: ikigaiExactMatch
       });
       
       if (fuseResult.type === 'search_not_available') {

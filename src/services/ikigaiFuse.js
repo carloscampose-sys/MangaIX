@@ -49,9 +49,12 @@ class IkigaiFuseManager {
         synopsisNormalized: this.normalizeText(s.synopsis || '')
       }));
       
-      console.log('[IkigaiFuse] Ejemplos de normalización:');
-      this.series.slice(0, 3).forEach((s, i) => {
-        console.log(`  ${i+1}. Original: "${s.name}" → Normalizado: "${s.nameNormalized}"`);
+      const hasNormalizedFields = this.series[0]?.nameNormalized !== undefined;
+      console.log(`[IkigaiFuse] Los datos tienen campos normalizados: ${hasNormalizedFields}`);
+      
+      console.log('[IkigaiFuse] Ejemplos de normalización (primeras 5 series):');
+      this.series.slice(0, 5).forEach((s, i) => {
+        console.log(`  ${i+1}. Original: "${s.name}" → Normalizado: "${s.nameNormalized}" | Slug: "${s.slug}" → Normalizado: "${s.slugNormalized}"`);
       });
       
       this.loadedPages = this.totalPages;
@@ -64,6 +67,17 @@ class IkigaiFuseManager {
   }
 
   initFuse() {
+    console.log('[IkigaiFuse] Configuración de Fuse.js:');
+    console.log(`  Total series: ${this.series.length}`);
+    if (this.series[0]) {
+      console.log(`  Primera serie:`, {
+        name: this.series[0].name,
+        nameNormalized: this.series[0].nameNormalized,
+        slug: this.series[0].slug,
+        slugNormalized: this.series[0].slugNormalized
+      });
+    }
+    
     this.fuse = new Fuse(this.series, {
       keys: [
         { name: 'nameNormalized', weight: 1.0 },
@@ -71,7 +85,7 @@ class IkigaiFuseManager {
         { name: 'summaryNormalized', weight: 0.5 },
         { name: 'synopsisNormalized', weight: 0.5 }
       ],
-      threshold: 0.4,
+      threshold: 0.3,
       ignoreLocation: true,
       minMatchCharLength: 1,
       shouldSort: true,
@@ -80,6 +94,8 @@ class IkigaiFuseManager {
       findAllMatches: true,
       useExtendedSearch: false
     });
+    
+    console.log('[IkigaiFuse] Fuse.js inicializado correctamente');
   }
 
   async startBackgroundLoad(onProgress, onComplete) {
@@ -202,13 +218,91 @@ class IkigaiFuseManager {
       const normalizedQuery = this.normalizeText(query);
       console.log('[IkigaiFuse] Ejutando Fuse.search con query:', normalizedQuery);
       
+      const jinxBySlug = this.series.find(s => 
+        s.slugNormalized === 'jinx-manhwa' || s.slugNormalized?.includes('jinx')
+      );
+      if (jinxBySlug) {
+        console.log('[IkigaiFuse] 🔍 SERIE "JINX" ENCONTRADA POR SLUG:');
+        console.log(`  Nombre: "${jinxBySlug.name}"`);
+        console.log(`  Slug: "${jinxBySlug.slug}"`);
+        console.log(`  nameNormalized: "${jinxBySlug.nameNormalized}"`);
+        console.log(`  slugNormalized: "${jinxBySlug.slugNormalized}"`);
+        console.log(`  ¿Contiene "jinx" en nameNormalized?: ${jinxBySlug.nameNormalized?.includes('jinx')}`);
+        console.log(`  ¿Contiene "jinx" en slugNormalized?: ${jinxBySlug.slugNormalized?.includes('jinx')}`);
+      } else {
+        console.log('[IkigaiFuse] ❌ NO se encontró ninguna serie con slug que contenga "jinx"');
+      }
+      
+      const allWithJinx = this.series.filter(s => 
+        (s.nameNormalized?.includes('jinx') || s.slugNormalized?.includes('jinx'))
+      );
+      console.log(`[IkigaiFuse] 📊 Total de series que contienen "jinx": ${allWithJinx.length}`);
+      if (allWithJinx.length > 0) {
+        console.log('[IkigaiFuse] Series con "jinx":');
+        allWithJinx.slice(0, 10).forEach((s, i) => {
+          console.log(`  ${i+1}. "${s.name}" (slug: "${s.slug}") → Normalizado: "${s.nameNormalized}"`);
+        });
+      }
+      
       const fuseResults = this.fuse.search(normalizedQuery);
       console.log('[IkigaiFuse] Fuse.results.length:', fuseResults.length);
       
+      if (filters.exactMatch) {
+        console.log('[IkigaiFuse] 🔒 Modo coincidencia exacta activado');
+        const exactResults = fuseResults.filter(r => {
+          const nameMatch = r.item.nameNormalized === normalizedQuery;
+          const slugMatch = r.item.slugNormalized === normalizedQuery;
+          return nameMatch || slugMatch;
+        });
+        
+        console.log(`[IkigaiFuse] ${exactResults.length} resultados exactos de ${fuseResults.length} totales`);
+        
+        if (exactResults.length > 0) {
+          const results = exactResults.map(r => ({
+            id: `ikigai-${r.item.slug}`,
+            slug: r.item.slug,
+            title: r.item.name,
+            cover: r.item.cover,
+            source: 'ikigai',
+            type: r.item.type,
+            status: r.item.status?.name || 'En Curso',
+            chapterCount: r.item.chapter_count,
+            genres: (r.item.genres || []).map(g => g.name),
+            score: r.score,
+            description: r.item.summary || r.item.synopsis || '',
+            author: r.item.team?.name || ''
+          }));
+          
+          return {
+            type: 'search_results',
+            results,
+            total: results.length
+          };
+        } else {
+          return {
+            type: 'search_results',
+            results: [],
+            total: 0
+          };
+        }
+      }
+      
+      fuseResults.sort((a, b) => {
+        const aNameStart = a.item.nameNormalized.startsWith(normalizedQuery) ? 0 : 1;
+        const bNameStart = b.item.nameNormalized.startsWith(normalizedQuery) ? 0 : 1;
+        
+        if (aNameStart !== bNameStart) {
+          return aNameStart - bNameStart;
+        }
+        
+        return a.score - b.score;
+      });
+      
       if (fuseResults.length > 0) {
-        console.log('[IkigaiFuse] Primeros 5 resultados:');
+        console.log('[IkigaiFuse] Primeros 5 resultados (ordenados):');
         fuseResults.slice(0, 5).forEach((r, i) => {
-          console.log(`  ${i+1}. ${r.item.name} (score: ${r.score.toFixed(4)})`);
+          const startsWith = r.item.nameNormalized.startsWith(normalizedQuery) ? '✅' : '  ';
+          console.log(`  ${startsWith} ${i+1}. ${r.item.name} (score: ${r.score.toFixed(4)})`);
           if (r.matches) {
             console.log(`     Matches:`, r.matches);
           }
