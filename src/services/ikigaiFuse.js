@@ -17,16 +17,41 @@ class IkigaiFuseManager {
     this.storageManager = null;
   }
 
+  normalizeText(text) {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   async init(storageManager) {
     this.storageManager = storageManager;
     
     const cachedSeries = await this.storageManager.loadSeries();
     
     if (cachedSeries && cachedSeries.length > 0) {
-      this.series = cachedSeries;
+      const invalidSeries = cachedSeries.filter(s => !s.name || !s.slug);
+      if (invalidSeries.length > 0) {
+        console.warn(`[IkigaiFuse] ${invalidSeries.length} series sin nombre/slug serán ignoradas`);
+      }
+      
+      this.series = cachedSeries.filter(s => s.name && s.slug);
+      
+      this.series = this.series.map(s => ({
+        ...s,
+        nameNormalized: this.normalizeText(s.name),
+        slugNormalized: this.normalizeText(s.slug),
+        summaryNormalized: this.normalizeText(s.summary || ''),
+        synopsisNormalized: this.normalizeText(s.synopsis || '')
+      }));
+      
       this.loadedPages = this.totalPages;
       this.initFuse();
-      console.log(`[IkigaiFuse] Cargado desde cache: ${cachedSeries.length} series`);
+      console.log(`[IkigaiFuse] Cargado desde cache: ${cachedSeries.length} series (${this.series.length} válidas)`);
       return true;
     }
     
@@ -35,12 +60,20 @@ class IkigaiFuseManager {
 
   initFuse() {
     this.fuse = new Fuse(this.series, {
-      keys: ['name'],
-      threshold: 0.6,
+      keys: [
+        { name: 'name', weight: 1.0 },
+        { name: 'slug', weight: 0.8 },
+        { name: 'summary', weight: 0.5 },
+        { name: 'synopsis', weight: 0.5 }
+      ],
+      threshold: 0.4,
       ignoreLocation: true,
-      minMatchCharLength: 2,
+      minMatchCharLength: 1,
       shouldSort: true,
-      includeScore: true
+      includeScore: true,
+      includeMatches: true,
+      findAllMatches: true,
+      useExtendedSearch: false
     });
   }
 
@@ -132,6 +165,12 @@ class IkigaiFuseManager {
   }
 
   search(query, filters) {
+    console.log('[IkigaiFuse] Búsqueda iniciada');
+    console.log('[IkigaiFuse] Query:', query);
+    console.log('[IkigaiFuse] Query normalizada:', this.normalizeText(query));
+    console.log('[IkigaiFuse] Total series cargadas:', this.series.length);
+    console.log('[IkigaiFuse] isComplete:', this.isComplete());
+    
     if (query && query.trim() && !this.isComplete()) {
       return {
         type: 'search_not_available',
@@ -142,7 +181,61 @@ class IkigaiFuseManager {
     }
     
     if (query && query.trim() && this.isComplete()) {
-      const results = this.fuse.search(query).map(r => ({
+      const normalizedQuery = this.normalizeText(query);
+      console.log('[IkigaiFuse] Ejutando Fuse.search con query:', normalizedQuery);
+      
+      const fuseResults = this.fuse.search(normalizedQuery);
+      console.log('[IkigaiFuse] Fuse.results.length:', fuseResults.length);
+      
+      if (fuseResults.length > 0) {
+        console.log('[IkigaiFuse] Primeros 5 resultados:');
+        fuseResults.slice(0, 5).forEach((r, i) => {
+          console.log(`  ${i+1}. ${r.item.name} (score: ${r.score.toFixed(4)})`);
+          if (r.matches) {
+            console.log(`     Matches:`, r.matches);
+          }
+        });
+      } else {
+        console.log('[IkigaiFuse] Búsqueda difusa sin resultados, intentando búsqueda directa...');
+        
+        const directResults = this.series.filter(s => {
+          const nameMatch = s.name && s.name.toLowerCase().includes(normalizedQuery.toLowerCase());
+          const slugMatch = s.slug && s.slug.toLowerCase().includes(normalizedQuery.toLowerCase());
+          return nameMatch || slugMatch;
+        });
+        
+        console.log(`[IkigaiFuse] Búsqueda directa encontró ${directResults.length} resultados`);
+        
+        if (directResults.length > 0) {
+          console.log('[IkigaiFuse] Primeros 5 resultados directos:');
+          directResults.slice(0, 5).forEach((s, i) => {
+            console.log(`  ${i+1}. ${s.name}`);
+          });
+        }
+        
+        const results = directResults.map(r => ({
+          id: `ikigai-${r.slug}`,
+          slug: r.slug,
+          title: r.name,
+          cover: r.cover,
+          source: 'ikigai',
+          type: r.type,
+          status: r.status?.name || 'En Curso',
+          chapterCount: r.chapter_count,
+          genres: (r.genres || []).map(g => g.name),
+          score: 0,
+          description: r.summary || r.synopsis || '',
+          author: r.team?.name || ''
+        }));
+        
+        return {
+          type: 'search_results',
+          results,
+          total: results.length
+        };
+      }
+      
+      const results = fuseResults.map(r => ({
         id: `ikigai-${r.item.slug}`,
         slug: r.item.slug,
         title: r.item.name,

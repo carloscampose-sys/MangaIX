@@ -323,10 +323,14 @@ const MainApp = ({ userName, userGender }) => {
       }
       
       if (fuseResult.type === 'search_results') {
+        if (fuseResult.results.length === 0) {
+          showToast('🔍 No se encontraron resultados. Intenta con un término más corto.');
+        } else {
+          console.log(`[App] Ikigai Fuse.js: ${fuseResult.results.length} resultados`);
+        }
         setSearchResults(fuseResult.results);
         setLoading(false);
         setHasMorePages(false);
-        console.log(`[App] Ikigai Fuse.js: ${fuseResult.results.length} resultados`);
         return;
       }
     }
