@@ -1328,68 +1328,46 @@ const MainApp = ({ userName, userGender }) => {
  
                  {/* Barra de progreso de Ikigai */}
                  <AnimatePresence>
-                   {selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded && (
-                     <motion.div
-                       initial={{ opacity: 0, y: -20 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       exit={{ opacity: 0, y: -20 }}
-                       className="ikigai-progress-container"
-                     >
-                       <div className="ikigai-progress-header">
-                         <div className="ikigai-progress-icon">🌸</div>
-                         <div className="ikigai-progress-title">
-                           Cargando series de Ikigai
-                         </div>
-                       </div>
-                       
-                       <div className="ikigai-progress-bar-container">
-                         <motion.div 
-                           className="ikigai-progress-bar-fill"
-                           initial={{ width: '0%' }}
-                           animate={{ width: `${ikigaiStatus.percent}%` }}
-                           transition={{ duration: 0.5, ease: 'easeInOut' }}
-                         >
-                           <div className="ikigai-progress-bar-glow" />
-                         </motion.div>
-                         
-                         <div className="ikigai-progress-percent">
-                           {ikigaiStatus.percent.toFixed(1)}%
-                         </div>
-                       </div>
-                       
-                       <motion.div 
-                         key={ikigaiStatus.estimatedTimeRemaining}
-                         initial={{ opacity: 0 }}
-                         animate={{ opacity: 1 }}
-                         className="ikigai-progress-time"
-                       >
-                         ⏱️ Tiempo restante: {Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto
-                         {ikigaiStatus.estimatedTimeRemaining / 60 >= 2 ? 's' : ''}
-                       </motion.div>
-                       
-                       <div className="ikigai-progress-stats">
-                         <div className="ikigai-progress-stat">
-                           <span className="ikigai-stat-label">Series:</span>
-                           <span className="ikigai-stat-value">{ikigaiStatus.seriesCount}</span>
-                         </div>
-                         <div className="ikigai-progress-stat">
-                           <span className="ikigai-stat-label">Páginas:</span>
-                           <span className="ikigai-stat-value">{ikigaiStatus.loaded}/{ikigaiStatus.totalPages}</span>
-                         </div>
-                       </div>
-                       
-                       <button 
-                         onClick={handleCancelIkigaiLoad}
-                         className="ikigai-cancel-button"
-                       >
-                         ✕ Cancelar carga
-                       </button>
-                       
-                       <div className="ikigai-progress-hint">
-                         💡 Mientras tanto, puedes usar los filtros de género para buscar
-                       </div>
-                     </motion.div>
-                   )}
+                    {selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="ikigai-progress-container simple"
+                      >
+                        <div className="ikigai-progress-bar-wrapper">
+                          <motion.div 
+                            className="ikigai-progress-bar-fill"
+                            initial={{ width: '0%' }}
+                            animate={{ width: `${ikigaiStatus.percent}%` }}
+                            transition={{ duration: 0.5, ease: 'easeInOut' }}
+                          >
+                            <span className="ikigai-progress-percent-text">
+                              {ikigaiStatus.percent.toFixed(1)}%
+                            </span>
+                          </motion.div>
+                        </div>
+                        
+                        <motion.div
+                          key={ikigaiStatus.estimatedTimeRemaining}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="ikigai-progress-message"
+                        >
+                          Cargando Todas las Obras, la búsqueda por título estará disponible en 
+                          <strong>
+                            {ikigaiStatus.estimatedTimeRemaining < 60 
+                              ? `${Math.ceil(ikigaiStatus.estimatedTimeRemaining)} segundo${ikigaiStatus.estimatedTimeRemaining >= 2 ? 's' : ''}`
+                              : `${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60) >= 2 ? 's' : ''}`
+                            }
+                          </strong>
+                        </motion.div>
+                        
+                        <div className="ikigai-progress-hint">
+                          💡 Mientras tanto, puedes usar los filtros de género para buscar
+                        </div>
+                      </motion.div>
+                    )}
                  </AnimatePresence>
 
                  <motion.div

@@ -53,6 +53,125 @@
   box-shadow: 0 4px 12px rgba(248, 215, 218, 0.3);
 }
 
+.ikigai-progress-container.simple {
+  background: linear-gradient(135deg, #d9f99d 0%, #c5e17a 100%);
+  border-radius: 16px;
+  padding: 24px 32px;
+  margin: 24px 16px;
+  box-shadow: 0 4px 20px rgba(197, 225, 122, 0.3);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .ikigai-progress-container.simple {
+    padding: 20px 24px;
+    margin: 20px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ikigai-progress-container.simple {
+    padding: 16px 20px;
+    margin: 16px 8px;
+    border-radius: 12px;
+  }
+}
+
+.ikigai-progress-bar-wrapper {
+  position: relative;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+}
+
+.ikigai-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
+  border-radius: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 16px;
+  transition: width 0.5s ease-in-out;
+}
+
+.ikigai-progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.6) 50%, 
+    transparent 100%);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.ikigai-progress-percent-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.ikigai-progress-message {
+  font-size: 15px;
+  color: #1f2937;
+  text-align: center;
+  line-height: 1.5;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.ikigai-progress-message strong {
+  color: #166534;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .ikigai-progress-message {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ikigai-progress-message {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}
+
+.ikigai-progress-hint {
+  font-size: 13px;
+  color: #92400e;
+  text-align: center;
+  margin-top: 12px;
+  font-style: italic;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .ikigai-progress-hint {
+    font-size: 12px;
+  }
+}
+
 .ikigai-progress-header {
   display: flex;
   align-items: center;
