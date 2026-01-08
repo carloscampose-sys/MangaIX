@@ -34,7 +34,7 @@ const SettingsHeader = () => (
 // ============================================================
 // SETTINGS CARD COMPONENT
 // ============================================================
-const SettingsCard = ({ section, index }) => {
+const SettingsCard = ({ section, index, isReloadingIkigai }) => {
   const Icon = section.icon;
   
   return (
@@ -104,13 +104,14 @@ const SettingsCard = ({ section, index }) => {
 // ============================================================
 // SETTINGS GRID COMPONENT
 // ============================================================
-const SettingsGrid = ({ sections }) => (
+const SettingsGrid = ({ sections, isReloadingIkigai }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
     {sections.map((section, index) => (
       <SettingsCard 
         key={section.id} 
         section={section} 
-        index={index} 
+        index={index}
+        isReloadingIkigai={isReloadingIkigai}
       />
     ))}
   </div>
@@ -216,7 +217,7 @@ const SettingsPanel = () => {
       <SettingsHeader />
       
       {/* Settings Grid */}
-      <SettingsGrid sections={settingsSections} />
+      <SettingsGrid sections={settingsSections} isReloadingIkigai={isReloadingIkigai} />
       
       {/* Modals */}
       <BackupModal 
