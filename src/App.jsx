@@ -938,8 +938,8 @@ const MainApp = ({ userName, userGender }) => {
                         Cargando Todas las Obras, la búsqueda por título estará disponible en 
                         <strong>
                           {ikigaiStatus.estimatedTimeRemaining < 60 
-                            ? `${Math.ceil(ikigaiStatus.estimatedTimeRemaining)} segundo${ikigaiStatus.estimatedTimeRemaining >= 2 ? 's' : ''}`
-                            : `${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60) >= 2 ? 's' : ''}`
+                            ? ` ${Math.ceil(ikigaiStatus.estimatedTimeRemaining)} segundo${ikigaiStatus.estimatedTimeRemaining >= 2 ? 's' : ''}`
+                            : ` ${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60) >= 2 ? 's' : ''}`
                           }
                         </strong>
                       </motion.div>
