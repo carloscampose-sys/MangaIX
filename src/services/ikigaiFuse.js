@@ -33,112 +33,14 @@ class IkigaiFuseManager {
   async init(storageManager) {
     this.storageManager = storageManager;
     
-    const cachedSeries = await this.storageManager.loadSeries();
+    console.log('[IkigaiFuse] Inicializando - Carga desde API (sin cache persistente)');
     
-    if (cachedSeries && cachedSeries.length > 0) {
-      console.log('[IkigaiFuse] =============================================');
-      console.log('[IkigaiFuse] INICIANDO VALIDACIÓN DE CACHE');
-      console.log('[IkigaiFuse] =============================================');
-      console.log('[IkigaiFuse] Series cargadas desde storage:', cachedSeries.length);
-      
-      const validation = this.validateCacheIntegrity(cachedSeries);
-      console.log('[IkigaiFuse] Validación de integridad:');
-      console.log('  isValid:', validation.isValid);
-      console.log('  errors:', validation.errors);
-      console.log('  stats:', validation.stats);
-      
-      if (!validation.isValid) {
-        console.warn('[IkigaiFuse] ❌ CACHE CORRUPTO - Se procederá a limpiar');
-        validation.errors.forEach(error => console.warn(`  ❌ ${error}`));
-        console.warn('[IkigaiFuse] Limpiando cache y forzando recarga completa...');
-        
-        await this.storageManager.clearPartialProgress();
-        await this.storageManager.clearSeries();
-        await this.storageManager.clearCacheMetadata();
-        
-        return false;
-      }
-      
-      console.log('[IkigaiFuse] ✅ Cache válido - Continuando validación');
-      
-      const invalidSeries = cachedSeries.filter(s => !s.name || !s.slug);
-      if (invalidSeries.length > 0) {
-        console.warn(`[IkigaiFuse] ${invalidSeries.length} series sin nombre/slug serán ignoradas`);
-      }
-      
-      this.series = cachedSeries.filter(s => s.name && s.slug);
-      
-      const cachedMetadata = await this.storageManager.loadCacheMetadata();
-      console.log('[IkigaiFuse] Metadata del cache:', cachedMetadata);
-      
-      const expectedMinSeries = cachedMetadata?.totalSeries || 4500;
-      console.log('[IkigaiFuse] expectedMinSeries:', expectedMinSeries);
-      console.log('[IkigaiFuse] Umbral de validación (80%):', expectedMinSeries * 0.8);
-      console.log('[IkigaiFuse] Series actuales:', this.series.length);
-      console.log('[IkigaiFuse] ¿Cumple umbral? (this.series.length >= expectedMinSeries * 0.8):', this.series.length >= expectedMinSeries * 0.8);
-      
-      const isCacheTooOld = cachedMetadata 
-        ? (Date.now() - cachedMetadata.lastUpdated) > (7 * 24 * 60 * 60 * 1000)
-        : false;
-      
-      if (cachedMetadata) {
-        const daysOld = Math.floor((Date.now() - cachedMetadata.lastUpdated) / (24 * 60 * 60 * 1000));
-        console.log('[IkigaiFuse] Cache antigüedad:', daysOld, 'días');
-        console.log('[IkigaiFuse] ¿Muy antiguo? (>7 días):', isCacheTooOld);
-      } else {
-        console.log('[IkigaiFuse] ⚠️ No se encontró metadata del cache');
-        console.log('[IkigaiFuse] isCacheTooOld:', false, '(no hay metadata)');
-      }
-      
-      const isCacheIncomplete = this.series.length < (expectedMinSeries * 0.8);
-      console.log('[IkigaiFuse] isCacheIncomplete:', isCacheIncomplete);
-      console.log('[IkigaiFuse] isCacheTooOld:', isCacheTooOld);
-      
-      if (isCacheIncomplete || isCacheTooOld) {
-        if (isCacheIncomplete) {
-          console.warn(`[IkigaiFuse] ❌ CACHE INCOMPLETO: ${this.series.length} / ${expectedMinSeries} series`);
-        } else if (isCacheTooOld) {
-          const daysOld = Math.floor((Date.now() - cachedMetadata.lastUpdated) / (24 * 60 * 60 * 1000));
-          console.warn(`[IkigaiFuse] ❌ CACHE MUY ANTIGUO: ${daysOld} días`);
-        }
-        
-        console.warn('[IkigaiFuse] Se procederá a limpiar cache y recargar...');
-        
-        await this.storageManager.clearPartialProgress();
-        await this.storageManager.clearSeries();
-        await this.storageManager.clearCacheMetadata();
-        
-        return false;
-      }
-      
-      console.log('[IkigaiFuse] ✅ CACHE ACEPTADO - Usando datos guardados');
-      console.log('[IkigaiFuse] =============================================');
-      
-      this.series = this.series.map(s => ({
-        ...s,
-        nameNormalized: this.normalizeText(s.name),
-        slugNormalized: this.normalizeText(s.slug),
-        summaryNormalized: this.normalizeText(s.summary || ''),
-        synopsisNormalized: this.normalizeText(s.synopsis || '')
-      }));
-      
-      const hasNormalizedFields = this.series[0]?.nameNormalized !== undefined;
-      console.log(`[IkigaiFuse] Los datos tienen campos normalizados: ${hasNormalizedFields}`);
-      
-      console.log('[IkigaiFuse] Ejemplos de normalización (primeras 5 series):');
-      this.series.slice(0, 5).forEach((s, i) => {
-        console.log(`  ${i+1}. Original: "${s.name}" → Normalizado: "${s.nameNormalized}" | Slug: "${s.slug}" → Normalizado: "${s.slugNormalized}"`);
-      });
-      
-      this.loadedPages = this.totalPages;
-      this.initFuse();
-      console.log(`[IkigaiFuse] Cargado desde cache: ${cachedSeries.length} series (${this.series.length} válidas)`);
-      console.log('[IkigaiFuse] ✅ init() RETORNANDO: true');
-      return true;
-    }
+    this.series = [];
+    this.loadedPages = 0;
+    this.loadedSeriesCount = 0;
+    this.fuse = null;
     
-    console.log('[IkigaiFuse] No se encontró cache o no es válido');
-    console.log('[IkigaiFuse] ❌ init() RETORNANDO: false');
+    console.log('[IkigaiFuse] ❌ init() RETORNANDO: false (siempre carga desde API)');
     return false;
   }
 
