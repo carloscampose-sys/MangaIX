@@ -919,12 +919,16 @@ const MainApp = ({ userName, userGender }) => {
                       <div className="ikigai-progress-bar-wrapper">
                         <motion.div 
                           className="ikigai-progress-bar-fill"
+                          layout
                           initial={{ width: '0%' }}
                           animate={{ width: `${ikigaiStatus.percent}%` }}
                           transition={{ duration: 0.5, ease: 'easeInOut' }}
+                          onAnimationStart={() => console.log('[DEBUG] Progress animation start, percent:', ikigaiStatus.percent)}
+                          onUpdate={(latest) => console.log('[DEBUG] Progress animation update, latest:', latest)}
+                          onAnimationComplete={() => console.log('[DEBUG] Progress animation complete')}
                         >
                           <span className="ikigai-progress-percent-text">
-                            {ikigaiStatus.percent.toFixed(1)}%
+                            {Number(ikigaiStatus.percent || 0).toFixed(1)}%
                           </span>
                         </motion.div>
                       </div>
