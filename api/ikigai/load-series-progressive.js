@@ -68,15 +68,28 @@ export default async function handler(req, res) {
 
     const loadedPages = allResults.filter(r => r.status === 'fulfilled' && r.value).length;
     const actualStartPage = parseInt(startPage);
-    const totalPages = 338;
-    const percent = ((actualStartPage - 1 + loadedPages) / totalPages) * 100;
+    
+    let totalSeries = null;
+    const firstSuccessfulResult = allResults.find(
+      r => r.status === 'fulfilled' && r.value?.total
+    );
+
+    if (firstSuccessfulResult) {
+      totalSeries = firstSuccessfulResult.value.total;
+      console.log(`[Ikigai Progressive Load] Total series desde API: ${totalSeries}`);
+    }
+    
+    const totalPages = totalSeries ? Math.ceil(totalSeries / 15) : 338;
+    const percent = totalSeries 
+      ? ((actualStartPage - 1) * 15 + series.length) / totalSeries * 100
+      : ((actualStartPage - 1 + loadedPages) / totalPages) * 100;
 
     const timeElapsed = Date.now() - startTime;
     const timePerPage = timeElapsed / loadedPages;
     const pagesRemaining = totalPages - (actualStartPage - 1) - loadedPages;
     const estimatedTimeRemaining = Math.ceil((pagesRemaining * timePerPage) / 1000);
 
-    console.log(`[Ikigai Progressive Load] Series: ${series.length}, Percent: ${percent.toFixed(1)}%, ETA: ${estimatedTimeRemaining}s`);
+    console.log(`[Ikigai Progressive Load] Series: ${series.length}, Total: ${totalSeries || 'N/A'}, Percent: ${percent.toFixed(1)}%, ETA: ${estimatedTimeRemaining}s`);
 
     return res.status(200).json({
       series,
@@ -84,7 +97,7 @@ export default async function handler(req, res) {
       nextPage: actualStartPage + loadedPages,
       isComplete: (actualStartPage - 1 + loadedPages) >= totalPages,
       percent,
-      totalSeries: series.length,
+      totalSeries,
       estimatedTimeRemaining
     });
 

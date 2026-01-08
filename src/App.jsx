@@ -74,9 +74,10 @@ const MainApp = ({ userName, userGender }) => {
     seriesLoaded: false,
     isLoading: false,
     loadedPages: 0,
-    totalPages: 199,
+    totalPages: 339,
     percent: 0,
     seriesCount: 0,
+    totalSeries: null,
     estimatedTimeRemaining: 0
   });
  
@@ -112,65 +113,110 @@ const MainApp = ({ userName, userGender }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLuckModalOpen, setIsLuckModalOpen] = useState(false);
 
-  // Inicializar storageManager y carga progresiva de Ikigai
+  // Inicializar Ikigai al cargar la app (no al cambiar fuente)
   useEffect(() => {
-    const initStorage = async () => {
+    const initIkigai = async () => {
       await storageManager.init();
       
-      if (selectedSource === 'ikigai') {
-        const alreadyLoaded = await ikigaiFuseManager.init(storageManager);
-        
-        if (alreadyLoaded) {
+      try {
+        const savedStatus = sessionStorage.getItem('ikigai-status');
+        if (savedStatus) {
+          const parsed = JSON.parse(savedStatus);
+          if (parsed.seriesLoaded && parsed.seriesCount > 0) {
+            const alreadyLoaded = await ikigaiFuseManager.init(storageManager);
+            if (alreadyLoaded) {
+              setIkigaiStatus({
+                seriesLoaded: true,
+                isLoading: false,
+                loadedPages: parsed.loadedPages || 339,
+                totalPages: 339,
+                percent: 100,
+                seriesCount: parsed.seriesCount,
+                totalSeries: parsed.totalSeries || null,
+                estimatedTimeRemaining: 0
+              });
+              console.log('[App] Estado de Ikigai restaurado desde sessionStorage');
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[App] Error restaurando estado:', e);
+      }
+      
+      const alreadyLoaded = await ikigaiFuseManager.init(storageManager);
+      
+      if (alreadyLoaded) {
+        setIkigaiStatus(prev => ({
+          ...prev,
+          seriesLoaded: true,
+          seriesCount: ikigaiFuseManager.getSeriesCount(),
+          percent: 100,
+          loadedPages: ikigaiFuseManager.getLoadedPages()
+        }));
+        console.log('[App] Ikigai cargado desde cache');
+      } else {
+        const partialProgress = await storageManager.loadPartialProgress();
+        if (partialProgress) {
           setIkigaiStatus(prev => ({
             ...prev,
-            seriesLoaded: true,
-            seriesCount: ikigaiFuseManager.getSeriesCount(),
-            percent: 100,
-            loadedPages: ikigaiFuseManager.getLoadedPages()
+            seriesLoaded: false,
+            isLoading: true,
+            loadedPages: partialProgress.loadedPages,
+            seriesCount: partialProgress.series?.length || 0,
+            percent: ikigaiFuseManager.getPercent()
           }));
-        } else {
-          const partialProgress = await storageManager.loadPartialProgress();
-          if (partialProgress) {
+        }
+        
+        ikigaiFuseManager.startBackgroundLoad(
+          (progress) => {
             setIkigaiStatus(prev => ({
               ...prev,
               seriesLoaded: false,
               isLoading: true,
-              loadedPages: partialProgress.loadedPages,
-              seriesCount: partialProgress.series?.length || 0,
-              percent: (partialProgress.loadedPages / 338) * 100
+              loadedPages: progress.loaded,
+              totalPages: progress.total,
+              percent: progress.percent,
+              seriesCount: progress.seriesCount,
+              totalSeries: progress.totalSeries,
+              estimatedTimeRemaining: progress.estimatedTimeRemaining
             }));
-          }
-          
-          ikigaiFuseManager.startBackgroundLoad(
-            (progress) => {
-              setIkigaiStatus({
-                seriesLoaded: false,
-                isLoading: true,
-                loadedPages: progress.loaded,
-                totalPages: progress.total,
-                percent: progress.percent,
-                seriesCount: progress.seriesCount,
-                estimatedTimeRemaining: progress.estimatedTimeRemaining
-              });
-            },
-            (completionData) => {
-              setIkigaiStatus({
-                seriesLoaded: true,
-                isLoading: false,
-                loadedPages: 338,
-    totalPages: 338,
-                percent: 100,
-                seriesCount: completionData.seriesCount,
-                estimatedTimeRemaining: 0
-              });
+            
+            if (progress.loaded % 50 === 0 && selectedSource !== 'ikigai') {
+              showToast(`📚 Cargando Ikigai en segundo plano... ${progress.seriesCount}/${progress.totalSeries || '?'} series`);
             }
-          );
-        }
+          },
+          (completionData) => {
+            setIkigaiStatus({
+              seriesLoaded: true,
+              isLoading: false,
+              loadedPages: 339,
+              totalPages: 339,
+              percent: 100,
+              seriesCount: completionData.seriesCount,
+              totalSeries: completionData.totalSeries || null,
+              estimatedTimeRemaining: 0
+            });
+            
+            sessionStorage.setItem('ikigai-status', JSON.stringify({
+              seriesLoaded: true,
+              seriesCount: completionData.seriesCount,
+              totalSeries: completionData.totalSeries,
+              loadedPages: 339
+            }));
+            
+            if (selectedSource === 'ikigai') {
+              showToast('✅ ¡Ikigai cargado completamente! Búsqueda disponible');
+            } else {
+              showToast('✅ Ikigai cargado en segundo plano. Cambia a Ikigai para buscar');
+            }
+          }
+        );
       }
     };
     
-    initStorage();
-  }, [selectedSource]);
+    initIkigai();
+  }, []);
 
   useEffect(() => {
     // Simulamos el tiempo del ritual potaxie
@@ -200,6 +246,8 @@ const MainApp = ({ userName, userGender }) => {
     }));
     
     showToast('🚫 Carga de series de Ikigai cancelada');
+    
+    sessionStorage.removeItem('ikigai-status');
   };
 
   useSwapy('source-buttons-container', handleSourceOrderChange);

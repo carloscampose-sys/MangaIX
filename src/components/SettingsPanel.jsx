@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Database, Palette, Snowflake, ChevronRight, Paintbrush, Sparkles } from 'lucide-react';
+import { Database, Palette, Snowflake, ChevronRight, Paintbrush, Sparkles, RefreshCw } from 'lucide-react';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import { useToast } from '../context/ToastContext';
 import { BackupModal } from './BackupModal';
 import { ColorThemeModal } from './ColorThemeModal';
 import { BackgroundColorModal } from './BackgroundColorModal';
 import { ParticleSettingsModal } from './ParticleSettingsModal';
+import storageManager from '../services/storageManager';
+import ikigaiFuseManager from '../services/ikigaiFuse';
 
 // ============================================================
 // SETTINGS HEADER COMPONENT
@@ -40,20 +42,33 @@ const SettingsCard = ({ section, index }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      whileHover={{ scale: 1.03, y: -5 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={section.action}
-      className="group relative bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 
+      whileHover={{ scale: section.disabled ? 1 : 1.03, y: section.disabled ? 0 : -5 }}
+      whileTap={{ scale: section.disabled ? 1 : 0.98 }}
+      onClick={section.disabled ? undefined : section.action}
+      className={`group relative bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 
                  border-2 border-gray-100 dark:border-gray-700 
-                 hover:border-transparent hover:shadow-2xl 
-                 transition-all duration-300 text-left overflow-hidden"
+                 ${section.disabled 
+                   ? 'opacity-50 cursor-not-allowed' 
+                   : 'hover:border-transparent hover:shadow-2xl'
+                 } transition-all duration-300 text-left overflow-hidden`}
       aria-label={section.title}
+      disabled={section.disabled}
     >
       {/* Gradient Background on Hover */}
       <div 
         className={`absolute inset-0 bg-gradient-to-br ${section.color} 
                     opacity-0 group-hover:opacity-10 transition-opacity duration-300`} 
       />
+      
+      {section.id === 'ikigai' && isReloadingIkigai && (
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="absolute top-4 right-4"
+        >
+          <RefreshCw className="text-orange-400" size={20} />
+        </motion.div>
+      )}
       
       {/* Icon */}
       <div 
@@ -75,11 +90,13 @@ const SettingsCard = ({ section, index }) => {
       </p>
       
       {/* Arrow Indicator */}
-      <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 opacity-0 group-hover:opacity-100 
-                      transform translate-x-2 group-hover:translate-x-0 
-                      transition-all duration-300 z-10">
-        <ChevronRight className="text-gray-400" size={24} />
-      </div>
+      {!section.disabled && (
+        <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 opacity-0 group-hover:opacity-100 
+                        transform translate-x-2 group-hover:translate-x-0 
+                        transition-all duration-300 z-10">
+          <ChevronRight className="text-gray-400" size={24} />
+        </div>
+      )}
     </motion.button>
   );
 };
@@ -107,11 +124,44 @@ const SettingsPanel = () => {
   const [showColorTheme, setShowColorTheme] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
   const [showParticleModal, setShowParticleModal] = useState(false);
+  const [isReloadingIkigai, setIsReloadingIkigai] = useState(false);
   const { isChristmasMode, toggleChristmasMode } = useChristmasTheme();
   const { showToast } = useToast();
 
+  const handleForceReloadIkigai = async () => {
+    setIsReloadingIkigai(true);
+    
+    try {
+      showToast('🔄 Limpiando cache y recargando Ikigai...');
+      
+      await storageManager.clearSeries();
+      await storageManager.clearPartialProgress();
+      localStorage.removeItem('ikigai-cache-metadata');
+      sessionStorage.removeItem('ikigai-status');
+      
+      const response = await fetch('/api/ikigai/load-series-progressive?chunk=3&startPage=1');
+      const data = await response.json();
+      
+      showToast('✅ Recarga iniciada. Ikigai se cargará en segundo plano');
+    } catch (error) {
+      console.error('[SettingsPanel] Error recargando Ikigai:', error);
+      showToast('❌ Error recargando Ikigai. Intenta de nuevo');
+    } finally {
+      setIsReloadingIkigai(false);
+    }
+  };
+
   // Definir secciones de ajustes
   const settingsSections = [
+    {
+      id: 'ikigai',
+      title: 'Recargar Ikigai',
+      description: 'Fuerza la recarga completa de las series de Ikigai (útil si hay errores)',
+      icon: RefreshCw,
+      color: isReloadingIkigai ? 'from-gray-400 to-gray-500' : 'from-orange-400 to-red-500',
+      action: () => handleForceReloadIkigai(),
+      disabled: isReloadingIkigai
+    },
     {
       id: 'backup',
       title: 'Backup de Datos',

@@ -225,6 +225,49 @@ class StorageManager {
   getStorageType() {
     return this.storageType;
   }
+
+  async saveCacheMetadata(metadata) {
+    try {
+      const metadataStr = JSON.stringify(metadata);
+      if (this.storageType === 'localStorage') {
+        localStorage.setItem('ikigai-cache-metadata', metadataStr);
+        console.log('[StorageManager] Metadata guardada en localStorage');
+      } else {
+        localStorage.setItem('ikigai-cache-metadata', metadataStr);
+        console.log('[StorageManager] Metadata guardada en localStorage (para IndexedDB)');
+      }
+      return true;
+    } catch (error) {
+      console.warn('[StorageManager] Error guardando metadata:', error);
+      return false;
+    }
+  }
+
+  async loadCacheMetadata() {
+    try {
+      const metadataStr = localStorage.getItem('ikigai-cache-metadata');
+      if (metadataStr) {
+        const metadata = JSON.parse(metadataStr);
+        console.log('[StorageManager] Metadata cargada:', metadata);
+        return metadata;
+      }
+      return null;
+    } catch (error) {
+      console.warn('[StorageManager] Error cargando metadata:', error);
+      return null;
+    }
+  }
+
+  async clearCacheMetadata() {
+    try {
+      localStorage.removeItem('ikigai-cache-metadata');
+      console.log('[StorageManager] Metadata eliminada');
+      return true;
+    } catch (error) {
+      console.warn('[StorageManager] Error eliminando metadata:', error);
+      return false;
+    }
+  }
 }
 
 const storageManager = new StorageManager();

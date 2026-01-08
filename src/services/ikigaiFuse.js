@@ -13,8 +13,10 @@ class IkigaiFuseManager {
     this.isCancelled = false;
     this.loadedPages = 0;
     this.totalPages = 338;
+    this.totalSeries = null;
     this.onProgress = null;
     this.storageManager = null;
+    this.loadedSeriesCount = 0;
   }
 
   normalizeText(text) {
@@ -34,6 +36,22 @@ class IkigaiFuseManager {
     const cachedSeries = await this.storageManager.loadSeries();
     
     if (cachedSeries && cachedSeries.length > 0) {
+      const validation = this.validateCacheIntegrity(cachedSeries);
+      
+      if (!validation.isValid) {
+        console.warn('[IkigaiFuse] Cache corrupto detectado:');
+        validation.errors.forEach(error => console.warn(`  ❌ ${error}`));
+        console.warn('[IkigaiFuse] Limpiando cache y forzando recarga completa...');
+        
+        await this.storageManager.clearPartialProgress();
+        await this.storageManager.clearSeries();
+        await this.storageManager.clearCacheMetadata();
+        
+        return false;
+      }
+      
+      console.log('[IkigaiFuse] Cache válido:', validation.stats);
+      
       const invalidSeries = cachedSeries.filter(s => !s.name || !s.slug);
       if (invalidSeries.length > 0) {
         console.warn(`[IkigaiFuse] ${invalidSeries.length} series sin nombre/slug serán ignoradas`);
@@ -41,18 +59,25 @@ class IkigaiFuseManager {
       
       this.series = cachedSeries.filter(s => s.name && s.slug);
       
-      const expectedMinSeries = Math.floor(this.totalPages * 10);
-      const isCacheIncomplete = this.series.length < expectedMinSeries;
+      const cachedMetadata = await this.storageManager.loadCacheMetadata();
+      const expectedMinSeries = cachedMetadata?.totalSeries || 4500;
+      const isCacheTooOld = cachedMetadata 
+        ? (Date.now() - cachedMetadata.lastUpdated) > (7 * 24 * 60 * 60 * 1000)
+        : false;
       
-      if (isCacheIncomplete) {
-        console.warn(`[IkigaiFuse] Cache incompleto detectado:`);
-        console.warn(`  Series cacheadas: ${this.series.length}`);
-        console.warn(`  Series esperadas (mínimo): ${expectedMinSeries}`);
-        console.warn(`  Total de páginas: ${this.totalPages}`);
-        console.warn(`[IkigaiFuse] Limpiando cache y forzando recarga completa...`);
+      const isCacheIncomplete = this.series.length < (expectedMinSeries * 0.8);
+      
+      if (isCacheIncomplete || isCacheTooOld) {
+        if (isCacheIncomplete) {
+          console.warn(`[IkigaiFuse] Cache incompleto detectado: ${this.series.length} / ${expectedMinSeries}`);
+        } else if (isCacheTooOld) {
+          const daysOld = Math.floor((Date.now() - cachedMetadata.lastUpdated) / (24 * 60 * 60 * 1000));
+          console.warn(`[IkigaiFuse] Cache muy antiguo (${daysOld} días)`);
+        }
         
         await this.storageManager.clearPartialProgress();
         await this.storageManager.clearSeries();
+        await this.storageManager.clearCacheMetadata();
         
         return false;
       }
@@ -126,6 +151,7 @@ class IkigaiFuseManager {
     this.onComplete = onComplete;
     this.series = [];
     this.loadedPages = 0;
+    this.loadedSeriesCount = 0;
     
     console.log('[IkigaiFuse] Iniciando carga progresiva...');
     
@@ -142,6 +168,12 @@ class IkigaiFuseManager {
         
         this.series.push(...data.series);
         this.loadedPages = data.loaded;
+        this.loadedSeriesCount += data.series.length;
+        
+        if (data.totalSeries && !this.totalSeries) {
+          this.totalSeries = data.totalSeries;
+          console.log(`[IkigaiFuse] Total series establecido: ${this.totalSeries}`);
+        }
         
         this.series = this.series.map(s => ({
           ...s,
@@ -169,8 +201,9 @@ class IkigaiFuseManager {
           this.onProgress({
             loaded: this.loadedPages,
             total: this.totalPages,
-            percent: data.percent,
+            percent: this.getPercent(),
             seriesCount: this.series.length,
+            totalSeries: this.totalSeries,
             estimatedTimeRemaining: estimatedTimeRemaining,
             isComplete: data.isComplete
           });
@@ -195,6 +228,13 @@ class IkigaiFuseManager {
       
       await this.storageManager.saveSeries(this.series);
       await this.storageManager.clearPartialProgress();
+      
+      await this.storageManager.saveCacheMetadata({
+        totalSeries: this.series.length,
+        lastUpdated: Date.now(),
+        totalPages: this.totalPages
+      });
+      
       console.log(`[IkigaiFuse] Carga completada: ${this.series.length} series`);
       
       if (this.onComplete) {
@@ -487,6 +527,9 @@ class IkigaiFuseManager {
   }
 
   getPercent() {
+    if (this.totalSeries && this.series.length > 0) {
+      return (this.series.length / this.totalSeries) * 100;
+    }
     return (this.loadedPages / this.totalPages) * 100;
   }
 
@@ -496,6 +539,61 @@ class IkigaiFuseManager {
 
   getLoadedPages() {
     return this.loadedPages;
+  }
+
+  validateCacheIntegrity(series) {
+    const errors = [];
+    
+    if (!Array.isArray(series)) {
+      errors.push('Cache no es un array');
+      return { isValid: false, errors };
+    }
+    
+    if (series.length === 0) {
+      errors.push('Cache vacío');
+      return { isValid: false, errors };
+    }
+    
+    const sampleSize = Math.min(100, series.length);
+    let missingFields = 0;
+    
+    for (let i = 0; i < sampleSize; i++) {
+      const item = series[i];
+      if (!item.name || !item.slug) {
+        missingFields++;
+      }
+    }
+    
+    if (missingFields > sampleSize * 0.1) {
+      errors.push(`Más del 10% de series tienen campos faltantes (${missingFields}/${sampleSize})`);
+    }
+    
+    const slugs = new Set();
+    let duplicates = 0;
+    for (const item of series) {
+      if (item.slug) {
+        if (slugs.has(item.slug)) {
+          duplicates++;
+        } else {
+          slugs.add(item.slug);
+        }
+      }
+    }
+    
+    if (duplicates > 0) {
+      errors.push(`Se encontraron ${duplicates} series duplicadas por slug`);
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      stats: {
+        total: series.length,
+        uniqueSlugs: slugs.size,
+        duplicates,
+        missingFields
+      }
+    };
   }
 }
 
