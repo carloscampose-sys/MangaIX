@@ -191,6 +191,23 @@ class IkigaiFuseManager {
     this.isLoading = false;
   }
 
+  reset() {
+    console.log('[IkigaiFuse] Reset completo - Preparando para recarga desde inicio');
+    
+    this.isCancelled = false;
+    this.isLoading = false;
+    
+    this.series = [];
+    this.fuse = null;
+    this.loadedPages = 0;
+    this.loadedSeriesCount = 0;
+    this.totalSeries = null;
+    this.onProgress = null;
+    this.onComplete = null;
+    
+    console.log('[IkigaiFuse] Estado reseteado - Listo para nueva carga');
+  }
+
   search(query, filters) {
     console.log('[IkigaiFuse] Búsqueda iniciada');
     console.log('[IkigaiFuse] Query:', query);
