@@ -7,6 +7,8 @@ import { BackupModal } from './BackupModal';
 import { ColorThemeModal } from './ColorThemeModal';
 import { BackgroundColorModal } from './BackgroundColorModal';
 import { ParticleSettingsModal } from './ParticleSettingsModal';
+import storageManager from '../services/storageManager';
+import ikigaiFuseManager from '../services/ikigaiFuse';
 
 // ============================================================
 // SETTINGS HEADER COMPONENT
@@ -118,7 +120,7 @@ const SettingsGrid = ({ sections, isReloadingIkigai }) => (
 // ============================================================
 // MAIN SETTINGS PANEL COMPONENT
 // ============================================================
-const SettingsPanel = ({ onForceReloadIkigai }) => {
+const SettingsPanel = () => {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showColorTheme, setShowColorTheme] = useState(false);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
@@ -127,18 +129,23 @@ const SettingsPanel = ({ onForceReloadIkigai }) => {
   const { isChristmasMode, toggleChristmasMode } = useChristmasTheme();
   const { showToast } = useToast();
 
-  const handleReloadClick = async () => {
-    if (!onForceReloadIkigai) {
-      showToast('❌ Función no disponible. Recarga la página');
-      return;
-    }
-    
+  const handleForceReloadIkigai = async () => {
     setIsReloadingIkigai(true);
     
     try {
-      await onForceReloadIkigai();
+      showToast('🔄 Limpiando cache y recargando Ikigai...');
+      
+      await storageManager.clearSeries();
+      await storageManager.clearPartialProgress();
+      localStorage.removeItem('ikigai-cache-metadata');
+      sessionStorage.removeItem('ikigai-status');
+      
+      const response = await fetch('/api/ikigai/load-series-progressive?chunk=3&startPage=1');
+      const data = await response.json();
+      
+      showToast('✅ Recarga iniciada. Ikigai se cargará en segundo plano');
     } catch (error) {
-      console.error('[SettingsPanel] Error en recarga:', error);
+      console.error('[SettingsPanel] Error recargando Ikigai:', error);
       showToast('❌ Error recargando Ikigai. Intenta de nuevo');
     } finally {
       setIsReloadingIkigai(false);
@@ -150,10 +157,10 @@ const SettingsPanel = ({ onForceReloadIkigai }) => {
     {
       id: 'ikigai',
       title: 'Recargar Ikigai',
-      description: 'Fuerza la recarga completa de las series de Ikigai (útil si hay errores o para actualizar)',
+      description: 'Fuerza la recarga completa de las series de Ikigai (útil si hay errores)',
       icon: RefreshCw,
       color: isReloadingIkigai ? 'from-gray-400 to-gray-500' : 'from-orange-400 to-red-500',
-      action: () => handleReloadClick(),
+      action: () => handleForceReloadIkigai(),
       disabled: isReloadingIkigai
     },
     {

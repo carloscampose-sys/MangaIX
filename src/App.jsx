@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ColorThemeProvider } from './context/ColorThemeContext';
@@ -113,8 +113,8 @@ const MainApp = ({ userName, userGender }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLuckModalOpen, setIsLuckModalOpen] = useState(false);
 
-  // Función reutilizable para iniciar carga de Ikigai
-  const startIkigaiLoad = useCallback(() => {
+  // Inicializar Ikigai al cargar la app (siempre desde API)
+  useEffect(() => {
     const initIkigai = async () => {
       await storageManager.init();
       await ikigaiFuseManager.init(storageManager);
@@ -158,46 +158,7 @@ const MainApp = ({ userName, userGender }) => {
     };
     
     initIkigai();
-  }, [selectedSource, showToast]);
-
-  // Handler para recarga forzada de Ikigai
-  const handleForceReloadIkigai = async () => {
-    try {
-      showToast('🔄 Recargando Ikigai desde el inicio...');
-      
-      ikigaiFuseManager.cancel();
-      
-      ikigaiFuseManager.reset();
-      
-      await storageManager.clearSeries();
-      await storageManager.clearPartialProgress();
-      await storageManager.clearCacheMetadata();
-      localStorage.removeItem('ikigai-cache-metadata');
-      
-      setIkigaiStatus({
-        seriesLoaded: false,
-        isLoading: false,
-        loadedPages: 0,
-        totalPages: 339,
-        percent: 0,
-        seriesCount: 0,
-        totalSeries: null,
-        estimatedTimeRemaining: 0
-      });
-      
-      startIkigaiLoad();
-      
-      showToast('✅ Recarga iniciada. Ikigai se está cargando...');
-    } catch (error) {
-      console.error('[App] Error recargando Ikigai:', error);
-      showToast('❌ Error recargando Ikigai. Intenta de nuevo');
-    }
-  };
-
-  // Inicializar Ikigai al cargar la app (siempre desde API)
-  useEffect(() => {
-    startIkigaiLoad();
-  }, [startIkigaiLoad]);
+  }, []);
 
   useEffect(() => {
     // Simulamos el tiempo del ritual potaxie
@@ -1661,7 +1622,7 @@ const MainApp = ({ userName, userGender }) => {
 
             {page === 'settings' && (
               <Suspense fallback={<PageLoader />}>
-                <SettingsPanel onForceReloadIkigai={handleForceReloadIkigai} />
+                <SettingsPanel />
               </Suspense>
             )}
           </motion.div>
