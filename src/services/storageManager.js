@@ -94,6 +94,8 @@ class StorageManager {
   }
 
   async loadSeries() {
+    console.log('[StorageManager] Tipo de almacenamiento:', this.storageType);
+    
     if (this.storageType === 'localStorage') {
       const data = localStorage.getItem('ikigai-series');
       if (data) {
@@ -245,15 +247,29 @@ class StorageManager {
 
   async loadCacheMetadata() {
     try {
+      console.log('[StorageManager] Intentando cargar metadata del cache...');
       const metadataStr = localStorage.getItem('ikigai-cache-metadata');
-      if (metadataStr) {
-        const metadata = JSON.parse(metadataStr);
-        console.log('[StorageManager] Metadata cargada:', metadata);
-        return metadata;
+      
+      if (!metadataStr) {
+        console.log('[StorageManager] ⚠️ No se encontró metadata en localStorage');
+        return null;
       }
-      return null;
+      
+      console.log('[StorageManager] Metadata encontrada, parseando...');
+      const metadata = JSON.parse(metadataStr);
+      
+      console.log('[StorageManager] Metadata parseada exitosamente:');
+      console.log('  totalSeries:', metadata.totalSeries);
+      console.log('  lastUpdated:', new Date(metadata.lastUpdated).toISOString());
+      console.log('  totalPages:', metadata.totalPages);
+      
+      const age = Date.now() - metadata.lastUpdated;
+      const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
+      console.log('[StorageManager] Edad de metadata:', daysOld, 'días');
+      
+      return metadata;
     } catch (error) {
-      console.warn('[StorageManager] Error cargando metadata:', error);
+      console.error('[StorageManager] ❌ Error cargando metadata:', error);
       return null;
     }
   }
