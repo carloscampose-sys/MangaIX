@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ColorThemeProvider } from './context/ColorThemeContext';
