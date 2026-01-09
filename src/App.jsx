@@ -93,6 +93,9 @@ const MainApp = ({ userName, userGender }) => {
   // Referencia a la sección de resultados para scroll
   const resultsRef = useRef(null);
 
+  // Referencia para rastrear si ya se mostró la notificación inicial de Ikigai
+  const hasShownIkigaiNotification = useRef(false);
+
   const { showToast } = useToast();
   
   // Obtener filtros dinámicos según fuente seleccionada
@@ -157,7 +160,15 @@ const MainApp = ({ userName, userGender }) => {
   }, []);
 
   useEffect(() => {
-    if (selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded) {
+    // Solo mostrar la notificación inicial si:
+    // 1. Se cambió a Ikigai
+    // 2. Ikigai está cargando
+    // 3. NO se ha mostrado la notificación antes
+    if (selectedSource === 'ikigai' &&
+        ikigaiStatus.isLoading &&
+        !ikigaiStatus.seriesLoaded &&
+        !hasShownIkigaiNotification.current) {
+
       const minutes = Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60);
       const timeText = minutes < 1
         ? `menos de 1 minuto`
@@ -168,6 +179,14 @@ const MainApp = ({ userName, userGender }) => {
         `Búsqueda por título disponible en ${timeText}. ` +
         `Por mientras, puedes usar filtros de género.`
       );
+
+      // Marcar que ya se mostró la notificación
+      hasShownIkigaiNotification.current = true;
+    }
+
+    // Resetear el flag cuando se completa la carga (para la próxima sesión)
+    if (ikigaiStatus.seriesLoaded) {
+      hasShownIkigaiNotification.current = false;
     }
   }, [selectedSource, ikigaiStatus.isLoading, ikigaiStatus.seriesLoaded, ikigaiStatus.estimatedTimeRemaining, showToast]);
 
