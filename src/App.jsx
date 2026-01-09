@@ -131,10 +131,6 @@ const MainApp = ({ userName, userGender }) => {
             totalSeries: progress.totalSeries,
             estimatedTimeRemaining: progress.estimatedTimeRemaining
           });
-          
-          if (progress.loaded % 50 === 0 && selectedSource !== 'ikigai') {
-            showToast(`📚 Cargando Ikigai en segundo plano... ${progress.seriesCount}/${progress.totalSeries || '?'} series`);
-          }
         },
         (completionData) => {
           setIkigaiStatus({
@@ -159,6 +155,21 @@ const MainApp = ({ userName, userGender }) => {
     
     initIkigai();
   }, []);
+
+  useEffect(() => {
+    if (selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded) {
+      const minutes = Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60);
+      const timeText = minutes < 1
+        ? `menos de 1 minuto`
+        : `${minutes} minuto${minutes >= 2 ? 's' : ''}`;
+
+      showToast(
+        `📚 Ikigai se está cargando en segundo plano. ` +
+        `Búsqueda por título disponible en ${timeText}. ` +
+        `Por mientras, puedes usar filtros de género.`
+      );
+    }
+  }, [selectedSource, ikigaiStatus.isLoading, ikigaiStatus.seriesLoaded, ikigaiStatus.estimatedTimeRemaining, showToast]);
 
   useEffect(() => {
     // Simulamos el tiempo del ritual potaxie
@@ -855,23 +866,18 @@ const MainApp = ({ userName, userGender }) => {
                     <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
                       <Search className="text-gray-400 group-focus-within:text-potaxie-green transition-colors" size={18} />
                     </div>
-                     <input
-                       type="text"
-                       value={searchQuery}
-                       onChange={(e) => setSearchQuery(e.target.value)}
-                       placeholder={
-                         selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded
-                           ? `Búsqueda disponible en ${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${ikigaiStatus.estimatedTimeRemaining / 60 >= 2 ? 's' : ''}`
-                           : 'Busca por título...'
-                       }
-                       disabled={selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded}
-                       className={`w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base ${
-                         selectedSource === 'ikigai' && !ikigaiStatus.seriesLoaded
-                           ? 'bg-gray-100 dark:bg-gray-800 border-dashed border-gray-300 dark:border-gray-600 cursor-not-allowed opacity-60'
-                           : 'border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green'
-                       }`}
-                     />
-                    <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={
+                          selectedSource === 'ikigai'
+                            ? 'Busca por título... o usa filtros de género'
+                            : 'Busca por título...'
+                        }
+                        className="w-full pl-10 sm:pl-12 pr-24 sm:pr-40 py-3 sm:py-4 rounded-full border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur outline-none transition-all shadow-lg dark:text-white text-sm sm:text-base focus:ring-4 focus:ring-potaxie-green/20 focus:border-potaxie-green"
+                      />
+                      <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 bottom-1.5 sm:bottom-2 flex gap-1 sm:gap-2">
                       <button
                         type="button"
                         onClick={() => setIsFiltersOpen(!isFiltersOpen)}
@@ -895,41 +901,7 @@ const MainApp = ({ userName, userGender }) => {
                       </button>
                     </div>
                   </form>
-                  
-                  {/* Barra de progreso de Ikigai Minimalista */}
-                  {selectedSource === 'ikigai' && ikigaiStatus.isLoading && !ikigaiStatus.seriesLoaded && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 20 }}
-                      className="ikigai-loader-minimal"
-                    >
-                      <div className="ikigai-bar-container">
-                        <motion.div
-                          className="ikigai-bar-fill"
-                          initial={{ width: '0%' }}
-                          animate={{ width: `${ikigaiStatus.percent}%` }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <div className="ikigai-shimmer" />
-                        </motion.div>
-                        <span className="ikigai-percent-badge">
-                          {ikigaiStatus.percent.toFixed(1)}%
-                        </span>
-                      </div>
 
-                      <p className="ikigai-loader-text">
-                        Cargando Todas las Obras, la búsqueda por título estará disponible en
-                        <span className="ikigai-timer">
-                          {ikigaiStatus.estimatedTimeRemaining < 60
-                            ? ` ${Math.ceil(ikigaiStatus.estimatedTimeRemaining)} segundos`
-                            : ` ${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60)} minuto${Math.ceil(ikigaiStatus.estimatedTimeRemaining / 60) >= 2 ? 's' : ''}`
-                          }
-                        </span>
-                      </p>
-                    </motion.div>
-                  )}
-                  
                   {/* Checkbox "Coincidencia Exacta" - Solo visible en Ikigai + con query */}
                   {selectedSource === 'ikigai' && searchQuery.trim() && (
                     <motion.div
