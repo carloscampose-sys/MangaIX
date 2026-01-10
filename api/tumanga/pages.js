@@ -65,10 +65,11 @@ export default async function handler(req, res) {
         // Navegar a la página del capítulo
         await page.goto(`https://tumanga.org/leer/${slug}-${chapter}`, {
             waitUntil: 'domcontentloaded',
-            timeout: 30000
+            timeout: 20000
         });
 
         // Esperar a que las imágenes reales se carguen (no los loaders)
+        console.log('[TuManga] Esperando a que se carguen las imágenes reales...');
         await page.waitForFunction(() => {
             const imgs = document.querySelectorAll('#lector img');
             if (imgs.length === 0) return false;
@@ -76,34 +77,50 @@ export default async function handler(req, res) {
             // Verificar que al menos una imagen NO sea el loader
             for (const img of imgs) {
                 const src = img.src || img.dataset?.src || '';
-                if (src && !src.includes('loader') && (src.includes('pic_source') || src.includes('social-google'))) {
+                // Ser más flexible: aceptar cualquier URL que parezca una imagen real
+                if (src && !src.includes('loader') && !src.includes('assets/img') && src.length > 50) {
                     return true;
                 }
             }
             return false;
-        }, { timeout: 6000 }).catch(() => {
-            console.log('Timeout waiting for real images...');
+        }, { timeout: 5000 }).catch(() => {
+            console.log('[TuManga] Timeout esperando imágenes reales, continuando con extracción...');
         });
 
         // Pequeña pausa adicional para asegurar que todas las imágenes se decodifiquen
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         // Extraer URLs de imágenes (excluyendo loaders)
         const pages = await page.evaluate(() => {
-            const images = document.querySelectorAll('#lector img');
             const urls = [];
 
-            images.forEach(img => {
-                const src = img.src || img.dataset?.src || img.getAttribute('data-src');
-                // Excluir loaders y solo incluir imágenes reales
-                if (src && !src.includes('loader') && !src.includes('assets/img')) {
-                    if (src.includes('pic_source') || src.includes('social-google') || src.includes('tumanga.org/pic')) {
-                        urls.push(src);
-                    }
-                }
-            });
+            // Intentar múltiples selectores para mayor compatibilidad
+            const selectors = [
+                '#lector img',
+                'img.page',
+                'img[data-image-id]',
+                '.manga-reader img',
+                '.reader img'
+            ];
 
-            return urls;
+            for (const selector of selectors) {
+                const images = document.querySelectorAll(selector);
+                if (images.length > 0) {
+                    console.log(`[TuManga] Usando selector: ${selector} (${images.length} imágenes)`);
+
+                    images.forEach(img => {
+                        const src = img.src || img.dataset?.src || img.getAttribute('data-src');
+                        // Ser más flexible con el filtrado
+                        if (src && !src.includes('loader') && !src.includes('assets/img') && src.length > 50) {
+                            urls.push(src);
+                        }
+                    });
+
+                    if (urls.length > 0) break; // Usar el primer selector que funcione
+                }
+            }
+
+            return [...new Set(urls)]; // Eliminar duplicados
         });
 
         console.log(`Found ${pages.length} pages`);

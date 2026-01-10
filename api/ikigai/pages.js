@@ -60,28 +60,28 @@ export default async function handler(req, res) {
 
     await page.goto(chapterUrl, {
       waitUntil: 'networkidle0',
-      timeout: 45000
+      timeout: 20000
     });
 
     // El sitio usa Qwik framework - necesita tiempo para cargar JavaScript
     console.log('[Ikigai Pages] Esperando carga de Qwik framework...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Hacer scroll para activar lazy loading de imágenes
     console.log('[Ikigai Pages] Haciendo scroll para cargar imágenes...');
     let previousHeight = 0;
     let scrollAttempts = 0;
-    const maxScrollAttempts = 10;
+    const maxScrollAttempts = 15;
 
     while (scrollAttempts < maxScrollAttempts) {
       await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const currentHeight = await page.evaluate(() => document.body.scrollHeight);
       if (currentHeight === previousHeight) {
         // Intentar un scroll más para asegurar
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         break;
       }
       previousHeight = currentHeight;
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
 
     // Volver al inicio
     await page.evaluate(() => window.scrollTo(0, 0));
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Debug: Ver qué imágenes hay en la página
     const debugInfo = await page.evaluate(() => {
@@ -106,39 +106,65 @@ export default async function handler(req, res) {
     });
     console.log('[Ikigai Pages] Debug info:', JSON.stringify(debugInfo, null, 2));
 
-    // Extraer URLs de imágenes del capítulo
-    // Buscar imágenes grandes que sean del manga (no avatares, iconos, etc.)
+    // Extraer URLs de imágenes del capítulo con múltiples estrategias
     const imageUrls = await page.evaluate(() => {
-      const images = document.querySelectorAll('img');
       const validImages = [];
 
-      Array.from(images).forEach(img => {
-        const src = img.src || img.dataset?.src || '';
+      // Selectores a probar en orden de especificidad
+      const selectors = [
+        'img[src*="chapters/"]',
+        'img[src*="pages/"]',
+        'img[src*="imagedelivery"]',
+        'img[src*="ikigaimangas"]',
+        'div.chapter img',
+        'div.reader img',
+        '.chapter-pages img',
+        'img[data-src]',
+        'img'
+      ];
 
-        // Filtrar imágenes del CDN de Ikigai
-        const isIkigaiCdn = src.includes('ikigaimangas.cloud') ||
-                           src.includes('ikigai') ||
-                           src.includes('imagedelivery.net');
+      for (const selector of selectors) {
+        const images = document.querySelectorAll(selector);
 
-        // Excluir imágenes pequeñas o de UI
-        const isNotUiElement = !src.includes('avatar') &&
-                              !src.includes('icon') &&
-                              !src.includes('logo') &&
-                              !src.includes('loader') &&
-                              !src.includes('placeholder') &&
-                              !src.includes('60:60') &&  // Thumbnails pequeños
-                              !src.includes('btn_') &&   // Botones
-                              !src.includes('/misc/');   // Recursos misc
+        if (images.length > 0) {
+          console.log(`[Ikigai] Selector encontrado: ${selector} (${images.length} imágenes)`);
 
-        // Verificar que la imagen es grande (probable página de manga)
-        const isLargeImage = img.naturalWidth > 200 || img.width > 200 ||
-                            src.includes('/chapters/') ||
-                            src.includes('/pages/');
+          Array.from(images).forEach(img => {
+            const src = img.src || img.dataset?.src || '';
 
-        if (src && src.startsWith('http') && isIkigaiCdn && isNotUiElement) {
-          validImages.push(src);
+            // Validaciones más flexibles
+            if (!src || !src.startsWith('http')) return;
+
+            // Excluir elementos de UI más específicamente
+            const isNotUI = !src.includes('avatar') &&
+                           !src.includes('logo') &&
+                           !src.includes('icon') &&
+                           !src.includes('loader') &&
+                           !src.includes('placeholder') &&
+                           img.height !== 60 &&
+                           img.width !== 60 &&
+                           !src.includes('btn_') &&
+                           !src.includes('/misc/');
+
+            // Ser más permisivo con CDNs
+            const isValidCdn = src.includes('ikigaimangas.cloud') ||
+                              src.includes('imagedelivery.net') ||
+                              src.includes('ikigai') ||
+                              src.includes('/chapters/') ||
+                              src.includes('/pages/');
+
+            if (isValidCdn && isNotUI) {
+              validImages.push(src);
+            }
+          });
+
+          // Si encontramos imágenes, usar este selector
+          if (validImages.length > 0) {
+            console.log(`[Ikigai] ${validImages.length} imágenes válidas encontradas`);
+            break;
+          }
         }
-      });
+      }
 
       // Eliminar duplicados
       return [...new Set(validImages)];
