@@ -64,18 +64,20 @@ export default async function handler(req, res) {
     });
 
     // El sitio usa Qwik framework - necesita tiempo para cargar JavaScript
+    // Optimizado: reducir de 2000ms a 800ms (suficiente para Qwik)
     console.log('[Ikigai Pages] Esperando carga de Qwik framework...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     // Hacer scroll para activar lazy loading de imágenes
+    // Optimizado: reducir de 15 intentos a 8, y espera de 500ms a 300ms
     console.log('[Ikigai Pages] Haciendo scroll para cargar imágenes...');
     let previousHeight = 0;
     let scrollAttempts = 0;
-    const maxScrollAttempts = 15;
+    const maxScrollAttempts = 8;
 
     while (scrollAttempts < maxScrollAttempts) {
       await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       const currentHeight = await page.evaluate(() => document.body.scrollHeight);
       if (currentHeight === previousHeight) {
@@ -90,7 +92,9 @@ export default async function handler(req, res) {
 
     // Volver al inicio
     await page.evaluate(() => window.scrollTo(0, 0));
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    console.log(`[Ikigai Pages] Scroll completado - Intentos: ${scrollAttempts}/${maxScrollAttempts}`);
 
     // Debug: Ver qué imágenes hay en la página
     const debugInfo = await page.evaluate(() => {

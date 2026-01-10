@@ -85,10 +85,11 @@ export default async function handler(req, res) {
     allChapters.sort((a, b) => {
       const numA = parseFloat(a.chapter) || 0;
       const numB = parseFloat(b.chapter) || 0;
-      return numB - numA;
+      return numA - numB;
     });
 
     console.log(`[Ikigai Chapters] Total capítulos: ${allChapters.length}`);
+    console.log(`[Ikigai Chapters] Capítulos ordenados ascendente - Primero: ${allChapters[0]?.chapter}, Último: ${allChapters[allChapters.length - 1]?.chapter}`);
 
     return res.status(200).json({
       chapters: allChapters,
