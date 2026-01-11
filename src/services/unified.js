@@ -5,6 +5,7 @@
 
 import * as tumanga from './tumanga';
 import * as manhwaweb from './manhwaweb';
+import * as manhwaweb1 from './manhwaweb1';
 import * as ikigai from './ikigai';
 import { getSourceById } from './sources';
 
@@ -12,6 +13,7 @@ import { getSourceById } from './sources';
 const serviceMap = {
     tumanga,
     manhwaweb,
+    manhwaweb1,
     ikigai
 };
 
@@ -46,6 +48,10 @@ export async function unifiedSearch(query, filters, source, page = 1) {
             const results = await service.searchManhwaWeb(query, filters, page);
             // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
             return { results, hasMore: results.length >= 30 };
+        } else if (source === 'manhwaweb1') {
+            const results = await service.searchManhwaWeb1(query, filters, page);
+            // ManhwaWeb1: usa API directa, revisar flag 'next' de la respuesta
+            return { results, hasMore: true };
         } else if (source === 'ikigai') {
             const results = await service.searchIkigai(query, filters, page);
             return { results, hasMore: results.length > 0 };
@@ -69,6 +75,8 @@ export async function unifiedGetDetails(slug, source) {
             return await service.getTuMangaDetails(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebDetails(slug);
+        } else if (source === 'manhwaweb1') {
+            return await service.getManhwaWeb1Details(slug);
         } else if (source === 'ikigai') {
             return await service.getIkigaiDetails(slug);
         }
@@ -91,6 +99,8 @@ export async function unifiedGetChapters(slug, source) {
             return await service.getTuMangaChapters(slug);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebChapters(slug);
+        } else if (source === 'manhwaweb1') {
+            return await service.getManhwaWeb1Chapters(slug);
         } else if (source === 'ikigai') {
             return await service.getIkigaiChapters(slug);
         }
@@ -117,6 +127,8 @@ export async function unifiedGetPages(slug, chapter, source, chapterData = null)
             return await service.getTuMangaPages(slug, chapter);
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
+        } else if (source === 'manhwaweb1') {
+            return await service.getManhwaWeb1Images(slug, chapter);
         } else if (source === 'ikigai') {
             // Ikigai necesita el chapterId (ID largo) para obtener las páginas
             const chapterId = chapterData?.chapterId || chapterData;
@@ -141,6 +153,16 @@ export async function unifiedGetRandom(genreIds, source) {
             return await service.getRandomManga(genreIds);
         } else if (source === 'manhwaweb') {
             return await service.getRandomManhwaWeb(genreIds);
+        } else if (source === 'manhwaweb1') {
+            // ManhwaWeb1 usa getNuevos para obras recientes
+            const nuevos = await service.getManhwaWeb1Nuevos();
+            if (nuevos && nuevos.length > 0) {
+                // Seleccionar una obra aleatoria de las nuevas
+                const randomIndex = Math.floor(Math.random() * nuevos.length);
+                const randomSlug = nuevos[randomIndex].slug;
+                return await service.getManhwaWeb1Details(randomSlug);
+            }
+            return null;
         } else if (source === 'ikigai') {
             return await service.getRandomIkigai(genreIds);
         }

@@ -36,6 +36,17 @@ export const SOURCES = {
         textColor: 'text-pink-500',
         features: ['search', 'details', 'chapters', 'read', 'random'],
         status: 'active'
+    },
+    MANHWAWEB1: {
+        id: 'manhwaweb1',
+        name: 'ManhwaWeb API',
+        icon: '⚡',
+        baseUrl: 'https://manhwaweb.com',
+        color: 'bg-orange-500',
+        hoverColor: 'hover:bg-orange-600',
+        textColor: 'text-orange-500',
+        features: ['search', 'details', 'chapters', 'read', 'api-direct'],
+        status: 'active'
     }
 };
 

@@ -22,7 +22,12 @@
       "Bash(grep:*)",
       "WebFetch(domain:tumanga.org)",
       "Bash(npm run dev:*)",
-      "Bash(pnpm install)"
+      "Bash(pnpm install)",
+      "WebFetch(domain:ikigaimangas.com)",
+      "WebFetch(domain:viralikigai.techbee.site)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:manhwaweb.com)"
     ]
   }
 }
