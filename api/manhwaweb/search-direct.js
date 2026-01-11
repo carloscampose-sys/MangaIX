@@ -11,6 +11,8 @@ export default async function handler(req, res) {
 
   const { action } = req.query;
 
+  console.log('[ManhwaWeb Search Direct] req.query completo:', JSON.stringify(req.query, null, 2));
+
   if (action === 'nuevos') {
     try {
       const data = await ApiClient.getNuevos();
@@ -60,17 +62,22 @@ export default async function handler(req, res) {
 
     const params = {};
     if (query) params.buscar = query;
-    if (type) params.tipo = type;
-    if (demographic) params.demografia = demographic;
-    if (status) params.estado = status;
-    if (erotic) params.erotico = erotic;
+    if (type !== undefined) params.tipo = type;
+    if (demographic !== undefined) params.demografia = demographic;
+    if (status !== undefined) params.estado = status;
+    if (erotic !== undefined) params.erotico = erotic;
     if (genres) {
       const genreIds = typeof genres === 'string' ? genres.split(',') : genres;
-      params.genders = genreIds;
+      params.genders = genreIds.map(g => {
+        const num = parseInt(g);
+        return isNaN(num) ? g : num;
+      });
     }
-    if (sortBy) params.order_item = sortBy;
-    if (sortOrder) params.order_dir = sortOrder;
+    if (sortBy !== undefined) params.order_item = sortBy;
+    if (sortOrder !== undefined) params.order_dir = sortOrder;
     params.page = parseInt(page);
+
+    console.log('[ManhwaWeb Search Direct] params a enviar a API:', JSON.stringify(params, null, 2));
 
     const startTime = Date.now();
     const data = await ApiClient.search(params);
