@@ -141,8 +141,8 @@ export const getManhwaWeb1ChapterNav = async (slug, chapter) => {
   try {
     console.log(`[ManhwaWeb1] Obteniendo navegación del capítulo ${chapter} de ${slug}`);
 
-    const response = await axios.get(`${API_BASE}/chapter-nav`, {
-      params: { slug, chapter },
+    const response = await axios.get(`${API_BASE}/chapter-images`, {
+      params: { slug, chapter, action: 'nav' },
       timeout: 20000
     });
 
@@ -172,7 +172,8 @@ export const getManhwaWeb1Nuevos = async () => {
   try {
     console.log('[ManhwaWeb1] Obteniendo obras nuevas');
 
-    const response = await axios.get(`${API_BASE}/nuevos`, {
+    const response = await axios.get(`${API_BASE}/search`, {
+      params: { action: 'nuevos' },
       timeout: 20000
     });
 

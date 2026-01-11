@@ -77,114 +77,18 @@ class IkigaiFuseManager {
   }
 
   async startBackgroundLoad(onProgress, onComplete) {
-    if (this.isLoading) {
-      console.warn('[IkigaiFuse] Ya se está cargando');
-      return;
-    }
+    console.log('[IkigaiFuse] Carga en segundo plano no disponible en plan gratuito de Vercel');
     
-    this.isLoading = true;
-    this.isCancelled = false;
-    this.onProgress = onProgress;
-    this.onComplete = onComplete;
-    this.series = [];
-    this.loadedPages = 0;
-    this.loadedSeriesCount = 0;
-    
-    console.log('[IkigaiFuse] Iniciando carga progresiva...');
-    
-    const startTime = Date.now();
-    
-    while (!this.isCancelled && this.loadedPages < this.totalPages) {
-      const chunkSize = this.loadedPages === 0 ? 3 :5;
-      
-      try {
-        const response = await fetch(`/api/ikigai/load-series-progressive?chunk=${chunkSize}&startPage=${this.loadedPages + 1}`);
-        const data = await response.json();
-        
-        if (this.isCancelled) break;
-        
-        this.series.push(...data.series);
-        this.loadedPages = data.loaded;
-        this.loadedSeriesCount += data.series.length;
-        
-        if (data.totalSeries && !this.totalSeries) {
-          this.totalSeries = data.totalSeries;
-          console.log(`[IkigaiFuse] Total series establecido: ${this.totalSeries}`);
-        }
-        
-        this.series = this.series.map(s => ({
-          ...s,
-          nameNormalized: this.normalizeText(s.name),
-          slugNormalized: this.normalizeText(s.slug),
-          summaryNormalized: this.normalizeText(s.summary || ''),
-          synopsisNormalized: this.normalizeText(s.synopsis || '')
-        }));
-        
-        this.initFuse();
-        
-        if (this.loadedPages % 50 === 0) {
-          await this.storageManager.savePartialProgress({
-            series: this.series,
-            loadedPages: this.loadedPages
-          });
-        }
-        
-        if (this.onProgress) {
-          const timeElapsed = (Date.now() - startTime) / 1000;
-          const pagesPerSecond = this.loadedPages / timeElapsed;
-          const pagesRemaining = this.totalPages - this.loadedPages;
-          const estimatedTimeRemaining = Math.ceil(pagesRemaining / pagesPerSecond);
-          
-          this.onProgress({
-            loaded: this.loadedPages,
-            total: this.totalPages,
-            percent: this.getPercent(),
-            seriesCount: this.series.length,
-            totalSeries: this.totalSeries,
-            estimatedTimeRemaining: estimatedTimeRemaining,
-            isComplete: data.isComplete
-          });
-        }
-        
-        await new Promise(r => setTimeout(r, 200));
-        
-      } catch (error) {
-        console.error('[IkigaiFuse] Error cargando chunk:', error);
-        await new Promise(r => setTimeout(r, 2000));
-        continue;
-      }
-    }
-    
-    this.isLoading = false;
-    
-    if (!this.isCancelled) {
-      const withoutNormalized = this.series.filter(s => !s.nameNormalized);
-      if (withoutNormalized.length > 0) {
-        console.warn(`[IkigaiFuse] ⚠️ ${withoutNormalized.length} series sin campos normalizados`);
-      }
-      
-      await this.storageManager.saveSeries(this.series);
-      await this.storageManager.clearPartialProgress();
-      
-      await this.storageManager.saveCacheMetadata({
-        totalSeries: this.series.length,
-        lastUpdated: Date.now(),
-        totalPages: this.totalPages
+    if (onComplete) {
+      onComplete({
+        seriesLoaded: false,
+        seriesCount: 0
       });
-      
-      console.log(`[IkigaiFuse] Carga completada: ${this.series.length} series`);
-      
-      if (this.onComplete) {
-        this.onComplete({
-          seriesLoaded: true,
-          seriesCount: this.series.length
-        });
-      }
-    } else {
-      console.log('[IkigaiFuse] Carga cancelada por el usuario');
     }
+    
+    return;
   }
-
+  
   cancel() {
     console.log('[IkigaiFuse] Cancelando carga...');
     this.isCancelled = true;
