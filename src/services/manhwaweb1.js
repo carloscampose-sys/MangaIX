@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = '/api/manhwaweb1';
+const API_BASE = '/api/manhwaweb';
 
 export const normalizeTitle = (title) => {
   if (!title) return '';
@@ -119,7 +119,7 @@ export const getManhwaWeb1Images = async (slug, chapter) => {
   try {
     console.log(`[ManhwaWeb1] Obteniendo imágenes del capítulo ${chapter} de ${slug}`);
 
-    const response = await axios.get(`${API_BASE}/chapter-images`, {
+    const response = await axios.get(`${API_BASE}/pages`, {
       params: { slug, chapter },
       timeout: 20000
     });
@@ -141,7 +141,7 @@ export const getManhwaWeb1ChapterNav = async (slug, chapter) => {
   try {
     console.log(`[ManhwaWeb1] Obteniendo navegación del capítulo ${chapter} de ${slug}`);
 
-    const response = await axios.get(`${API_BASE}/chapter-images`, {
+    const response = await axios.get(`${API_BASE}/pages`, {
       params: { slug, chapter, action: 'nav' },
       timeout: 20000
     });

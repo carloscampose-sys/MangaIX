@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import ApiClient from './api-client.js';
 
 // Detectar si estamos en Vercel o en local
 const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
@@ -14,7 +15,44 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const { slug, chapter } = req.query;
+    const { slug, chapter, action } = req.query;
+    
+    // Si action es 'nav', obtener navegación de capítulo
+    if (action === 'nav') {
+        if (!slug || !chapter) {
+            return res.status(400).json({ error: 'Missing slug or chapter parameter' });
+        }
+        
+        try {
+            const data = await ApiClient.getChapterNav(slug, chapter);
+            
+            const result = {
+                success: true,
+                title: data.name,
+                current: { slug, chapter: parseFloat(chapter) },
+                previous: data.chapterAnterior ? {
+                    url: data.chapterAnterior
+                } : null,
+                next: data.chapterSiguiente ? {
+                    url: data.chapterSiguiente
+                } : null,
+                platform: data.actual,
+                erotic: data.erotico === 'si'
+            };
+            
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error('[ManhwaWeb Chapter Nav] Error:', error.message);
+            
+            return res.status(500).json({
+                success: false,
+                error: error.message,
+                current: { slug, chapter: parseFloat(chapter) },
+                previous: null,
+                next: null
+            });
+        }
+    }
 
     if (!slug || !chapter) {
         return res.status(400).json({ error: 'Missing slug or chapter parameter' });

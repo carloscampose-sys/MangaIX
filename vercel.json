@@ -4,23 +4,35 @@
       "memory": 1024,
       "maxDuration": 10
     },
-    "api/manhwaweb1/search.js": {
+    "api/manhwaweb/search.js": {
       "memory": 512,
       "maxDuration": 10
     },
-    "api/manhwaweb1/details.js": {
+    "api/manhwaweb/details.js": {
       "memory": 512,
       "maxDuration": 10
     },
-    "api/manhwaweb1/chapter-images.js": {
+    "api/manhwaweb/chapters.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/manhwaweb/pages.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/ikigai/load-series-progressive.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/ikigai/cancel-load.js": {
       "memory": 512,
       "maxDuration": 10
     }
   },
   "rewrites": [
     {
-      "source": "/api/manhwaweb1/:path*",
-      "destination": "/api/manhwaweb1/:path*"
+      "source": "/api/manhwaweb/:path*",
+      "destination": "/api/manhwaweb/:path*"
     }
   ]
 }
