@@ -20,11 +20,11 @@
       "memory": 512,
       "maxDuration": 10
     },
-    "api/ikigai/load-series-progressive.js": {
+    "api/ikigai/index.js": {
       "memory": 512,
       "maxDuration": 10
     },
-    "api/ikigai/cancel-load.js": {
+    "api/image-proxy.js": {
       "memory": 512,
       "maxDuration": 10
     }

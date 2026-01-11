@@ -98,7 +98,7 @@ class IkigaiFuseManager {
       const chunkSize = this.loadedPages === 0 ? 3 :5;
       
       try {
-        const response = await fetch(`/api/ikigai/load-series-progressive?chunk=${chunkSize}&startPage=${this.loadedPages + 1}`);
+        const response = await fetch(`/api/ikigai?action=load-series-progressive&chunk=${chunkSize}&startPage=${this.loadedPages + 1}`);
         const data = await response.json();
         
         if (this.isCancelled) break;

@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-import ApiClient from './api-client.js';
+import ApiClient from '../../lib/manhwaweb/api-client.js';
 
 // Detectar si estamos en Vercel o en local
 const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;

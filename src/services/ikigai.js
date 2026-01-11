@@ -38,10 +38,10 @@ export const searchIkigai = async (query = '', filters = {}, page = 1) => {
       return [];
     }
 
-    // En producción, usar la API serverless
+     // En producción, usar la API serverless
     console.log('[Ikigai Service] Enviando búsqueda - Página:', page);
 
-    const response = await axios.post('/api/ikigai/search', {
+    const response = await axios.post('/api/ikigai?action=search', {
       query: query || '',
       filters: {
         types: filters.types || [],
@@ -107,7 +107,7 @@ export const getIkigaiDetails = async (slug) => {
     // En producción, usar la API serverless con Puppeteer
     console.log('[Ikigai] Llamando a API de detalles...');
 
-    const response = await axios.post('/api/ikigai/details', {
+    const response = await axios.post('/api/ikigai?action=details', {
       slug
     }, {
       timeout: 35000 // 35 segundos
@@ -177,7 +177,7 @@ export const getIkigaiChapters = async (slug) => {
     }
 
     // En producción, usar la API serverless
-    const response = await axios.post('/api/ikigai/chapters', {
+    const response = await axios.post('/api/ikigai?action=chapters', {
       slug
     }, {
       timeout: 50000 // 50 segundos (puede tardar si hay muchas páginas)
@@ -226,7 +226,7 @@ export const getIkigaiPages = async (slug, chapter, chapterId) => {
       return [];
     }
 
-    const response = await axios.post('/api/ikigai/pages', {
+    const response = await axios.post('/api/ikigai?action=pages', {
       slug,
       chapter,
       chapterId  // ID largo necesario para construir la URL correcta
@@ -262,7 +262,7 @@ export const getRandomIkigai = async (genreValues = []) => {
       : {};
 
     // Primero obtener info de paginación con página 1
-    const firstPageResponse = await axios.post('/api/ikigai/search', {
+    const firstPageResponse = await axios.post('/api/ikigai?action=search', {
       query: '',
       filters: {
         genres: filters.genres || [],
@@ -293,7 +293,7 @@ export const getRandomIkigai = async (genreValues = []) => {
       results = firstPageResponse.data.results || [];
     } else {
       // Buscar en la página aleatoria
-      const randomPageResponse = await axios.post('/api/ikigai/search', {
+      const randomPageResponse = await axios.post('/api/ikigai?action=search', {
         query: '',
         filters: {
           genres: filters.genres || [],
