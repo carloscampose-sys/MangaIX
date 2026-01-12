@@ -5,106 +5,6 @@ import { getViewedMangas, saveViewedManga, isMangaViewed, getViewedSlugs } from 
 const BASE_URL = 'https://manhwaweb.com';
 
 /**
- * Genera una query aleatoria de la lista de populares
- */
-function getRandomQuery() {
-    return POPULAR_QUERIES[Math.floor(Math.random() * POPULAR_QUERIES.length)];
-}
-
-/**
- * Genera N queries diferentes para búsqueda
- * @param {number} count - Número de queries a generar (3-5)
- * @param {array} genreIds - IDs de géneros
- * @returns {string[]}
- */
-function generateSearchQueries(count = 5, genreIds = []) {
-    const queries = [];
-    
-    queries.push(''); // Query 1: vacía (variedad general)
-    queries.push(getRandomQuery()); // Query 2: aleatoria
-    queries.push(getRandomQuery()); // Query 3: aleatoria
-    
-    if (genreIds.length > 0) {
-        queries.push(''); // Query 4: vacía con filtro de género
-    } else {
-        queries.push(getRandomQuery()); // Query 4: aleatoria
-    }
-    
-    queries.push(getRandomQuery()); // Query 5: aleatoria
-    
-    return queries;
-}
-
-// Lista de proxies CORS (reutilizando la misma estrategia de TuManga)
-const PROXY_URLS = [
-    'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url=',
-    'https://proxy.cors.sh/',
-    'https://api.codetabs.com/v1/proxy?quest='
-];
-
-let currentProxyIndex = 0;
-
-/**
- * Hace una petición con fallback de proxies
- */
-const fetchWithProxy = async (url, retries = 4) => {
-    const errors = [];
-    
-    for (let i = 0; i < retries; i++) {
-        const proxyIndex = (currentProxyIndex + i) % PROXY_URLS.length;
-        const proxyUrl = PROXY_URLS[proxyIndex];
-        
-        try {
-            const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
-            console.log(`[ManhwaWeb] Intentando proxy ${proxyIndex + 1}/${PROXY_URLS.length}...`);
-            
-            const response = await axios.get(fullUrl, {
-                timeout: 12000,
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                }
-            });
-            
-            currentProxyIndex = proxyIndex;
-            console.log(`[ManhwaWeb] Proxy funcionó correctamente`);
-            return response;
-        } catch (error) {
-            const errorMsg = error.response?.status || error.message;
-            console.warn(`[ManhwaWeb] Proxy ${proxyUrl} falló (${errorMsg})`);
-            errors.push({ proxy: proxyUrl, error: errorMsg });
-            
-            if (i === retries - 1) {
-                console.error('[ManhwaWeb] Todos los proxies CORS fallaron:', errors);
-                throw new Error('Todos los proxies CORS fallaron');
-            }
-        }
-    }
-};
-
-/**
- * Normaliza un título para mejorar las coincidencias
- */
-export const normalizeTitle = (title) => {
-    if (!title) return '';
-    return title.toLowerCase()
-        .replace(/[''"!-]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-};
-
-/**
- * Normaliza un título para mejorar las coincidencias
- */
-export const normalizeTitle = (title) => {
-    if (!title) return '';
-    return title.toLowerCase()
-        .replace(/[''"!-]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-};
-
-/**
  * Lista de queries populares para variedad en el oráculo
  * Estas son búsquedas que tienden a devolver muchos resultados
  */
@@ -162,19 +62,19 @@ function getRandomQuery() {
  */
 function generateSearchQueries(count = 5, genreIds = []) {
     const queries = [];
-    
+
     queries.push(''); // Query 1: vacía (variedad general)
     queries.push(getRandomQuery()); // Query 2: aleatoria
     queries.push(getRandomQuery()); // Query 3: aleatoria
-    
+
     if (genreIds.length > 0) {
         queries.push(''); // Query 4: vacía con filtro de género
     } else {
         queries.push(getRandomQuery()); // Query 4: aleatoria
     }
-    
+
     queries.push(getRandomQuery()); // Query 5: aleatoria
-    
+
     return queries;
 }
 
@@ -193,22 +93,22 @@ let currentProxyIndex = 0;
  */
 const fetchWithProxy = async (url, retries = 4) => {
     const errors = [];
-    
+
     for (let i = 0; i < retries; i++) {
         const proxyIndex = (currentProxyIndex + i) % PROXY_URLS.length;
         const proxyUrl = PROXY_URLS[proxyIndex];
-        
+
         try {
             const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
             console.log(`[ManhwaWeb] Intentando proxy ${proxyIndex + 1}/${PROXY_URLS.length}...`);
-            
+
             const response = await axios.get(fullUrl, {
                 timeout: 12000,
                 headers: {
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 }
             });
-            
+
             currentProxyIndex = proxyIndex;
             console.log(`[ManhwaWeb] Proxy funcionó correctamente`);
             return response;
@@ -216,24 +116,13 @@ const fetchWithProxy = async (url, retries = 4) => {
             const errorMsg = error.response?.status || error.message;
             console.warn(`[ManhwaWeb] Proxy ${proxyUrl} falló (${errorMsg})`);
             errors.push({ proxy: proxyUrl, error: errorMsg });
-            
+
             if (i === retries - 1) {
                 console.error('[ManhwaWeb] Todos los proxies CORS fallaron:', errors);
                 throw new Error('Todos los proxies CORS fallaron');
             }
         }
     }
-};
-
-/**
- * Normaliza un título para mejorar las coincidencias
- */
-export const normalizeTitle = (title) => {
-    if (!title) return '';
-    return title.toLowerCase()
-        .replace(/[''"!-]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
 };
 
 /**
