@@ -1,7 +1,89 @@
 import axios from 'axios';
 import { MANHWAWEB_GENRES } from './manhwawebFilters';
+import { getViewedMangas, saveViewedManga, isMangaViewed, getViewedSlugs } from './manhwawebCache';
 
 const BASE_URL = 'https://manhwaweb.com';
+
+/**
+ * Lista de queries populares para variedad en el oráculo
+ * Estas son búsquedas que tienden a devolver muchos resultados
+ */
+const POPULAR_QUERIES = [
+    '',                // Búsqueda vacía (muestra variedad general)
+    'tower',         // Tower of God, Tower of Fantasy
+    'level',          // Solo Leveling, Level Up
+    'reborn',         // Reborn, I Reincarnated
+    'god',            // Omniscient Reader, God of Magic
+    'system',         // The Legendary Mechanic
+    'demon',          // Demon Lord
+    'dragon',         // Dragon King, Dragon Hunter
+    'martial',        // Martial Peak, Martial Arts
+    'noble',          // Return of Mount Hua Sect, Noble Reincarnation
+    'swordsman',     // Swordmaster
+    'academy',        // Academy
+    'villain',        // Villain
+    'hero',           // Hero
+    'king',            // Emperor
+    'prince',          // Prince
+    'strong',         // Strongest
+    'mage',           // Magician
+    'sword',          // Sword
+    'revenge',        // Revenge
+    'war',            // Great Demon King
+    'cultivation',    // Cultivation
+    'trans',          // Transmigration
+    'fantasy',        // Fantasy
+    'world',          // World
+    'heaven',         // Heaven
+    'immortal',       // Immortal
+    'legend',         // Legend
+    'power',          // Power
+    'blood',          // Blood
+    'soul',           // Soul
+    'life',           // Life
+    'death',          // Death
+    'destiny',        // Destiny
+    'fate',          // Fate
+    'magic'           // Magic
+];
+
+/**
+ * Genera una query aleatoria de la lista de populares
+ */
+function getRandomQuery() {
+    return POPULAR_QUERIES[Math.floor(Math.random() * POPULAR_QUERIES.length)];
+}
+
+/**
+ * Genera N queries diferentes para búsqueda
+ * @param {number} count - Número de queries a generar (3-5)
+ * @param {array} genreIds - IDs de géneros
+ * @returns {string[]}
+ */
+function generateSearchQueries(count = 5, genreIds = []) {
+    const queries = [];
+    
+    // Query 1: Búsqueda vacía (variedad general)
+    queries.push('');
+    
+    // Query 2: Query aleatoria de populares
+    queries.push(getRandomQuery());
+    
+    // Query 3: Otra query aleatoria
+    queries.push(getRandomQuery());
+    
+    // Query 4: Query específica si hay géneros
+    if (genreIds.length > 0) {
+        queries.push('');  // Búsqueda vacía con filtro de género
+    } else {
+        queries.push(getRandomQuery());  // Query aleatoria 4
+    }
+    
+    // Query 5: Query aleatoria 5
+    queries.push(getRandomQuery());
+    
+    return queries;
+}
 
 // Lista de proxies CORS (reutilizando la misma estrategia de TuManga)
 const PROXY_URLS = [
@@ -18,22 +100,22 @@ let currentProxyIndex = 0;
  */
 const fetchWithProxy = async (url, retries = 4) => {
     const errors = [];
-
+    
     for (let i = 0; i < retries; i++) {
         const proxyIndex = (currentProxyIndex + i) % PROXY_URLS.length;
         const proxyUrl = PROXY_URLS[proxyIndex];
-
+        
         try {
             const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
             console.log(`[ManhwaWeb] Intentando proxy ${proxyIndex + 1}/${PROXY_URLS.length}...`);
-
+            
             const response = await axios.get(fullUrl, {
                 timeout: 12000,
                 headers: {
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 }
             });
-
+            
             currentProxyIndex = proxyIndex;
             console.log(`[ManhwaWeb] Proxy funcionó correctamente`);
             return response;
@@ -41,13 +123,24 @@ const fetchWithProxy = async (url, retries = 4) => {
             const errorMsg = error.response?.status || error.message;
             console.warn(`[ManhwaWeb] Proxy ${proxyUrl} falló (${errorMsg})`);
             errors.push({ proxy: proxyUrl, error: errorMsg });
-
+            
             if (i === retries - 1) {
-                console.error('[ManhwaWeb] Todos los proxies fallaron:', errors);
+                console.error('[ManhwaWeb] Todos los proxies CORS fallaron:', errors);
                 throw new Error('Todos los proxies CORS fallaron');
             }
         }
     }
+};
+
+/**
+ * Normaliza un título para mejorar las coincidencias
+ */
+export const normalizeTitle = (title) => {
+    if (!title) return '';
+    return title.toLowerCase()
+        .replace(/[''"!-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 };
 
 /**
@@ -327,49 +420,82 @@ export const getManhwaWebPages = async (slug, chapter) => {
  */
 export const getRandomManhwaWeb = async (genreIds = []) => {
     try {
-        console.log('[ManhwaWeb] Obteniendo obra aleatoria con géneros:', genreIds);
-
-        // Convertir IDs string a values numéricos para la API
-        // genreIds puede ser ["drama", "tragedia"] y necesitamos ["1", "25"]
+        console.log('[ManhwaWeb Oracle] Iniciando oráculo híbrido con caché...');
+        console.log(`[ManhwaWeb Oracle] Géneros: [${genreIds.join(', ')}]`);
+        
+        // PASO 1: Obtener vistas previas
+        const viewedSlugs = getViewedSlugs();
+        console.log(`[ManhwaWeb Oracle] ⚡ Vistas recientes: ${viewedSlugs.length} obras`);
+        
+        // PASO 2: Generar queries para búsqueda
+        const searchQueries = generateSearchQueries(5, genreIds);
+        console.log('[ManhwaWeb Oracle] Queries generadas:', searchQueries);
+        
+        // PASO 3: Ejecutar búsquedas en paralelo
+        console.log('[ManhwaWeb Oracle] Ejecutando 5 búsquedas en paralelo...');
+        
         const genreValues = genreIds.map(id => {
             const genre = MANHWAWEB_GENRES.find(g => g.id === id);
             return genre ? genre.value : null;
         }).filter(v => v !== null);
-
-        console.log('[ManhwaWeb] Genre values para búsqueda:', genreValues);
-
-        // Construir filtros
-        const filters = genreValues.length > 0
-            ? { genres: genreValues }  // Array de values string ["1", "25"]
-            : {};
-
-        // Seleccionar una página aleatoria (1-10, ManhwaWeb soporta paginación)
-        const maxPages = 10;
-        const randomPage = Math.floor(Math.random() * maxPages) + 1;
-        console.log(`[ManhwaWeb Random] Página aleatoria: ${randomPage}`);
-
-        // Buscar en la página aleatoria
-        let results = await searchManhwaWeb('', filters, randomPage);
-
-        // Si la página está vacía, intentar página 1
-        if (results.length === 0) {
-            console.log('[ManhwaWeb Random] Página vacía, usando página 1');
-            results = await searchManhwaWeb('', filters, 1);
+        
+        const filters = genreValues.length > 0 ? { genres: genreValues } : {};
+        
+        const searchPromises = searchQueries.map(query => 
+            searchManhwaWeb(query, filters, 1)
+        );
+        
+        const searchResults = await Promise.all(searchPromises);
+        
+        console.log(`[ManhwaWeb Oracle] Búsquedas completadas: ${searchResults.map((r, i) => `Q${i+1}: ${r.results ? r.results.length : 0}`).join(', ')}`);
+        
+        // PASO 4: Combinar y deduplicar resultados
+        const combinedResults = new Map();
+        
+        for (const searchResponse of searchResults) {
+            const results = searchResponse.results || [];
+            for (const manga of results) {
+                if (manga && manga.slug) {
+                    combinedResults.set(manga.slug, manga);
+                }
+            }
         }
-
-        if (results.length === 0) {
-            console.log('[ManhwaWeb] No se encontraron resultados');
+        
+        const totalUnique = Array.from(combinedResults.values());
+        console.log(`[ManhwaWeb Oracle] ✅ Total único: ${totalUnique.length} obras`);
+        
+        // PASO 5: Excluir vistas recientes
+        const availableResults = totalUnique.filter(manga => 
+            !viewedSlugs.includes(manga.slug)
+        );
+        
+        console.log(`[ManhwaWeb Oracle] Disponibles: ${availableResults.length} obras (excluyendo ${viewedSlugs.length} vistas)`);
+        
+        // Si no hay suficientes obras disponibles, incluir vistas
+        let finalResults = availableResults;
+        if (availableResults.length < 10) {
+            console.warn('[ManhwaWeb Oracle] ⚠️ Pocas obras disponibles, incluyendo vistas...');
+            finalResults = totalUnique;
+        }
+        
+        // PASO 6: Seleccionar obra aleatoria
+        if (finalResults.length === 0) {
+            console.error('[ManhwaWeb Oracle] ❌ No se encontraron obras');
             return null;
         }
-
-        // Seleccionar uno aleatorio de los resultados
-        const randomIndex = Math.floor(Math.random() * results.length);
-        const randomManhwa = results[randomIndex];
-
-        console.log(`[ManhwaWeb Random] Obra seleccionada: ${randomManhwa.title} (página ${randomPage}, índice ${randomIndex})`);
-        return await getManhwaWebDetails(randomManhwa.slug);
+        
+        const randomIndex = Math.floor(Math.random() * finalResults.length);
+        const randomManga = finalResults[randomIndex];
+        
+        console.log(`[ManhwaWeb Oracle] ✅ Obra seleccionada: ${randomManga.title} (índice ${randomIndex} de ${finalResults.length})`);
+        
+        // PASO 7: Guardar vista en caché
+        saveViewedManga(randomManga.slug, randomManga);
+        
+        return randomManga;
+        
     } catch (error) {
-        console.error('[ManhwaWeb] Error obteniendo obra aleatoria:', error);
+        console.error('[ManhwaWeb Oracle] ❌ Error:', error.message);
         return null;
     }
 };
