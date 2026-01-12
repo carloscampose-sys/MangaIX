@@ -23,7 +23,7 @@ export const SOURCES = {
         color: 'bg-purple-500',
         hoverColor: 'hover:bg-purple-600',
         textColor: 'text-purple-500',
-        features: ['search', 'details', 'chapters', 'read'],
+        features: ['search', 'details', 'chapters', 'read', 'random', 'nuevos', 'chapter-nav'],
         status: 'active'
     },
     IKIGAI: {
@@ -35,17 +35,6 @@ export const SOURCES = {
         hoverColor: 'hover:bg-pink-600',
         textColor: 'text-pink-500',
         features: ['search', 'details', 'chapters', 'read', 'random'],
-        status: 'active'
-    },
-    MANHWAWEB1: {
-        id: 'manhwaweb1',
-        name: 'ManhwaWeb API',
-        icon: '⚡',
-        baseUrl: 'https://manhwaweb.com',
-        color: 'bg-orange-500',
-        hoverColor: 'hover:bg-orange-600',
-        textColor: 'text-orange-500',
-        features: ['search', 'details', 'chapters', 'read', 'api-direct'],
         status: 'active'
     }
 };

@@ -317,9 +317,9 @@ const MainApp = ({ userName, userGender }) => {
       return;
     }
 
-    // Para ManhwaWeb1, permitir búsqueda solo con filtros (sin searchTerm)
-    if (selectedSource === 'manhwaweb1' && !searchTerm && selectedGenres.length === 0) {
-      console.log('[App] ManhwaWeb1: No hay query ni géneros, no se ejecuta búsqueda');
+    // Para ManhwaWeb, permitir búsqueda solo con filtros (sin searchTerm)
+    if (selectedSource === 'manhwaweb' && !searchTerm && selectedGenres.length === 0) {
+      console.log('[App] ManhwaWeb: No hay query ni géneros, no se ejecuta búsqueda');
       return;
     }
 
@@ -368,10 +368,7 @@ const MainApp = ({ userName, userGender }) => {
          showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
        }
 
-       // Toast para ManhwaWeb1 (rápido)
-       if (selectedSource === 'manhwaweb1') {
-         showToast('⚡ ManhwaWeb1 API cargando... <1 segundo 🥑');
-       }
+
 
        // Construir filtros según la fuente seleccionada
        let filters = {};
@@ -399,26 +396,10 @@ const MainApp = ({ userName, userGender }) => {
             status: selectedStatus || '',
             erotic: selectedErotic || '',
             demographic: selectedDemographic || '',
-            sortBy: selectedSortBy,
-            sortOrder: selectedSortOrder
-          };
-       } else if (selectedSource === 'manhwaweb1') {
-         // ManhwaWeb1 usa los mismos filtros que ManhwaWeb
-         const genreValues = selectedGenres.map(genreId => {
-           const genre = currentFilters.genres.find(g => g.id === genreId);
-           return genre ? genre.value : genreId;
-         });
-
-          filters = {
-            genres: genreValues,
-            type: selectedType || '',
-            status: selectedStatus || '',
-            erotic: selectedErotic || '',
-            demographic: selectedDemographic || '',
-            sortBy: selectedSortBy,
-            sortOrder: selectedSortOrder
-          };
-       } else if (selectedSource === 'ikigai') {
+             sortBy: selectedSortBy,
+             sortOrder: selectedSortOrder
+           };
+        } else if (selectedSource === 'ikigai') {
         // Para Ikigai, usar genreValues del mood si está seleccionado
         const selectedGenreValues = selectedMood
           ? selectedMood.genreValues  // Usar valores pre-mapeados
@@ -1122,8 +1103,8 @@ const MainApp = ({ userName, userGender }) => {
                             </div>
                           </div>
 
-                          {/* Filtros Avanzados (solo ManhwaWeb y ManhwaWeb1) */}
-                          {(selectedSource === 'manhwaweb' || selectedSource === 'manhwaweb1') && currentFilters.hasAdvancedFilters && (
+                          {/* Filtros Avanzados (solo ManhwaWeb) */}
+                          {selectedSource === 'manhwaweb' && currentFilters.hasAdvancedFilters && (
                             <>
                               {/* Tipo */}
                               <div>

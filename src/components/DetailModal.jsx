@@ -32,7 +32,6 @@ export const DetailModal = ({
     const [chaptersBySource, setChaptersBySource] = useState({
         tumanga: [],
         manhwaweb: [],
-        manhwaweb1: [],
         ikigai: []
     });
     const [selectedChapterSource, setSelectedChapterSource] = useState(manga?.source || 'tumanga');
@@ -64,7 +63,7 @@ export const DetailModal = ({
             document.body.style.overflow = 'unset';
             if (!isOpen) {
                 setMangaDetails(null);
-                setChaptersBySource({ tumanga: [], manhwaweb: [], manhwaweb1: [], ikigai: [] });
+                setChaptersBySource({ tumanga: [], manhwaweb: [], ikigai: [] });
                 setSelectedChapter(null);
                 setReaderPages(null);
                 setReadChapters([]);

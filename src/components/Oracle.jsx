@@ -35,9 +35,7 @@ const OracleResultCard = ({ recommendation, theme, addToLibrary, isAlreadyInLibr
           ? ['#A855F7', '#EC4899', '#F472B6'] // Púrpura/Rosa para Ikigai
           : selectedSource === 'manhwaweb'
             ? ['#10B981', '#14B8A6', '#06B6D4'] // Verde/Teal para ManhwaWeb
-            : selectedSource === 'manhwaweb1'
-              ? ['#F97316', '#FB923C', '#FDBA74'] // Naranja para ManhwaWeb1 API
-              : ['#A7D08C', '#FFD700', '#FFFFFF']; // Azul/Púrpura para TuManga
+            : ['#A7D08C', '#FFD700', '#FFFFFF']; // Azul/Púrpura para TuManga
 
         confetti({
             particleCount: 50,
@@ -177,9 +175,7 @@ const Oracle = () => {
                   ? ['#A855F7', '#EC4899', '#F472B6'] // Púrpura/Rosa para Ikigai
                   : selectedSource === 'manhwaweb'
                     ? ['#10B981', '#14B8A6', '#06B6D4'] // Verde/Teal para ManhwaWeb
-                    : selectedSource === 'manhwaweb1'
-                      ? ['#F97316', '#FB923C', '#FDBA74'] // Naranja para ManhwaWeb1 API
-                      : ['#FFD700', '#00BFFF', '#7B68EE']; // Azul/Púrpura para TuManga
+                    : ['#FFD700', '#00BFFF', '#7B68EE']; // Azul/Púrpura para TuManga
 
                 confetti({
                     particleCount: 100,
