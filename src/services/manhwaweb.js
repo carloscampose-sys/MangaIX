@@ -96,6 +96,101 @@ const PROXY_URLS = [
 let currentProxyIndex = 0;
 
 /**
+ * Normaliza un título para mejorar las coincidencias
+ */
+export const normalizeTitle = (title) => {
+    if (!title) return '';
+    return title.toLowerCase()
+        .replace(/[''"!-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+/**
+ * Lista de queries populares para variedad en el oráculo
+ * Estas son búsquedas que tienden a devolver muchos resultados
+ */
+const POPULAR_QUERIES = [
+    '',                // Búsqueda vacía (muestra variedad general)
+    'tower',         // Tower of God, Tower of Fantasy
+    'level',          // Solo Leveling, Level Up
+    'reborn',         // Reborn, I Reincarnated
+    'god',            // Omniscient Reader, God of Magic
+    'system',         // The Legendary Mechanic
+    'demon',          // Demon Lord
+    'dragon',         // Dragon King, Dragon Hunter
+    'martial',        // Martial Peak, Martial Arts
+    'noble',          // Return of Mount Hua Sect, Noble Reincarnation
+    'swordsman',     // Swordmaster
+    'academy',        // Academy
+    'villain',        // Villain
+    'hero',           // Hero
+    'king',            // Emperor
+    'prince',          // Prince
+    'strong',         // Strongest
+    'mage',           // Magician
+    'sword',          // Sword
+    'revenge',        // Revenge
+    'war',            // Great Demon King
+    'cultivation',    // Cultivation
+    'trans',          // Transmigration
+    'fantasy',        // Fantasy
+    'world',          // World
+    'heaven',         // Heaven
+    'immortal',       // Immortal
+    'legend',         // Legend
+    'power',          // Power
+    'blood',          // Blood
+    'soul',           // Soul
+    'life',           // Life
+    'death',          // Deceased
+    'destiny',        // Destiny
+    'fate',          // Fate
+    'magic'           // Magic
+];
+
+/**
+ * Genera una query aleatoria de la lista de populares
+ */
+function getRandomQuery() {
+    return POPULAR_QUERIES[Math.floor(Math.random() * POPULAR_QUERIES.length)];
+}
+
+/**
+ * Genera N queries diferentes para búsqueda
+ * @param {number} count - Número de queries a generar (3-5)
+ * @param {array} genreIds - IDs de géneros
+ * @returns {string[]}
+ */
+function generateSearchQueries(count = 5, genreIds = []) {
+    const queries = [];
+    
+    queries.push(''); // Query 1: vacía (variedad general)
+    queries.push(getRandomQuery()); // Query 2: aleatoria
+    queries.push(getRandomQuery()); // Query 3: aleatoria
+    
+    if (genreIds.length > 0) {
+        queries.push(''); // Query 4: vacía con filtro de género
+    } else {
+        queries.push(getRandomQuery()); // Query 4: aleatoria
+    }
+    
+    queries.push(getRandomQuery()); // Query 5: aleatoria
+    
+    return queries;
+}
+
+// Lista de proxies CORS (reutilizando la misma estrategia de TuManga)
+const PROXY_URLS = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+    'https://proxy.cors.sh/',
+    'https://api.codetabs.com/v1/proxy?quest='
+];
+
+let currentProxyIndex = 0;
+
+/**
  * Hace una petición con fallback de proxies
  */
 const fetchWithProxy = async (url, retries = 4) => {
