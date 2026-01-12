@@ -55,10 +55,10 @@ const MainApp = ({ userName, userGender }) => {
   
   // Filtros específicos de ManhwaWeb (Tipo, Estado, Erótico, Demografía, Ordenar)
   // Estos estados solo se usan cuando selectedSource === 'manhwaweb'
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedErotic, setSelectedErotic] = useState('');
-  const [selectedDemographic, setSelectedDemographic] = useState('');
+  const [selectedType, setSelectedType] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [selectedErotic, setSelectedErotic] = useState(null);
+  const [selectedDemographic, setSelectedDemographic] = useState(null);
   const [selectedSortBy, setSelectedSortBy] = useState('alfabetico');  // Por defecto: alfabético
   const [selectedSortOrder, setSelectedSortOrder] = useState('desc');   // Por defecto: descendente
 
@@ -393,15 +393,15 @@ const MainApp = ({ userName, userGender }) => {
          console.log('[App] Géneros seleccionados (IDs):', selectedGenres);
          console.log('[App] Géneros convertidos (values):', genreValues);
 
-         filters = {
-           genres: genreValues,  // Usar values numéricos para la API
-           type: selectedType,
-           status: selectedStatus,
-           erotic: selectedErotic,
-           demographic: selectedDemographic,
-           sortBy: selectedSortBy,
-           sortOrder: selectedSortOrder
-         };
+          filters = {
+            genres: genreValues,  // Usar values numéricos para la API
+            type: selectedType || '',
+            status: selectedStatus || '',
+            erotic: selectedErotic || '',
+            demographic: selectedDemographic || '',
+            sortBy: selectedSortBy,
+            sortOrder: selectedSortOrder
+          };
        } else if (selectedSource === 'manhwaweb1') {
          // ManhwaWeb1 usa los mismos filtros que ManhwaWeb
          const genreValues = selectedGenres.map(genreId => {
@@ -409,15 +409,15 @@ const MainApp = ({ userName, userGender }) => {
            return genre ? genre.value : genreId;
          });
 
-         filters = {
-           genres: genreValues,
-           type: selectedType,
-           status: selectedStatus,
-           erotic: selectedErotic,
-           demographic: selectedDemographic,
-           sortBy: selectedSortBy,
-           sortOrder: selectedSortOrder
-         };
+          filters = {
+            genres: genreValues,
+            type: selectedType || '',
+            status: selectedStatus || '',
+            erotic: selectedErotic || '',
+            demographic: selectedDemographic || '',
+            sortBy: selectedSortBy,
+            sortOrder: selectedSortOrder
+          };
        } else if (selectedSource === 'ikigai') {
         // Para Ikigai, usar genreValues del mood si está seleccionado
         const selectedGenreValues = selectedMood
@@ -673,10 +673,10 @@ const MainApp = ({ userName, userGender }) => {
     setSelectedMood(null);
     setSearchQuery('');
     // Limpiar filtros de ManhwaWeb también
-    setSelectedType('');
-    setSelectedStatus('');
-    setSelectedErotic('');
-    setSelectedDemographic('');
+    setSelectedType(null);
+    setSelectedStatus(null);
+    setSelectedErotic(null);
+    setSelectedDemographic(null);
     // Limpiar filtros de Ikigai también
     setSelectedTypes([]);
     setSelectedStatuses([]);
@@ -1135,7 +1135,7 @@ const MainApp = ({ userName, userGender }) => {
                                   {currentFilters.types.map(type => (
                                     <button
                                       key={type.id}
-                                      onClick={() => setSelectedType(selectedType === type.value ? '' : type.value)}
+                                      onClick={() => setSelectedType(selectedType === type.value ? null : type.value)}
                                       className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                                         selectedType === type.value
                                           ? 'bg-blue-500 text-white shadow-lg'
@@ -1158,7 +1158,7 @@ const MainApp = ({ userName, userGender }) => {
                                   {currentFilters.status.map(status => (
                                     <button
                                       key={status.id}
-                                      onClick={() => setSelectedStatus(selectedStatus === status.value ? '' : status.value)}
+                                      onClick={() => setSelectedStatus(selectedStatus === status.value ? null : status.value)}
                                       className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                                         selectedStatus === status.value
                                           ? 'bg-green-500 text-white shadow-lg'
@@ -1183,7 +1183,7 @@ const MainApp = ({ userName, userGender }) => {
                                     {currentFilters.erotic.map(option => (
                                       <button
                                         key={option.id}
-                                        onClick={() => setSelectedErotic(selectedErotic === option.value ? '' : option.value)}
+                                        onClick={() => setSelectedErotic(selectedErotic === option.value ? null : option.value)}
                                         className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                                           selectedErotic === option.value
                                             ? 'bg-red-500 text-white shadow-lg'
@@ -1206,7 +1206,7 @@ const MainApp = ({ userName, userGender }) => {
                                     {currentFilters.demographics.map(demo => (
                                       <button
                                         key={demo.id}
-                                        onClick={() => setSelectedDemographic(selectedDemographic === demo.value ? '' : demo.value)}
+                                        onClick={() => setSelectedDemographic(selectedDemographic === demo.value ? null : demo.value)}
                                         className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
                                           selectedDemographic === demo.value
                                             ? 'bg-yellow-500 text-white shadow-lg'

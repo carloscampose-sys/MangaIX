@@ -14,18 +14,35 @@ export const searchManhwaWeb1 = async (query = '', filters = {}, page = 1) => {
   try {
     console.log(`[ManhwaWeb1] Buscando: "${query}"`, filters);
     
-    const response = await axios.get(`${API_BASE}/search`, {
-      params: { 
-        query: query || '',
-        genres: filters.genres ? filters.genres.join(',') : '',
-        type: filters.type || '',
-        status: filters.status || '',
-        erotic: filters.erotic || '',
-        demographic: filters.demographic || '',
-        sortBy: filters.sortBy || '',
-        sortOrder: filters.sortOrder || '',
-        page: String(page || 1)
-      },
+    const params = {
+      query: query || '',
+      genres: filters.genres ? filters.genres.join(',') : ''
+    };
+    
+    if (filters.type && filters.type !== '') {
+      params.type = filters.type;
+    }
+    if (filters.status && filters.status !== '') {
+      params.status = filters.status;
+    }
+    if (filters.erotic && filters.erotic !== '') {
+      params.erotic = filters.erotic;
+    }
+    if (filters.demographic && filters.demographic !== '') {
+      params.demographic = filters.demographic;
+    }
+    if (filters.sortBy) {
+      params.sortBy = filters.sortBy;
+    }
+    if (filters.sortOrder) {
+      params.sortOrder = filters.sortOrder;
+    }
+    if (page) {
+      params.page = String(page || 1);
+    }
+
+    const response = await axios.get(`${API_BASE}/search-direct`, {
+      params,
       timeout: 20000
     });
 
