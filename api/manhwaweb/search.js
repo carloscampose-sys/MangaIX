@@ -28,7 +28,26 @@ export default async function handler(req, res) {
     // Ejemplo: "accion,aventura,comedia" → ["accion", "aventura", "comedia"]
     // NOTA: Estos son los IDs (nombres), luego se convierten a valores numéricos
     const genreIds = genres ? (typeof genres === 'string' ? genres.split(',') : genres) : [];
+    
+    // ⚡ CONFIGURACIÓN DE PAGINACIÓN Y OPTIMIZACIÓN
+    const CONFIG = {
+        resultsPerPage: 20,        // Objetivo: 20 resultados por página
+        maxScrolls: 2,             // Reducir de 8 a 2 scrolls
+        minScrollWait: 100,         // Espera mínima: 100ms
+        maxScrollWait: 500,         // Espera máxima: 500ms (vs 1000ms fija)
+        convergenceThreshold: 2,     // 2 iteraciones sin cambios = convergencia
+        timeoutNavigation: 15000,   // Timeout navegación: 15s (vs 30s)
+        timeoutResults: 8000        // Timeout extracción: 8s (vs 20s)
+    };
 
+    console.log('[ManhwaWeb Search] Configuración:', {
+        resultsPerPage: CONFIG.resultsPerPage,
+        maxScrolls: CONFIG.maxScrolls,
+        scrollWait: `${CONFIG.minScrollWait}-${CONFIG.maxScrollWait}ms`,
+        timeoutNavigation: `${CONFIG.timeoutNavigation}ms`,
+        timeoutResults: `${CONFIG.timeoutResults}ms`
+    });
+    
     let browser = null;
 
     try {
@@ -176,7 +195,7 @@ export default async function handler(req, res) {
         
         await page.goto(finalUrl, {
             waitUntil: 'domcontentloaded',
-            timeout: 30000
+            timeout: CONFIG.timeoutNavigation  // ⚡ 15s en lugar de 30s
         });
 
         // Esperar a que la página cargue completamente
@@ -225,30 +244,71 @@ export default async function handler(req, res) {
         });
 
         // ============================================================
-        // HACER SCROLL PARA CARGAR MÁS RESULTADOS (lazy loading)
-        // Soluciona el problema de obtener solo 1 resultado en filtros como "Comedia"
-        // ManhwaWeb usa infinite scroll, debemos hacer scroll para cargar todos
+        // ⚡ SCROLL INTELIGENTE CON WAIT DINÁMICO
+        // Soluciona el problema de timeout en Vercel (10s límite)
+        // Estrategia: Scroll inteligente + early exit + wait dinámico
         // ============================================================
-        console.log('[ManhwaWeb Search] Haciendo scroll para cargar más resultados...');
+        console.log('[ManhwaWeb Search] ⚡ Iniciando scroll inteligente...');
+        
         let previousCount = 0;
         let currentCount = 0;
         let scrollAttempts = 0;
-        const maxScrollAttempts = 8; // Limitar a 8 intentos (8 segundos total)
-        // Cada scroll carga ~10-20 resultados adicionales
+        let noChangeCount = 0;  // Contador de iteraciones sin cambios
         
         do {
             previousCount = currentCount;
             
-            // Scroll hacia abajo hasta el final de la página
-            // Esto activa el lazy loading de ManhwaWeb
+            // Scroll hacia abajo
             await page.evaluate(() => {
                 window.scrollTo(0, document.body.scrollHeight);
             });
             
-            // Esperar 1 segundo a que se carguen nuevos elementos del lazy loading
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // ⚡ WAIT DINÁMICO: Esperar hasta que cargue algo nuevo
+            const waitStart = Date.now();
+            await page.evaluate((minWait, maxWait) => {
+                return new Promise(resolve => {
+                    const startTime = Date.now();
+                    let lastCount = 0;
+                    const checkInterval = 50;  // Verificar cada 50ms
+                    
+                    const interval = setInterval(() => {
+                        const currentCount = Math.max(
+                            document.querySelectorAll('a[href*="/manhwa/"]').length,
+                            document.querySelectorAll('a[href*="/obra/"]').length,
+                            document.querySelectorAll('.element a[href]').length
+                        );
+                        
+                        const elapsed = Date.now() - startTime;
+                        
+                        // Si hay nuevos elementos, resolver
+                        if (currentCount > lastCount) {
+                            clearInterval(interval);
+                            resolve();
+                            return;
+                        }
+                        
+                        // Si superamos el tiempo máximo, resolver
+                        if (elapsed >= maxWait) {
+                            clearInterval(interval);
+                            resolve();
+                            return;
+                        }
+                        
+                        // Si superamos el tiempo mínimo sin cambios, continuar esperando
+                        if (elapsed >= minWait) {
+                            clearInterval(interval);
+                            resolve();
+                            return;
+                        }
+                        
+                        lastCount = currentCount;
+                    }, checkInterval);
+                });
+            }, CONFIG.minScrollWait, CONFIG.maxScrollWait);
             
-            // Contar elementos actuales (usar selectores alternativos)
+            const waitDuration = Date.now() - waitStart;
+            
+            // Contar elementos actuales
             currentCount = await page.evaluate(() => {
                 const links1 = document.querySelectorAll('a[href*="/manhwa/"]');
                 const links2 = document.querySelectorAll('a[href*="/obra/"]');
@@ -257,50 +317,50 @@ export default async function handler(req, res) {
             });
             
             scrollAttempts++;
-            console.log(`[ManhwaWeb Search] Scroll ${scrollAttempts}/${maxScrollAttempts}: ${currentCount} resultados`);
             
-            // Salir si no hay más elementos nuevos o alcanzamos el límite de scrolls
-            // currentCount > previousCount = hay nuevos elementos cargados
-        } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
+            // ⚡ EARLY EXIT 1: Si ya tenemos suficientes resultados, detener
+            if (currentCount >= CONFIG.resultsPerPage) {
+                console.log(`[ManhwaWeb Search] ⚡ Early exit: Objetivo ${CONFIG.resultsPerPage} alcanzado en ${scrollAttempts} scrolls`);
+                break;
+            }
+            
+            // ⚡ EARLY EXIT 2: Detectar convergencia (sin cambios)
+            if (currentCount === previousCount) {
+                noChangeCount++;
+                if (noChangeCount >= CONFIG.convergenceThreshold) {
+                    console.log(`[ManhwaWeb Search] ⚡ Convergencia: No hay más elementos tras ${noChangeCount} intentos`);
+                    break;
+                }
+            } else {
+                noChangeCount = 0;  // Resetear contador si hubo cambios
+            }
+            
+            console.log(`[ManhwaWeb Search] ⚡ Scroll ${scrollAttempts}/${CONFIG.maxScrolls}: ${currentCount} resultados (espera: ${waitDuration}ms)`);
+            
+        } while (scrollAttempts < CONFIG.maxScrolls);
         
         console.log(`[ManhwaWeb Search] Scroll completado. Total: ${currentCount} resultados`);
         
-        // Pausa final para que se carguen las imágenes
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Pausa final reducida (500ms en lugar de 1000ms)
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Log de debugging con selectores alternativos
-        const debugInfo = await page.evaluate(() => {
-            return {
-                totalLinks: document.querySelectorAll('a').length,
-                manhwaLinks: document.querySelectorAll('a[href*="/manhwa/"]').length,
-                obraLinks: document.querySelectorAll('a[href*="/obra/"]').length,
-                elementLinks: document.querySelectorAll('.element a[href]').length,
-                images: document.querySelectorAll('img').length,
-                bodyText: document.body.innerText.substring(0, 300)
-            };
-        });
+        // ⚡ Eliminar debug innecesario para reducir tiempo
 
-        console.log('[ManhwaWeb Search] Debug info:', debugInfo);
 
-        // Extraer resultados con debugging mejorado - intentar múltiples selectores
-        const results = await page.evaluate(() => {
+        // ⚡ EXTRAER Y PAGINAR RESULTADOS
+        const extractedResults = await page.evaluate(() => {
             // Intentar múltiples selectores posibles
             let cards = Array.from(document.querySelectorAll('a[href*="/manhwa/"]')).filter(a => a.querySelector('img'));
 
             // Si no encuentra con /manhwa/, intentar con /obra/
             if (cards.length === 0) {
                 cards = Array.from(document.querySelectorAll('a[href*="/obra/"]')).filter(a => a.querySelector('img'));
-                console.log('[ManhwaWeb Search] Usando selector /obra/, encontrados:', cards.length);
             }
 
             // Si aún no encuentra, intentar con .element
             if (cards.length === 0) {
                 cards = Array.from(document.querySelectorAll('.element a[href]')).filter(a => a.querySelector('img'));
-                console.log('[ManhwaWeb Search] Usando selector .element, encontrados:', cards.length);
             }
-            
-            console.log(`[Puppeteer] Total de enlaces con /manhwa/: ${document.querySelectorAll('a[href*="/manhwa/"]').length}`);
-            console.log(`[Puppeteer] Enlaces con imagen: ${cards.length}`);
             
             const data = [];
 
@@ -340,22 +400,62 @@ export default async function handler(req, res) {
                         index
                     });
                 } catch (error) {
-                    console.error(`[Puppeteer] Error procesando tarjeta ${index}:`, error.message);
+                    // Silencioso en producción para reducir logs
                 }
             });
 
             return data;
         });
 
-        console.log(`[ManhwaWeb Search] Found ${results.length} results`);
+        // ⚡ CALCULAR PAGINACIÓN
+        const startIndex = (pageNumber - 1) * CONFIG.resultsPerPage;
+        const endIndex = startIndex + CONFIG.resultsPerPage;
+        const paginatedResults = extractedResults.slice(startIndex, endIndex);
+        const hasMore = extractedResults.length > endIndex;
+        const totalPages = Math.ceil(extractedResults.length / CONFIG.resultsPerPage);
+
+        console.log(`[ManhwaWeb Search] ⚡ Paginación:`, {
+            totalExtracted: extractedResults.length,
+            page: pageNumber,
+            totalPages,
+            range: `${startIndex + 1}-${Math.min(endIndex, extractedResults.length)}`,
+            returned: paginatedResults.length,
+            hasMore
+        });
 
         return res.status(200).json({
             success: true,
-            results: results,
-            count: results.length
+            results: paginatedResults,
+            count: paginatedResults.length,
+            page: pageNumber,
+            totalPages,
+            hasMore,  // ⚡ Indica si hay más páginas
+            totalFound: extractedResults.length  // ⚡ Total de resultados encontrados
         });
 
     } catch (error) {
+        // ⚡ Timeout específico para Vercel
+        if (error.message.includes('timeout')) {
+            console.error('[ManhwaWeb Search] ❌ Timeout en Vercel (10s límite)');
+            // Intentar devolver resultados parciales si existen
+            if (typeof extractedResults !== 'undefined' && extractedResults.length > 0) {
+                const pageNumber = pageParam ? parseInt(pageParam, 10) : 1;
+                const startIndex = (pageNumber - 1) * CONFIG.resultsPerPage;
+                const endIndex = startIndex + CONFIG.resultsPerPage;
+                const paginatedResults = extractedResults.slice(startIndex, endIndex);
+                
+                return res.status(200).json({
+                    success: true,
+                    results: paginatedResults,
+                    count: paginatedResults.length,
+                    page: pageNumber,
+                    hasMore: extractedResults.length > endIndex,
+                    totalFound: extractedResults.length,
+                    partial: true  // ⚡ Flag que indica que son resultados parciales
+                });
+            }
+        }
+        
         console.error('[ManhwaWeb Search] Error:', error.message);
         return res.status(500).json({
             success: false,

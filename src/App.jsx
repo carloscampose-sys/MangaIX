@@ -89,6 +89,9 @@ const MainApp = ({ userName, userGender }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
   const [isPaginationLoading, setIsPaginationLoading] = useState(false);
+  const [totalFound, setTotalFound] = useState(0);  // ⚡ Total de resultados encontrados
+  const [totalPages, setTotalPages] = useState(1);      // ⚡ Total de páginas
+
 
   // Referencia a la sección de resultados para scroll
   const resultsRef = useRef(null);
@@ -357,9 +360,9 @@ const MainApp = ({ userName, userGender }) => {
     try {
       setLoading(true);
 
-       // Toast especial para ManhwaWeb (Ikigai usa Fuse.js ya cargado)
-      if (selectedSource === 'manhwaweb') {
-        showToast('🌐 ManhwaWeb puede tardar 30-60s... Ten paciencia 🥑');
+       // Toast especial para ManhwaWeb (optimizado con paginación)
+      if (selectedSource === 'manhwaweb' && currentPage === 1) {
+        showToast('⚡ Primera página cargará en 3-5s... 🥑');
       }
 
       // Construir filtros según la fuente seleccionada
@@ -428,11 +431,28 @@ const MainApp = ({ userName, userGender }) => {
       }
       
       // Extraer results y hasMore de la respuesta
-      let results = searchResponse.results || [];
-      const hasMore = searchResponse.hasMore || false;
+      let results = [];
+      let hasMore = false;
 
-      // IMPORTANTE: Guardar el conteo ANTES de modificar los resultados
-      const resultCount = results.length;
+      // ⚡ Manejar diferentes estructuras según fuente
+      if (selectedSource === 'manhwaweb') {
+        // ManhwaWeb retorna { results, hasMore, totalFound, totalPages }
+        results = searchResponse.results || [];
+        hasMore = searchResponse.hasMore || false;
+        setTotalFound(searchResponse.totalFound || 0);
+        setTotalPages(searchResponse.totalPages || 1);
+        
+        if (searchResponse.partial) {
+          showToast('⚠️ Algunos resultados no se cargaron (timeout Vercel)');
+        }
+      } else {
+        // TuManga e Ikigai retornan estructura compatible
+        results = searchResponse.results || [];
+        hasMore = searchResponse.hasMore || false;
+        setTotalFound(results.length);  // TuManga/Ikigai no devuelven totalFound
+        setTotalPages(1);
+      }
+
 
       // Si no hay resultados y hay filtros, intentar sin filtros
       if (results.length === 0 && selectedGenres.length > 0) {
@@ -1367,11 +1387,34 @@ const MainApp = ({ userName, userGender }) => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-center gap-4 mt-8 mb-4"
                   >
-                    {/* Información de resultados */}
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-bold text-center space-y-1">
-                      <div>
-                        Mostrando {searchResults.length} manhwas en página {currentPage}
-                      </div>
+                     {/* Información de resultados */}
+                     <div className="text-xs text-gray-500 dark:text-gray-400 font-bold text-center space-y-1">
+                       {/* ⚡ Indicador de progreso de paginación (solo ManhwaWeb) */}
+                       {selectedSource === 'manhwaweb' && searchResults.length > 0 && (
+                         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                           Mostrando <span className="font-bold text-potaxie-green dark:text-potaxie-400">
+                             {((currentPage - 1) * 20) + 1}-{Math.min(currentPage * 20, searchResults.length)}
+                           </span>
+                           {totalFound > 20 && (
+                             <span> de <span className="font-bold text-potaxie-green dark:text-potaxie-400">{totalFound}</span> resultados</span>
+                           )}
+                           <span className="mx-2">|</span>
+                           Página <span className="font-bold text-potaxie-green dark:text-potaxie-400">
+                             {currentPage}
+                           </span>
+                           {totalPages > 1 && (
+                             <span> de <span className="font-bold text-potaxie-green dark:text-potaxie-400">{totalPages}</span></span>
+                           )}
+                         </div>
+                       )}
+
+                       {/* Indicador general para todas las fuentes */}
+                       {!selectedSource === 'manhwaweb' || searchResults.length === 0 ? (
+                         <div>
+                           Mostrando {searchResults.length} manhwas en página {currentPage}
+                         </div>
+                       ) : null}
+
 
                       {/* Indicador de orden (solo TuManga) */}
                       {selectedSource === 'tumanga' && (

@@ -43,12 +43,16 @@ export async function unifiedSearch(query, filters, source, page = 1) {
                 hasMore: response.hasMore
             };
         } else if (source === 'manhwaweb') {
-            const results = await service.searchManhwaWeb(query, filters, page);
-            // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
-            return { results, hasMore: results.length >= 30 };
-        } else if (source === 'ikigai') {
-            const results = await service.searchIkigai(query, filters, page);
-            return { results, hasMore: results.length > 0 };
+            const response = await service.searchManhwaWeb(query, filters, page);
+            // ⚡ ManhwaWeb ahora retorna { results, hasMore, totalFound, totalPages, partial }
+            return { 
+                results: response.results, 
+                hasMore: response.hasMore,
+                totalFound: response.totalFound,
+                totalPages: response.totalPages,
+                currentPage: response.currentPage,
+                partial: response.partial
+            };
         }
 
         return { results: [], hasMore: false };

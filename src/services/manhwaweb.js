@@ -65,16 +65,17 @@ export const normalizeTitle = (title) => {
  * Busca obras en ManhwaWeb
  * 
  * En LOCAL: Muestra mensaje informativo (ManhwaWeb requiere API serverless)
- * En PRODUCCIÓN: Usa API serverless con Puppeteer
+ * En PRODUCCIÓN: Usa API serverless con Puppeteer (con paginación inteligente)
  */
 export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
     try {
         console.log(`[ManhwaWeb] Buscando: "${query}"`, filters);
-
+        console.log(`[ManhwaWeb] ⚡ Página solicitada: ${page}`);
+        
         // Permitir búsquedas solo con filtros (sin query de texto)
         if ((!query || query.trim() === '') && (!filters.genres || filters.genres.length === 0)) {
             console.log('[ManhwaWeb] Búsqueda vacía sin filtros, retornando array vacío');
-            return [];
+            return { results: [], hasMore: false, totalFound: 0 };
         }
 
         // Detectar si estamos en local o producción
@@ -88,18 +89,17 @@ export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
             console.warn('[ManhwaWeb] 💡 Para probar ManhwaWeb, despliega a Vercel o usa Vercel CLI.');
             console.warn('[ManhwaWeb] 📚 TuManga funciona perfectamente en local.');
             
-            // Retornar array vacío para que no rompa la UI
-            return [];
+            // Retornar estructura compatible
+            return { results: [], hasMore: false, totalFound: 0 };
         }
 
-        // En producción, usar la API serverless (timeout aumentado)
-        console.log('[ManhwaWeb Service] Enviando búsqueda - Página:', page, 'Tipo:', typeof page);
+        // En producción, usar la API serverless (timeout reducido con paginación)
+        console.log('[ManhwaWeb Service] Enviando búsqueda - Página:', page);
         
         const response = await axios.get('/api/manhwaweb/search', {
             params: { 
                 query: query || '',  // Enviar string vacío si no hay query
                 // Enviar todos los filtros avanzados de ManhwaWeb a la API
-                // Estos parámetros serán procesados por Puppeteer para aplicar filtros reales
                 genres: filters.genres ? filters.genres.join(',') : '',
                 type: filters.type || '',
                 status: filters.status || '',
@@ -107,9 +107,9 @@ export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
                 demographic: filters.demographic || '',
                 sortBy: filters.sortBy || '',
                 sortOrder: filters.sortOrder || '',
-                page: String(page || 1)  // Convertir a string para asegurar que se envíe
+                page: String(page || 1)
             },
-            timeout: 60000 // 60 segundos para Puppeteer
+            timeout: 20000  // ⚡ Reducir de 60s a 20s (con paginación debería bastar)
         });
 
         if (response.data.success && response.data.results) {
@@ -121,15 +121,29 @@ export const searchManhwaWeb = async (query = '', filters = {}, page = 1) => {
                 source: 'manhwaweb'
             }));
 
-            console.log(`[ManhwaWeb] Encontradas ${results.length} obras`);
-            return results;
+            console.log(`[ManhwaWeb] ⚡ Encontradas ${results.length} obras (página ${page})`);
+            console.log(`[ManhwaWeb] ⚡ ¿Más páginas?`, response.data.hasMore);
+            console.log(`[ManhwaWeb] ⚡ Total encontrado:`, response.data.totalFound);
+            
+            if (response.data.partial) {
+                console.warn('[ManhwaWeb] ⚠️ Resultados parciales (timeout)');
+            }
+            
+            return { 
+                results, 
+                hasMore: response.data.hasMore || false,
+                totalFound: response.data.totalFound || 0,
+                currentPage: response.data.page || page,
+                totalPages: response.data.totalPages || 1,
+                partial: response.data.partial || false
+            };
         } else {
             console.error('[ManhwaWeb] Respuesta inválida de la API');
-            return [];
+            return { results: [], hasMore: false, totalFound: 0 };
         }
     } catch (error) {
         console.error('[ManhwaWeb] Error en búsqueda:', error);
-        return [];
+        return { results: [], hasMore: false, totalFound: 0 };
     }
 };
 
