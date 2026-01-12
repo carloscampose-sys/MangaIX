@@ -92,24 +92,6 @@ export const getFiltersForSource = (source) => {
         };
     }
 
-    if (source === 'manhwaweb1') {
-        // ManhwaWeb1 usa los mismos filtros que ManhwaWeb
-        return {
-            genres: MANHWAWEB_GENRES,
-            types: MANHWAWEB_TYPES,
-            status: MANHWAWEB_STATUS,
-            erotic: MANHWAWEB_EROTIC,
-            demographics: MANHWAWEB_DEMOGRAPHICS,
-            sortBy: MANHWAWEB_SORT_BY,
-            sortOrder: MANHWAWEB_SORT_ORDER,
-            moods: MANHWAWEB_MOODS,
-            hasAdvancedFilters: true,
-            // Campo vacío para consistencia
-            formats: [],
-            sortOptions: []
-        };
-    }
-
     // Fallback a TuManga si la fuente no es reconocida
     console.warn(`Fuente desconocida: ${source}, usando TuManga por defecto`);
     return getFiltersForSource('tumanga');
@@ -154,15 +136,6 @@ export const validateFiltersForSource = (filters, source) => {
         if (filters.page !== undefined) validatedFilters.page = filters.page;
     } else if (source === 'manhwaweb') {
         // Permitir todos los filtros avanzados
-        if (filters.genres) validatedFilters.genres = filters.genres;
-        if (filters.type) validatedFilters.type = filters.type;
-        if (filters.status) validatedFilters.status = filters.status;
-        if (filters.erotic) validatedFilters.erotic = filters.erotic;
-        if (filters.demographic) validatedFilters.demographic = filters.demographic;
-        if (filters.sortBy) validatedFilters.sortBy = filters.sortBy;
-        if (filters.sortOrder) validatedFilters.sortOrder = filters.sortOrder;
-    } else if (source === 'manhwaweb1') {
-        // ManhwaWeb1 usa los mismos filtros que ManhwaWeb
         if (filters.genres) validatedFilters.genres = filters.genres;
         if (filters.type) validatedFilters.type = filters.type;
         if (filters.status) validatedFilters.status = filters.status;
@@ -217,19 +190,6 @@ export const getEmptyFiltersForSource = (source) => {
             statuses: [],
             sortBy: '',
             page: 0
-        };
-    }
-
-    if (source === 'manhwaweb1') {
-        // ManhwaWeb1 usa los mismos filtros que ManhwaWeb
-        return {
-            genres: [],
-            type: '',
-            status: '',
-            erotic: '',
-            demographic: '',
-            sortBy: '',
-            sortOrder: ''
         };
     }
 

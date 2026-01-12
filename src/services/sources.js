@@ -23,7 +23,7 @@ export const SOURCES = {
         color: 'bg-purple-500',
         hoverColor: 'hover:bg-purple-600',
         textColor: 'text-purple-500',
-        features: ['search', 'details', 'chapters', 'read', 'random', 'nuevos', 'chapter-nav'],
+        features: ['search', 'details', 'chapters', 'read'],
         status: 'active'
     },
     IKIGAI: {

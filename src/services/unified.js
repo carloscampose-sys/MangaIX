@@ -37,12 +37,14 @@ export async function unifiedSearch(query, filters, source, page = 1) {
 
         if (source === 'tumanga') {
             const response = await service.searchTuManga(query, filters);
+            // TuManga ahora retorna { results, hasMore }
             return {
                 results: response.results,
                 hasMore: response.hasMore
             };
         } else if (source === 'manhwaweb') {
             const results = await service.searchManhwaWeb(query, filters, page);
+            // ManhwaWeb: si devuelve 30 resultados, probablemente hay más
             return { results, hasMore: results.length >= 30 };
         } else if (source === 'ikigai') {
             const results = await service.searchIkigai(query, filters, page);
@@ -116,6 +118,7 @@ export async function unifiedGetPages(slug, chapter, source, chapterData = null)
         } else if (source === 'manhwaweb') {
             return await service.getManhwaWebPages(slug, chapter);
         } else if (source === 'ikigai') {
+            // Ikigai necesita el chapterId (ID largo) para obtener las páginas
             const chapterId = chapterData?.chapterId || chapterData;
             return await service.getIkigaiPages(slug, chapter, chapterId);
         }

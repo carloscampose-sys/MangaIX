@@ -3,40 +3,6 @@
     "api/tumanga/pages.js": {
       "memory": 1024,
       "maxDuration": 10
-    },
-    "api/manhwaweb/search.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/manhwaweb/search-direct.js": {
-      "memory": 256,
-      "maxDuration": 5
-    },
-    "api/manhwaweb/details.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/manhwaweb/chapters.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/manhwaweb/pages.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/ikigai/index.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/image-proxy.js": {
-      "memory": 512,
-      "maxDuration": 10
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/manhwaweb/:path*",
-      "destination": "/api/manhwaweb/:path*"
-    }
-  ]
+  }
 }
