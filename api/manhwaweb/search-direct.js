@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       params.genders = genreIds.map(g => {
         const num = parseInt(g);
         return isNaN(num) ? g : num;
-      });
+      }).join(',');
     }
     if (sortBy !== undefined) params.order_item = sortBy;
     if (sortOrder !== undefined) params.order_dir = sortOrder;
