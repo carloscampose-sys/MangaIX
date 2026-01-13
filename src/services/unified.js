@@ -53,6 +53,15 @@ export async function unifiedSearch(query, filters, source, page = 1) {
                 currentPage: response.currentPage,
                 partial: response.partial
             };
+        } else if (source === 'ikigai') {
+            const response = await service.searchIkigai(query, filters, page);
+            // Ikigai retorna { results, hasMore, total, totalPages }
+            return {
+                results: response.results,
+                hasMore: response.hasMore,
+                total: response.total || 0,
+                totalPages: response.totalPages || 1
+            };
         }
 
         return { results: [], hasMore: false };

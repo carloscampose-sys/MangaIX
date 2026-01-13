@@ -64,14 +64,29 @@ export const searchIkigai = async (query = '', filters = {}, page = 1) => {
       }));
 
       console.log(`[Ikigai] Encontradas ${results.length} obras`);
-      return results;
+      return {
+        results: results,
+        hasMore: response.data.hasMore || false,
+        total: response.data.total || 0,
+        totalPages: response.data.totalPages || 1
+      };
     } else {
       console.error('[Ikigai] Respuesta inválida de la API');
-      return [];
+      return {
+        results: [],
+        hasMore: false,
+        total: 0,
+        totalPages: 1
+      };
     }
   } catch (error) {
     console.error('[Ikigai] Error en búsqueda:', error);
-    return [];
+    return {
+      results: [],
+      hasMore: false,
+      total: 0,
+      totalPages: 1
+    };
   }
 };
 
