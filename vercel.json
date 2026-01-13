@@ -3,6 +3,22 @@
     "api/tumanga/pages.js": {
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/ikigai/search.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/ikigai/chapters.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/ikigai/pages.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/ikigai/details.js": {
+      "memory": 512,
+      "maxDuration": 10
     }
   }
 }
