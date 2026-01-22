@@ -13,7 +13,15 @@ export const LibraryProvider = ({ children }) => {
     const [library, setLibrary] = useState(() => {
         try {
             const saved = localStorage.getItem('library');
-            return saved ? JSON.parse(saved) : [];
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Migración: agregar addedAt a mangas que no lo tienen
+                return parsed.map((manga, index) => ({
+                    ...manga,
+                    addedAt: manga.addedAt || Date.now() - (parsed.length - index) * 1000
+                }));
+            }
+            return [];
         } catch (e) {
             console.error("Error parsing library from localStorage", e);
             return [];
@@ -55,7 +63,13 @@ export const LibraryProvider = ({ children }) => {
 
     const addToLibrary = (manga) => {
         if (!library.find(m => m.id === manga.id)) {
-            setLibrary([...library, { ...manga, chaptersRead: 0, rating: 0, status: 'devorando' }]);
+            setLibrary([...library, {
+                ...manga,
+                chaptersRead: 0,
+                rating: 0,
+                status: 'devorando',
+                addedAt: Date.now()
+            }]);
         }
     };
 

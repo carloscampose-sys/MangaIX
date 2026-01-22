@@ -106,10 +106,11 @@ const MainApp = ({ userName, userGender }) => {
   // ManhwaWeb: 6 moods, 27 géneros + filtros avanzados
   const currentFilters = getFiltersForSource(selectedSource);
 
-  // Library State for filtering
+  // Library State for filtering and sorting
   const { library } = useLibrary();
   const [libraryFilter, setLibraryFilter] = useState('all');
-  
+  const [librarySort, setLibrarySort] = useState('newest');
+
   // Library Pagination State
   const [libraryCurrentPage, setLibraryCurrentPage] = useState(1);
   const LIBRARY_ITEMS_PER_PAGE = 10;
@@ -696,11 +697,31 @@ const MainApp = ({ userName, userGender }) => {
     return m.status === libraryFilter;
   });
 
+  // Ordenamiento de biblioteca
+  const sortedLibrary = [...filteredLibrary].sort((a, b) => {
+    switch (librarySort) {
+      case 'newest':
+        return (b.addedAt || 0) - (a.addedAt || 0);
+      case 'oldest':
+        return (a.addedAt || 0) - (b.addedAt || 0);
+      case 'title-az':
+        return a.title.localeCompare(b.title);
+      case 'title-za':
+        return b.title.localeCompare(a.title);
+      case 'rating':
+        return (b.rating || 0) - (a.rating || 0);
+      case 'most-read':
+        return (b.chaptersRead || 0) - (a.chaptersRead || 0);
+      default:
+        return 0;
+    }
+  });
+
   // Calcular paginación de biblioteca
-  const libraryTotalPages = Math.ceil(filteredLibrary.length / LIBRARY_ITEMS_PER_PAGE);
+  const libraryTotalPages = Math.ceil(sortedLibrary.length / LIBRARY_ITEMS_PER_PAGE);
   const libraryStartIndex = (libraryCurrentPage - 1) * LIBRARY_ITEMS_PER_PAGE;
   const libraryEndIndex = libraryStartIndex + LIBRARY_ITEMS_PER_PAGE;
-  const currentLibraryItems = filteredLibrary.slice(libraryStartIndex, libraryEndIndex);
+  const currentLibraryItems = sortedLibrary.slice(libraryStartIndex, libraryEndIndex);
 
   // Handler para cambio de página en biblioteca
   const handleLibraryPageChange = (page) => {
@@ -1600,6 +1621,27 @@ const MainApp = ({ userName, userGender }) => {
                         <ChevronDown size={12} className="sm:w-[14px] sm:h-[14px] text-gray-400" />
                       </div>
                     </div>
+
+                    <div className="relative">
+                      <select
+                        value={librarySort}
+                        onChange={(e) => {
+                          setLibrarySort(e.target.value);
+                          setLibraryCurrentPage(1);
+                        }}
+                        className="appearance-none pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border-2 border-gray-100 bg-white font-black text-[10px] sm:text-xs uppercase cursor-pointer hover:border-potaxie-200 transition-colors focus:outline-none focus:ring-4 ring-potaxie-green/10"
+                      >
+                        <option value="newest">Recién Agregados</option>
+                        <option value="oldest">Más Antiguos</option>
+                        <option value="title-az">Título A-Z</option>
+                        <option value="title-za">Título Z-A</option>
+                        <option value="rating">Mayor Rating</option>
+                        <option value="most-read">Más Leídos</option>
+                      </select>
+                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <ChevronDown size={12} className="sm:w-[14px] sm:h-[14px] text-gray-400" />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1634,12 +1676,12 @@ const MainApp = ({ userName, userGender }) => {
                     </AnimatePresence>
 
                     {/* Paginación - Solo mostrar si hay más de 10 obras */}
-                    {filteredLibrary.length > LIBRARY_ITEMS_PER_PAGE && (
+                    {sortedLibrary.length > LIBRARY_ITEMS_PER_PAGE && (
                       <Pagination
                         currentPage={libraryCurrentPage}
                         totalPages={libraryTotalPages}
                         onPageChange={handleLibraryPageChange}
-                        totalItems={filteredLibrary.length}
+                        totalItems={sortedLibrary.length}
                         itemsPerPage={LIBRARY_ITEMS_PER_PAGE}
                       />
                     )}
