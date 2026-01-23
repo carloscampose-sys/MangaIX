@@ -208,6 +208,23 @@ class ChapterHistoryService {
   }
 
   /**
+   * Obtiene el timestamp de la última lectura de un manga
+   * @param {string} mangaId - ID del manga
+   * @returns {number} - Timestamp o 0 si no existe
+   */
+  getLastReadTimestamp(mangaId) {
+    if (!mangaId) return 0;
+
+    try {
+      const history = this._getHistory();
+      return history[mangaId]?.lastReadTimestamp || 0;
+    } catch (error) {
+      console.error('Error in getLastReadTimestamp:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Limpia historiales expirados (más de 30 días sin actividad)
    */
   cleanExpiredHistory() {

@@ -28,6 +28,7 @@ import { getFiltersForSource, getEmptyFiltersForSource } from './services/filter
 // Storage y Fuse.js para Ikigai
 import storageManager from './services/storageManager';
 import ikigaiFuseManager from './services/ikigaiFuse';
+import { chapterHistoryService } from './services/chapterHistoryService';
 import { Search, Sparkles, Shuffle, Filter, RotateCcw, ChevronDown, ChevronUp, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGreeting } from './utils/greetingUtils';
@@ -712,6 +713,8 @@ const MainApp = ({ userName, userGender }) => {
         return (b.rating || 0) - (a.rating || 0);
       case 'most-read':
         return (b.chaptersRead || 0) - (a.chaptersRead || 0);
+      case 'recently-read':
+        return chapterHistoryService.getLastReadTimestamp(b.id) - chapterHistoryService.getLastReadTimestamp(a.id);
       default:
         return 0;
     }
@@ -1637,6 +1640,7 @@ const MainApp = ({ userName, userGender }) => {
                         <option value="title-za">Título Z-A</option>
                         <option value="rating">Mayor Rating</option>
                         <option value="most-read">Más Leídos</option>
+                        <option value="recently-read">Leídos Reciente</option>
                       </select>
                       <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                         <ChevronDown size={12} className="sm:w-[14px] sm:h-[14px] text-gray-400" />
