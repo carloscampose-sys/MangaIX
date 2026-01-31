@@ -35,18 +35,19 @@ export default async function handler(req, res) {
 
       console.log(`[Ikigai Chapters] Página ${currentPage}`);
 
-      // Usar proxy para evitar bloqueo 403
-      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+      // Usar proxy para evitar bloqueo 403 (corsproxy primero, codetabs como fallback)
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
       let response = await fetch(proxyUrl, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
 
-      // Fallback a corsproxy si codetabs falla
+      // Fallback a codetabs si corsproxy falla
       if (!response.ok) {
-        const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-        response = await fetch(corsproxyUrl, {
+        console.log(`[Ikigai Chapters] corsproxy falló en página ${currentPage}, intentando codetabs...`);
+        const codetabsUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+        response = await fetch(codetabsUrl, {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
@@ -57,7 +58,21 @@ export default async function handler(req, res) {
         break;
       }
 
-      const data = await response.json();
+      // Verificar que la respuesta sea JSON válido
+      const text = await response.text();
+      if (!text || text.startsWith('A server') || text.startsWith('<!') || text.startsWith('<html')) {
+        console.error(`[Ikigai Chapters] Respuesta inválida en página ${currentPage}:`, text.substring(0, 50));
+        break;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error(`[Ikigai Chapters] JSON inválido en página ${currentPage}:`, text.substring(0, 50));
+        break;
+      }
+
       const chapters = data.data || [];
 
       console.log(`[Ikigai Chapters] Página ${currentPage}: ${chapters.length} capítulos`);

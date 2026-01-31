@@ -270,8 +270,8 @@ async function handleSearchWithAPI(filters, page, res) {
     const apiUrl = buildApiUrl('', filters, page);
     console.log('[Ikigai Search API] API URL:', apiUrl);
 
-    // Usar proxy para evitar bloqueo 403
-    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+    // Usar proxy para evitar bloqueo 403 (corsproxy primero, codetabs como fallback)
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
     console.log('[Ikigai Search API] Proxy URL:', proxyUrl);
 
     let response = await fetch(proxyUrl, {
@@ -281,11 +281,11 @@ async function handleSearchWithAPI(filters, page, res) {
 
     console.log('[Ikigai Search API] Response status:', response.status);
 
-    // Fallback a corsproxy si codetabs falla
+    // Fallback a codetabs si corsproxy falla
     if (!response.ok) {
-      console.log('[Ikigai Search API] codetabs falló, intentando corsproxy...');
-      const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-      response = await fetch(corsproxyUrl, {
+      console.log('[Ikigai Search API] corsproxy falló, intentando codetabs...');
+      const codetabsUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+      response = await fetch(codetabsUrl, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -299,7 +299,27 @@ async function handleSearchWithAPI(filters, page, res) {
       });
     }
 
-    const data = await response.json();
+    // Verificar que la respuesta sea JSON válido
+    const text = await response.text();
+    if (!text || text.startsWith('A server') || text.startsWith('<!') || text.startsWith('<html')) {
+      console.error('[Ikigai Search API] Respuesta inválida:', text.substring(0, 50));
+      return res.status(502).json({
+        error: 'Respuesta inválida del proxy',
+        details: text.substring(0, 100)
+      });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('[Ikigai Search API] JSON inválido:', text.substring(0, 50));
+      return res.status(502).json({
+        error: 'JSON inválido del proxy',
+        details: text.substring(0, 100)
+      });
+    }
+
     return processAndReturnResults(data, page, res, '', filters);
 
   } catch (error) {
