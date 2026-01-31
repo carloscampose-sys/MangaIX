@@ -35,14 +35,22 @@ export default async function handler(req, res) {
 
       console.log(`[Ikigai Chapters] Página ${currentPage}`);
 
-      // Llamada directa desde servidor (no necesita proxy CORS)
-      const response = await fetch(apiUrl, {
+      // Usar proxy para evitar bloqueo 403
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+
+      let response = await fetch(proxyUrl, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
-        }
+        headers: { 'Accept': 'application/json' }
       });
+
+      // Fallback a corsproxy si codetabs falla
+      if (!response.ok) {
+        const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+        response = await fetch(corsproxyUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+      }
 
       if (!response.ok) {
         console.error(`[Ikigai Chapters] Error en página ${currentPage}:`, response.status);

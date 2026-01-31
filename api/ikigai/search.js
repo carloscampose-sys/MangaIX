@@ -270,16 +270,26 @@ async function handleSearchWithAPI(filters, page, res) {
     const apiUrl = buildApiUrl('', filters, page);
     console.log('[Ikigai Search API] API URL:', apiUrl);
 
-    // Llamada directa desde servidor (no necesita proxy CORS)
-    const response = await fetch(apiUrl, {
+    // Usar proxy para evitar bloqueo 403
+    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+    console.log('[Ikigai Search API] Proxy URL:', proxyUrl);
+
+    let response = await fetch(proxyUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
-      }
+      headers: { 'Accept': 'application/json' }
     });
 
     console.log('[Ikigai Search API] Response status:', response.status);
+
+    // Fallback a corsproxy si codetabs falla
+    if (!response.ok) {
+      console.log('[Ikigai Search API] codetabs falló, intentando corsproxy...');
+      const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+      response = await fetch(corsproxyUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+    }
 
     if (!response.ok) {
       console.error('[Ikigai Search API] Error:', response.status, response.statusText);
