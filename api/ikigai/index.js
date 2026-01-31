@@ -321,52 +321,36 @@ async function handleSearchWithAPI(filters, page, res) {
     console.log('[Ikigai Search API] Response status:', response.status);
 
     if (!response.ok) {
-      console.log('[Ikigai Search API] API directa falló, intentando alternativa...');
+      console.log('[Ikigai Search API] API directa falló, intentando codetabs...');
 
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
       console.log('[Ikigai Search API] Proxy URL:', proxyUrl);
 
       const proxyResponse = await fetch(proxyUrl, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
       });
 
       if (!proxyResponse.ok) {
-        console.log('[Ikigai Search API] corsproxy falló, intentando allorigins.win...');
-        const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+        console.log('[Ikigai Search API] codetabs falló, intentando corsproxy...');
+        const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
-        const alloriginsResponse = await fetch(alloriginsUrl, {
+        const corsproxyResponse = await fetch(corsproxyUrl, {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
+          headers: { 'Accept': 'application/json' }
         });
 
-        if (alloriginsResponse.ok) {
-          console.log('[Ikigai Search API] allorigins.win funcionó');
-          const alloriginsData = await alloriginsResponse.json();
-          return processAndReturnResults(alloriginsData, page, res, '', filters);
-        }
-
-        console.log('[Ikigai Search API] allorigins falló, intentando thingproxy...');
-        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(apiUrl)}`;
-
-        const thingProxyResponse = await fetch(thingProxyUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!thingProxyResponse.ok) {
+        if (!corsproxyResponse.ok) {
           console.error('[Ikigai Search API] Todos los proxies fallaron');
           return res.status(500).json({
             error: 'Error en la API de Ikigai',
             details: 'Todos los métodos fallaron'
           });
         }
+
+        const corsproxyData = await corsproxyResponse.json();
+        return processAndReturnResults(corsproxyData, page, res, '', filters);
+      }
 
         const thingProxyData = await thingProxyResponse.json();
         return processAndReturnResults(thingProxyData, page, res, '', filters);
@@ -404,18 +388,18 @@ async function handleDetails(req, res) {
     const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}`;
     console.log('[Ikigai Details] API URL:', apiUrl);
 
-    const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
-    console.log('[Ikigai Details] Using proxy');
+    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
 
     let response = await fetch(proxyUrl, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
 
+    // Fallback a corsproxy si codetabs falla
     if (!response.ok) {
-      console.log('[Ikigai Details] corsproxy falló, intentando thingproxy...');
-      const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
-      response = await fetch(thingProxyUrl, {
+      console.log('[Ikigai Details] codetabs falló, intentando corsproxy...');
+      const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+      response = await fetch(corsproxyUrl, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -490,7 +474,7 @@ async function handleChapters(req, res) {
 
     while (hasMorePages && currentPage <= maxPages) {
       const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}/chapters?page=${currentPage}`;
-      const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
 
       console.log(`[Ikigai Chapters] Página ${currentPage}`);
 
@@ -499,9 +483,10 @@ async function handleChapters(req, res) {
         headers: { 'Accept': 'application/json' }
       });
 
+      // Fallback a corsproxy si codetabs falla
       if (!response.ok) {
-        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
-        response = await fetch(thingProxyUrl, {
+        const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+        response = await fetch(corsproxyUrl, {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
@@ -738,27 +723,26 @@ async function handleLoadSeriesProgressive(req, res) {
     const allResults = await Promise.allSettled(
       pagesToLoad.map(async (page) => {
         const apiUrl = `https://panel.ikigaimangas.com/api/swf/series?page=${page}&nsfw=true`;
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
 
         try {
-          const response = await fetch(proxyUrl, {
+          let response = await fetch(proxyUrl, {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
           });
 
+          // Fallback a corsproxy si codetabs falla
           if (!response.ok) {
-            console.log(`[Ikigai Progressive Load] corsproxy falló para página ${page}, intentando thingproxy...`);
-            const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(apiUrl)}`;
-            const fallbackResponse = await fetch(thingProxyUrl, {
+            console.log(`[Ikigai Progressive Load] codetabs falló para página ${page}, intentando corsproxy...`);
+            const corsproxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+            response = await fetch(corsproxyUrl, {
               method: 'GET',
               headers: { 'Accept': 'application/json' }
             });
 
-            if (!fallbackResponse.ok) {
+            if (!response.ok) {
               throw new Error(`Error en página ${page}: ${response.status}`);
             }
-
-            return fallbackResponse.json();
           }
 
           return response.json();
