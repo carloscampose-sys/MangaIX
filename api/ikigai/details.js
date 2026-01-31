@@ -21,22 +21,14 @@ export default async function handler(req, res) {
     const apiUrl = `https://panel.ikigaimangas.com/api/swf/series/${slug}`;
     console.log('[Ikigai Details] API URL:', apiUrl);
 
-    const proxyUrl = `https://corsproxy.io/?${apiUrl}`;
-    console.log('[Ikigai Details] Using proxy');
-
-    let response = await fetch(proxyUrl, {
+    // Llamada directa desde servidor (no necesita proxy CORS)
+    const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
+      }
     });
-
-    if (!response.ok) {
-      console.log('[Ikigai Details] corsproxy falló, intentando thingproxy...');
-      const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${apiUrl}`;
-      response = await fetch(thingProxyUrl, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-    }
 
     if (!response.ok) {
       console.error('[Ikigai Details] Error:', response.status);

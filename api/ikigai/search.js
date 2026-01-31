@@ -270,86 +270,23 @@ async function handleSearchWithAPI(filters, page, res) {
     const apiUrl = buildApiUrl('', filters, page);
     console.log('[Ikigai Search API] API URL:', apiUrl);
 
-    const browserHeaders = {
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Origin': 'https://viralikigai.milkchoco.online',
-      'Referer': `https://viralikigai.milkchoco.online/`,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"Windows"',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'cross-site',
-      'Connection': 'keep-alive',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    };
-
+    // Llamada directa desde servidor (no necesita proxy CORS)
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: browserHeaders
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
+      }
     });
 
     console.log('[Ikigai Search API] Response status:', response.status);
 
     if (!response.ok) {
-      console.log('[Ikigai Search API] API directa falló, intentando alternativa...');
-
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-      console.log('[Ikigai Search API] Proxy URL:', proxyUrl);
-
-      const proxyResponse = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
+      console.error('[Ikigai Search API] Error:', response.status, response.statusText);
+      return res.status(response.status).json({
+        error: 'Error en la API de Ikigai',
+        details: response.statusText
       });
-
-      if (!proxyResponse.ok) {
-        console.log('[Ikigai Search API] corsproxy falló, intentando allorigins.win...');
-        const alloriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-
-        const alloriginsResponse = await fetch(alloriginsUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (alloriginsResponse.ok) {
-          console.log('[Ikigai Search API] allorigins.win funcionó');
-          const alloriginsData = await alloriginsResponse.json();
-          return processAndReturnResults(alloriginsData, page, res, '', filters);
-        }
-
-        console.log('[Ikigai Search API] allorigins falló, intentando thingproxy...');
-        const thingProxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(apiUrl)}`;
-
-        const thingProxyResponse = await fetch(thingProxyUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!thingProxyResponse.ok) {
-          console.error('[Ikigai Search API] Todos los proxies fallaron');
-          return res.status(500).json({
-            error: 'Error en la API de Ikigai',
-            details: 'Todos los métodos fallaron'
-          });
-        }
-
-        const thingProxyData = await thingProxyResponse.json();
-        return processAndReturnResults(thingProxyData, page, res, '', filters);
-      }
-
-      const proxyData = await proxyResponse.json();
-      return processAndReturnResults(proxyData, page, res, '', filters);
     }
 
     const data = await response.json();
