@@ -30,7 +30,7 @@ export const SOURCES = {
         id: 'ikigai',
         name: 'Ikigai',
         icon: '🌸',
-        baseUrl: 'https://viralikigai.learnixs.site',
+        baseUrl: 'https://viralikigai.milkchoco.online',
         color: 'bg-pink-500',
         hoverColor: 'hover:bg-pink-600',
         textColor: 'text-pink-500',

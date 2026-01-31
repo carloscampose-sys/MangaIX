@@ -65,7 +65,7 @@ async function handleSearchWithPuppeteer(query, filters, page, res) {
     }
 
     const queryEncoded = encodeURIComponent(query.trim());
-    let searchUrl = `https://viralikigai.techbee.site/series/?buscar=${queryEncoded}&pagina=${page}`;
+    let searchUrl = `https://viralikigai.milkchoco.online/series/?buscar=${queryEncoded}&pagina=${page}`;
 
     if (filters.genres && filters.genres.length > 0) {
       filters.genres.forEach(genreId => {
@@ -299,8 +299,8 @@ async function handleSearchWithAPI(filters, page, res) {
       'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
       'Accept-Encoding': 'gzip, deflate, br',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Origin': 'https://viralikigai.techbee.site',
-      'Referer': `https://viralikigai.techbee.site/`,
+      'Origin': 'https://viralikigai.milkchoco.online',
+      'Referer': `https://viralikigai.milkchoco.online/`,
       'X-Requested-With': 'XMLHttpRequest',
       'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
       'Sec-Ch-Ua-Mobile': '?0',
@@ -521,7 +521,7 @@ async function handleChapters(req, res) {
         id: `ikigai-${slug}-ch-${ch.name}-${ch.id}`,
         chapter: ch.name,
         title: ch.title ? `Capítulo ${ch.name} - ${ch.title}` : `Capítulo ${ch.name}`,
-        url: `https://viralikigai.techbee.site/capitulo/${ch.id}/`,
+        url: `https://viralikigai.milkchoco.online/capitulo/${ch.id}/`,
         publishedAt: ch.published_at,
         likeCount: ch.like_count,
         chapterId: ch.id,
@@ -575,7 +575,7 @@ async function handlePages(req, res) {
   let browser = null;
 
   try {
-    const chapterUrl = `https://viralikigai.techbee.site/capitulo/${chapterId}/`;
+    const chapterUrl = `https://viralikigai.milkchoco.online/capitulo/${chapterId}/`;
     console.log('[Ikigai Pages] URL:', chapterUrl);
 
     browser = await puppeteer.launch({

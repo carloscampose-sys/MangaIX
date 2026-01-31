@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://viralikigai.techbee.site';
+const BASE_URL = 'https://viralikigai.milkchoco.online';
 
 /**
  * Detecta si estamos en localhost
