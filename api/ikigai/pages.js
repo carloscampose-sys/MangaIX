@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const chapterUrl = `https://viralikigai.milkchoco.online/capitulo/${chapterId}/`;
+    const chapterUrl = `https://visualikigai.radiot.space/capitulo/${chapterId}/`;
     console.log('[Ikigai Pages] URL:', chapterUrl);
 
     browser = await puppeteer.launch({

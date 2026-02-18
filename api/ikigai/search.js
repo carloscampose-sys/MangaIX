@@ -40,7 +40,7 @@ async function handleSearchWithPuppeteer(query, filters, page, res) {
     }
 
     const queryEncoded = encodeURIComponent(query.trim());
-    let searchUrl = `https://viralikigai.milkchoco.online/series/?buscar=${queryEncoded}&pagina=${page}`;
+    let searchUrl = `https://visualikigai.radiot.space/series/?buscar=${queryEncoded}&pagina=${page}`;
 
     if (filters.genres && filters.genres.length > 0) {
       filters.genres.forEach(genreId => {
